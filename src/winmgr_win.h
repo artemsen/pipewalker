@@ -18,42 +18,51 @@
 
 #pragma once
 
-#include "common.h"
-#include "map.h"
+#include "winmgr.h"
 
 
-/**
- * CSettings - load / save game state
- */
-class CSettings
+#ifdef PW_USE_WIN
+
+class CWinManagerWin : public CWinManager
 {
 public:
 	//! Default constructor
-	CSettings();
+	CWinManagerWin(CEventHandler& eventHandler) : CWinManager(eventHandler), m_wnd(NULL), m_dc(NULL), m_AspectRatio(0.0f), m_Redisplay(false)  {}
 
-	/**
-	 * Load state
-	 */
-	void Load();
+public:
+	//From CWinManager
+	void CreateGLWindow(const int width, const int height);
+	void PostRedisplay();
+	void MainLoop();
+	void OnApplicationExit();
+	void ShowError(const char* err);
+	void PostExit();
 
-	/**
-	 * Save state
-	 */
-	void Save() const;
+protected:
+	//From CWinManager
+	void SwapBuffers() const;
 
 private:
 	/**
-	 * Get file name
-	 * \return file name
+	 * Destroy window and post exit message
 	 */
-	string GetFileName() const;
+	void DestroyAndQuit();
 
-public:
-	//Application properties
-	unsigned long	MapId;		///< Map MapId
-	MapSize			Size;		///< Map size (in cell)
-	string			State;		///< Map state
-	//bool			Blackout;	///< Blackout mode on/off flag
-	bool			Wrapping;	///< Wrapping mode on/off flag
-	bool			Sound;		///< Sound on/off flag
+	/**
+	 * The WindowProc function (for more information see MSDN)
+	 * \param wnd Handle to the window
+	 * \param msg Specifies the message
+	 * \param wParam Specifies additional message information
+	 * \param lParam Specifies additional message information
+	 * \return result of the message processing, depends on the message sent
+	 */
+	static LRESULT CALLBACK WndProc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+private:
+	HWND	m_wnd;			///< Holds Our Window Handle
+	HDC		m_dc;			///< Private GDI Device Context
+	float	m_AspectRatio;	///< Needed window aspect ration
+	bool	m_Redisplay;	///< Redisplay flag
 };
+
+#endif	//PW_USE_WIN

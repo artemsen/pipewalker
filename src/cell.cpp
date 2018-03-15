@@ -41,29 +41,75 @@ void CCell::Reset()
 }
 
 
-string CCell::Save() const
+unsigned short CCell::Save() const
 {
-	char state[32];
-	sprintf(state, "%i,%i,%03i,%i,%i,%i,%i,%i", m_TubeType, m_CellType, static_cast<int>(IsRotationInProgress() ? m_Rotate.InitAngle : m_Angle), m_Lock ? 1 : 0,
-		m_ConnTop ? 1 : 0,
-		m_ConnBottom  ? 1 : 0,
-		m_ConnLeft ? 1 : 0,
-		m_ConnRight ? 1 : 0);
+	int rotate = static_cast<int>(IsRotationInProgress() ? m_Rotate.InitAngle / 90.0f : m_Angle / 90.0f);
+	assert(rotate >= 0 && rotate <= 3);
 
-	return string(state);
+	unsigned short save = 0;
+	save |= (m_TubeType << 12);
+	save |= (m_CellType << 8);
+	save |= (rotate << 4);
+	save |= (m_Lock ? 1 : 0);
+	return save;
 }
 
 
-void CCell::Load(const string& state)
+void CCell::Load(const unsigned short state)
 {
-	m_TubeType = static_cast<TubeType>(atoi(state.c_str()));
-	m_CellType = static_cast<CellType>(atoi(state.c_str() + 2));
-	m_Angle = static_cast<float>(atof(state.c_str() + 4));
-	m_Lock = atoi(state.c_str() + 8) != 0;
-	m_ConnTop = atoi(state.c_str() + 10) != 0;
-	m_ConnBottom = atoi(state.c_str() + 12) != 0;
-	m_ConnLeft = atoi(state.c_str() + 14) != 0;
-	m_ConnRight = atoi(state.c_str() + 16) != 0;
+	int rotate = 0;
+
+	if (state) {
+		m_TubeType = static_cast<TubeType>((state >> 12) & 0xf);
+		m_CellType = static_cast<CellType>((state >> 8) & 0xf);
+		rotate = ((state >> 4) & 0xf);
+		m_Lock = (state & 0xf) == 1;
+
+		m_Angle = rotate * 90.0f;
+
+		//Restore connection side by rotate angle
+		switch (rotate) {
+			case 0:	//0 degrees
+				switch (m_TubeType) {
+					case TTHalf:		m_ConnTop = true;								break;
+					case TTStraight:	m_ConnTop = m_ConnBottom = true;				break;
+					case TTCurved:		m_ConnTop = m_ConnRight = true;					break;
+					case TTJoiner:		m_ConnTop = m_ConnBottom = m_ConnRight = true;	break;
+					default:			assert(false && "Unknown tube type");
+				}
+				break;
+			case 1:	//90 degrees
+				switch (m_TubeType) {
+					case TTHalf:		m_ConnLeft = true;								break;
+					case TTStraight:	m_ConnRight = m_ConnLeft = true;				break;
+					case TTCurved:		m_ConnTop = m_ConnLeft = true;					break;
+					case TTJoiner:		m_ConnTop = m_ConnLeft = m_ConnRight = true;	break;
+					default:			assert(false && "Unknown tube type");
+				}
+				break;
+			case 2:	//180 degrees
+				switch (m_TubeType) {
+					case TTHalf:		m_ConnBottom = true;							break;
+					case TTStraight:	m_ConnTop = m_ConnBottom = true;				break;
+					case TTCurved:		m_ConnBottom = m_ConnLeft = true;				break;
+					case TTJoiner:		m_ConnTop = m_ConnBottom = m_ConnLeft = true;	break;
+					default:			assert(false && "Unknown tube type");
+				}
+				break;
+			case 3:	//270 degrees
+				switch (m_TubeType) {
+					case TTHalf:		m_ConnRight = true;								break;
+					case TTStraight:	m_ConnRight = m_ConnLeft = true;				break;
+					case TTCurved:		m_ConnRight = m_ConnBottom = true;				break;
+					case TTJoiner:		m_ConnRight = m_ConnLeft = m_ConnBottom = true;	break;
+					default:			assert(false && "Unknown tube type");
+				}
+				break;
+			default:
+				assert(false && "Wrong angle");
+				break;
+		}
+	}
 }
 
 
@@ -182,6 +228,10 @@ bool CCell::ProcessRotation()
 	}
 
 	m_Angle = m_Rotate.NeedAngle;
+	if (m_Angle > 359.0f)
+		m_Angle = 0.0f;
+	if (m_Angle < 0.0f)
+		m_Angle = 270.0f;
 	m_Rotate.StartTime = 0;
 
 	//Calculate new connection sides

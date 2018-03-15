@@ -19,9 +19,8 @@
 #include "image.h"
 #include "buffer.h"
 
-//Image specific headers
 #pragma pack (push, 1)
-//Targa
+//! Targa header
 struct IMAGE_TGA_HEADER {
 	unsigned char	Length;
 	unsigned char	ColormapType;
@@ -38,80 +37,25 @@ struct IMAGE_TGA_HEADER {
 };
 #define IMAGE_TGA_RLE		0x0A	//RLE compressed TGA
 #define IMAGE_TGA_RGB		0x02	//Uncompressed TGA
-
-//Bitmap
-struct IMAGE_BMP_HEADER {
-	unsigned short	Type;
-	unsigned long	Size;
-	unsigned short	Reserved1;
-	unsigned short	Reserved2;
-	unsigned long	OffBits;
-};
-
-struct IMAGE_BMP_INFO {
-	unsigned long	Size;
-	unsigned long	Width;
-	unsigned long	Height;
-	unsigned short	Planes;
-	unsigned short	BitCount;
-	unsigned long	Compression;
-	unsigned long	SizeImage;
-	unsigned long	XPelsPerMeter;
-	unsigned long	YPelsPerMeter;
-	unsigned long	ClrUsed;
-	unsigned long	ClrImportant;
-};
-
-#define IMAGE_BMP_MAGIC		0x4D42	//Magic BMP header
-
 #pragma pack (pop)
 
 
 CImage::CImage()
 :	m_ImgWidth(0),
 	m_ImgHeight(0),
-	m_ImgMode(GL_RGB),
-	m_Data(NULL)
+	m_ImgMode(GL_RGB)
 {
-}
-
-
-CImage::CImage(const CImage& img)
-:	m_ImgWidth(img.GetHeight()),
-	m_ImgHeight(img.GetWidth()),
-	m_ImgMode(img.GetMode()),
-	m_Data(NULL)
-{
-	const size_t size = GetSize();
-	m_Data = new unsigned char[size];
-	memcpy(m_Data, img.GetData(), size);
-}
-
-
-CImage::~CImage()
-{
-	delete[] m_Data;
 }
 
 
 void CImage::Load(const char* fileName)
 {
 	assert(fileName);
+
 	CBuffer buf;
 	buf.Load(fileName);
-	if (strstr(fileName, ".tga"))
-		LoadTarga(&buf);
-	else
-		LoadBitmap(&buf);
-}
 
-
-void CImage::LoadTarga(CBuffer* buf)
-{
-	assert(buf);
-	assert(m_Data == NULL);
-
-	const IMAGE_TGA_HEADER* header = reinterpret_cast<const IMAGE_TGA_HEADER*>(buf->GetData(sizeof(IMAGE_TGA_HEADER)));
+	const IMAGE_TGA_HEADER* header = reinterpret_cast<const IMAGE_TGA_HEADER*>(buf.GetData(sizeof(IMAGE_TGA_HEADER)));
 	if (!header)
 		throw CException("TGA: Incorrect format");
 
@@ -142,21 +86,21 @@ void CImage::LoadTarga(CBuffer* buf)
 	const size_t sizeInBytes = m_ImgWidth * m_ImgHeight * bpp;
 
 	//Read the data
-	m_Data = new unsigned char[sizeInBytes];
+	m_Data.resize(sizeInBytes);
 	if (header->ImageType == IMAGE_TGA_RGB)
-		memcpy(m_Data, buf->GetData(sizeInBytes), sizeInBytes);
+		memcpy(&m_Data[0], buf.GetData(sizeInBytes), sizeInBytes);
 	else {
 		//Create new own buffer to store image data
 		size_t bufPos = 0;
 
 		while (bufPos < sizeInBytes) {
 			unsigned char packetHeader;
-			if (!buf->Get(packetHeader))
+			if (!buf.Get(packetHeader))
 				throw CException("TGA: Incorrect format (not enough data)");
 			const unsigned char packetLength = (packetHeader & 0x7F) + 1;
 			if ((packetHeader & 0x80) != 0) {	// Run-length encoding packet (RLE)
-				const unsigned char* packet = reinterpret_cast<const unsigned char*>(buf->GetData(bpp));
-				for (Uint32 j = 0; j < packetLength * bpp; ++j) {
+				const unsigned char* packet = reinterpret_cast<const unsigned char*>(buf.GetData(bpp));
+				for (unsigned int j = 0; j < packetLength * bpp; ++j) {
 					if (bufPos >= sizeInBytes)
 						throw CException("TGA: Incorrect format");
 					m_Data[bufPos++] = packet[j % bpp];
@@ -164,7 +108,7 @@ void CImage::LoadTarga(CBuffer* buf)
 			}
 			else {								//Raw packet
 				for (size_t j = 0; j < packetLength * bpp; ++j) {
-					if (bufPos >= sizeInBytes || !buf->Get(m_Data[bufPos++]))
+					if (bufPos >= sizeInBytes || !buf.Get(m_Data[bufPos++]))
 						throw CException("TGA: Incorrect format");
 				}
 			}
@@ -173,64 +117,94 @@ void CImage::LoadTarga(CBuffer* buf)
 
 	ConvertBGRtoRGB();
 
+	// Check flip bit
 	if ((header->ImageDesc & 0x20) != 0)
 		FlipVertical();
 }
 
 
-void CImage::LoadBitmap(CBuffer* buf)
+void CImage::LoadXPM(const char* data[], const size_t strNum)
 {
-	assert(buf);
-	assert(m_Data == NULL);
+	assert(data);
 
-	const IMAGE_BMP_HEADER* pBMPFileHeader = reinterpret_cast<const IMAGE_BMP_HEADER*>(buf->GetData(sizeof(IMAGE_BMP_HEADER)));
-	const IMAGE_BMP_INFO* pBMPInfoHeader = reinterpret_cast<const IMAGE_BMP_INFO*>(buf->GetData(sizeof(IMAGE_BMP_INFO)));
+	//Read image properties
+	const char* token = data[0];
+	m_ImgMode = GL_RGBA;
+	m_ImgWidth = atoi(data[0]);
+	token = strchr(token + 1, ' ') + 1;
+	m_ImgHeight = atoi(token);
 
-	if (pBMPFileHeader->Type != IMAGE_BMP_MAGIC)
-		throw CException("unknown format (header magic number undefined)");
+	token = strchr(token + 1, ' ') + 1;
+	const size_t colorMapSize = atoi(token);
+	token = strchr(token + 1, ' ') + 1;
+	const size_t bytePerPixel = atoi(token);
+	assert(strNum > bytePerPixel);
 
-	if (pBMPInfoHeader->Planes != 1)
-		throw CException("only 1 plane supported");
+	//Read the color map
+	map< string, vector<unsigned char> > colorMap;
+	for (size_t i = 1; i <= colorMapSize; ++i) {
+		if (i >= strNum)
+			throw CException("XPM: Incorrect format");
 
-	//Read the width and height
-	m_ImgWidth  = pBMPInfoHeader->Width;
-	m_ImgHeight = pBMPInfoHeader->Height;
- 	if (m_ImgWidth == 0 || m_ImgHeight == 0 || m_ImgWidth > 4096 || m_ImgHeight > 4096)
-		throw CException("undefined image size");
+		const string index(data[i], data[i] + bytePerPixel);
+		vector<unsigned char> color;
+		color.resize(4);
+		if (strcmp(data[i] + bytePerPixel + 3, "None") != 0) {
+			unsigned int colorRef = 0;
+			sscanf(data[i] + bytePerPixel + 4, "%x", &colorRef);
+			color[0] = static_cast<unsigned char>((colorRef & 0x00ff0000) >> 16);
+			color[1] = static_cast<unsigned char>((colorRef & 0x0000ff00) >> 8);
+			color[2] = static_cast<unsigned char>((colorRef & 0x000000ff) >> 0);
+			color[3] = 0xff;	//Non transparent
+		}
+		colorMap.insert(make_pair(index, color));
+	}
 
-	//Define format
-	if (pBMPInfoHeader->BitCount == 24)
-		m_ImgMode = GL_RGB;
-	else if (pBMPInfoHeader->BitCount == 32)
-		m_ImgMode = GL_RGBA;
-	else
-		throw CException("pixel size unsupported");
+	//Read image data
+	m_Data.reserve(SizeInBytes());
+	for (size_t i = 0; i < m_ImgHeight; ++i) {
+		if (i + colorMapSize + 1 >= strNum)
+			throw CException("XPM: Incorrect format");
+		const char* imgData = data[i + colorMapSize + 1];
+		for (size_t j = 0; j < m_ImgWidth; ++j) {
+			const string colorIndex(imgData + j * bytePerPixel, imgData + j * bytePerPixel + bytePerPixel);
+			const vector<unsigned char> colorValue = colorMap[colorIndex];
+			assert(colorValue.size() == 4);
+			copy(colorValue.begin(), colorValue.end(), back_inserter(m_Data));
+		}
+	}
+	assert(m_Data.size() == SizeInBytes());
+}
 
-	//Calculate the number of bytes per pixel
-	const size_t usBPP = pBMPInfoHeader->BitCount / 8;
 
-	//Calculate the size
-	const size_t ulSize = m_ImgWidth * m_ImgHeight * usBPP;
+void CImage::GetSubImage(const size_t x, const size_t y, const size_t width, const size_t height, vector<unsigned char>& data) const
+{
+	assert(!m_Data.empty());
+	assert(m_ImgMode == GL_RGB || m_ImgMode == GL_RGBA);
 
-	//Read the data
-	if (!buf->SetOffset(pBMPFileHeader->OffBits))
-		throw CException("incorrect format");
-	m_Data = new unsigned char[ulSize];
-	memcpy(m_Data, buf->GetData(ulSize), ulSize);
+	if (x > m_ImgWidth || x + width > m_ImgWidth || y > m_ImgHeight || y + height > m_ImgHeight)
+		throw CException("Sub image coordinates out of range");
 
-	ConvertBGRtoRGB();
+	const unsigned char bpp = BytesPerPixel();
+
+	data.reserve(height * width * bpp);
+	for (size_t i = 0; i < height; ++i) {
+		const vector<unsigned char>::const_iterator itCopy = m_Data.begin() + x * bpp + (i + y) * m_ImgWidth * bpp;
+		copy(itCopy, itCopy + width * bpp, back_inserter(data));
+	}
 }
 
 
 void CImage::ConvertBGRtoRGB()
 {
-	assert(m_Data != NULL);
+	assert(!m_Data.empty());
 	assert(m_ImgMode == GL_RGB || m_ImgMode == GL_RGBA);
+
 	if (m_ImgMode != GL_RGB && m_ImgMode != GL_RGBA)
 		return;	//One-component image
 
-	const unsigned short bpp = GetBPP();
-	const size_t sizeInBytes = GetSize();
+	const unsigned short bpp = BytesPerPixel();
+	const size_t sizeInBytes = SizeInBytes();
 
 	for (unsigned int i = 0; i < sizeInBytes; i += bpp) {
 		unsigned char tmp = m_Data[i];
@@ -242,19 +216,18 @@ void CImage::ConvertBGRtoRGB()
 
 void CImage::FlipVertical()
 {
-	assert(m_Data != NULL);
+	assert(!m_Data.empty());
 
-	const unsigned int sizeWidth = m_ImgWidth * GetBPP();
-	unsigned char* swapBuffer = new unsigned char[sizeWidth];
+	const unsigned int sizeWidth = m_ImgWidth * BytesPerPixel();
+	vector<unsigned char> swapBuffer;
+	swapBuffer.resize(sizeWidth);
 
 	for (unsigned int i = 0; i < m_ImgHeight / 2; ++i) {
-		unsigned char* srcData = m_Data + i * sizeWidth;
-		unsigned char* dstData = m_Data + (m_ImgHeight - i - 1) * sizeWidth;
+		unsigned char* srcData = &m_Data[i * sizeWidth];
+		unsigned char* dstData = &m_Data[(m_ImgHeight - i - 1) * sizeWidth];
 
-		memcpy(swapBuffer, dstData, sizeWidth);
+		memcpy(&swapBuffer[0], dstData, sizeWidth);
 		memcpy(dstData, srcData, sizeWidth);
-		memcpy(srcData, swapBuffer, sizeWidth);
+		memcpy(srcData, &swapBuffer[0], sizeWidth);
 	}
-
-	delete[] swapBuffer;
 }

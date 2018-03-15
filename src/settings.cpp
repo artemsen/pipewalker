@@ -19,50 +19,181 @@
 #include "settings.h"
 #include "buffer.h"
 
-#define PW_SERIALIZE_MAPID		"MapID"					///< Map ID field
-#define PW_SERIALIZE_MAPSTATE	"MapState"				///< Map state field
-#define PW_SERIALIZE_MAPSIZE	"MapSize"				///< Map size field
-#define PW_SERIALIZE_FILENAME	".pipewalker.save"		///< Filename to save state
+#define PW_SERIALIZE_MAPID		"MapID"				///< Map ID field
+#define PW_SERIALIZE_MAPSTATE	"MapState"			///< Map state field
+#define PW_SERIALIZE_MAPSIZE	"MapSize"			///< Map size field
+#define PW_SERIALIZE_WRAPMODE	"Wrapping"			///< Map wrapping mode field
+//#define PW_SERIALIZE_BLACKOUT	"Blackout"			///< Blackout mode field
+#define PW_SERIALIZE_SOUND		"Sound"				///< Sound mode field
 
-CSettings::SETTINGS CSettings::Settings;
+#define PW_SERIALIZE_FILENAME	".pipewalker"		///< Filename to save state
+
+
+/**
+ * CIniFile - work with Ini files
+ */
+class CIniFile
+{
+public:
+	/**
+	 * Load ini file
+	 * \param fileName file name
+	 */
+	void Load(const char* fileName)
+	{
+		assert(fileName);
+
+		CBuffer buf;
+		buf.Load(fileName);
+
+		while (!buf.EOB()) {
+			string name;
+			name.reserve(32);
+			while (!buf.EOB()) {
+				char c = 0;
+				buf.Get(c);
+				if (c == '\r')
+					continue;
+				if (c != '=')
+					name += c;
+				else
+					break;
+			}
+
+			string val;
+			val.reserve(32);
+			while (!buf.EOB()) {
+				char c = 0;
+				buf.Get(c);
+				if (c == '\r')
+					continue;
+				if (c != '\n')
+					val += c;
+				else
+					break;
+			}
+
+			SetProperty(name.c_str(), val.c_str());
+		}
+	}
+
+	/**
+	 * Save ini file
+	 * \param fileName file name
+	 */
+	void Save(const char* fileName) const
+	{
+		assert(fileName);
+
+		CBuffer buf;
+
+		for (map<string, string>::const_iterator it = m_Ini.begin(); it != m_Ini.end(); ++it) {
+			buf.Put(it->first);
+			buf.PutData("=", 1);
+			buf.Put(it->second);
+			buf.PutData("\n", 1);
+		}
+
+		buf.Save(fileName);
+	}
+
+	/**
+	 * For for property existing
+	 * \param name property name
+	 * \return true if property has been set
+	 */
+	inline bool ExistProperty(const char* name) const		{ assert(name); return m_Ini.find(name) != m_Ini.end(); }
+
+
+	/**
+	 * Get property
+	 * \param name property name
+	 * \return property value
+	 */
+	string GetProperty(const char* name) const
+	{
+		assert(name);
+		map<string, string>::const_iterator it = m_Ini.find(name);
+		return (it != m_Ini.end() ? it->second : string());
+	}
+
+	/**
+	 * Set property
+	 * \param name property name
+	 * \param value property value
+	 */
+	void SetProperty(const char* name, const char* value)	{ assert(name && value); m_Ini.insert(make_pair(name, value)); }
+
+
+	/**
+	 * Set property
+	 * \param name property name
+	 * \param value property value
+	 */
+	void SetProperty(const char* name, const unsigned long value)
+	{
+		char sz[16];
+		sprintf(sz, "%u", static_cast<unsigned int>(value));
+		SetProperty(name, sz);
+	}
+
+private:
+	map<string, string>	m_Ini;	///< Ini values
+};
+
+
+CSettings::CSettings()
+:	MapId(1),
+	Size(MapSizeNormal),
+	//Blackout(false),
+	Wrapping(true),
+	Sound(true)
+{
+}
 
 
 void CSettings::Load()
 {
-	//Set default values
-	Settings.Id = 0;
-	Settings.Size = MapSizeNormal;
-
-	const string fileName = GetFileName();
-
 	try {
 		CIniFile ini;
-		ini.Load(fileName.c_str());
+		ini.Load(GetFileName().c_str());
 
 		if (ini.ExistProperty(PW_SERIALIZE_MAPSTATE))
-			Settings.State = ini.GetProperty(PW_SERIALIZE_MAPSTATE);
+			State = ini.GetProperty(PW_SERIALIZE_MAPSTATE);
 
 		if (ini.ExistProperty(PW_SERIALIZE_MAPID))
-			Settings.Id = atoi(ini.GetProperty(PW_SERIALIZE_MAPID).c_str());
+			MapId = atoi(ini.GetProperty(PW_SERIALIZE_MAPID).c_str());
 
 		if (ini.ExistProperty(PW_SERIALIZE_MAPSIZE))
-			Settings.Size = static_cast<MapSize>(atoi(ini.GetProperty(PW_SERIALIZE_MAPSIZE).c_str()));
+			Size = static_cast<MapSize>(atoi(ini.GetProperty(PW_SERIALIZE_MAPSIZE).c_str()));
+
+		if (ini.ExistProperty(PW_SERIALIZE_SOUND))
+			Sound = atoi(ini.GetProperty(PW_SERIALIZE_SOUND).c_str()) != 0;
+
+		if (ini.ExistProperty(PW_SERIALIZE_WRAPMODE))
+			Wrapping = atoi(ini.GetProperty(PW_SERIALIZE_WRAPMODE).c_str()) != 0;
+
+// 		if (ini.ExistProperty(PW_SERIALIZE_BLACKOUT))
+// 			Blackout = atoi(ini.GetProperty(PW_SERIALIZE_BLACKOUT).c_str()) != 0;
 	}
 	catch (CException& /*ex*/) {
 	}
 }
 
 
-void CSettings::Save()
+void CSettings::Save() const
 {
 	const string fileName = GetFileName();
 
 	try {
 		CIniFile ini;
 
-		ini.SetProperty(PW_SERIALIZE_MAPID, Settings.Id);
-		ini.SetProperty(PW_SERIALIZE_MAPSTATE, Settings.State.c_str());
-		ini.SetProperty(PW_SERIALIZE_MAPSIZE, Settings.Size);
+		ini.SetProperty(PW_SERIALIZE_MAPID, MapId);
+		ini.SetProperty(PW_SERIALIZE_MAPSTATE, State.c_str());
+		ini.SetProperty(PW_SERIALIZE_MAPSIZE, Size);
+		ini.SetProperty(PW_SERIALIZE_SOUND, Sound ? 100 : 0);
+		ini.SetProperty(PW_SERIALIZE_WRAPMODE, Wrapping ? 1 : 0);
+		//ini.SetProperty(PW_SERIALIZE_BLACKOUT, Blackout ? 1 : 0);
 
 		ini.Save(fileName.c_str());
 	}
@@ -71,8 +202,11 @@ void CSettings::Save()
 }
 
 
-string CSettings::GetFileName()
+string CSettings::GetFileName() const
 {
+#ifdef PW_PORTABLE
+	string loadFileName = ".";
+#else
 	string loadFileName = getenv(
 #ifdef WIN32
 		"USERPROFILE"
@@ -80,6 +214,7 @@ string CSettings::GetFileName()
 		"HOME"
 #endif //WIN32
 		);
+#endif //PW_PORTABLE
 
 #ifdef WIN32
 	loadFileName += '\\';
@@ -89,92 +224,4 @@ string CSettings::GetFileName()
 
 	loadFileName += PW_SERIALIZE_FILENAME;
 	return loadFileName;
-}
-
-
-void CIniFile::Load(const char* fileName)
-{
-	assert(fileName);
-
-	CBuffer buf;
-	buf.Load(fileName);
-
-	while (!buf.EOB()) {
-		string name;
-		name.reserve(32);
-		while (!buf.EOB()) {
-			char c = 0;
-			buf.Get(c);
-			if (c == '\r')
-				continue;
-			if (c != '=')
-				name += c;
-			else
-				break;
-		}
-
-		string val;
-		val.reserve(32);
-		while (!buf.EOB()) {
-			char c = 0;
-			buf.Get(c);
-			if (c == '\r')
-				continue;
-			if (c != '\n')
-				val += c;
-			else
-				break;
-		}
-
-		SetProperty(name.c_str(), val.c_str());
-	}
-}
-
-
-void CIniFile::Save(const char* fileName) const
-{
-	assert(fileName);
-
-	CBuffer buf;
-
-	for (map<string, string>::const_iterator it = m_Ini.begin(); it != m_Ini.end(); ++it) {
-		buf.Put(it->first);
-		buf.PutData("=", 1);
-		buf.Put(it->second);
-		buf.PutData("\n", 1);
-	}
-
-	buf.Save(fileName);
-}
-
-
-void CIniFile::SetProperty(const char* name, const unsigned int value)
-{
-	char sz[16];
-	sprintf(sz, "%i", value);
-	SetProperty(name, sz);
-}
-
-
-void CIniFile::SetProperty(const char* name, const char* value)
-{
-	assert(name);
-	assert(value);
-	m_Ini.insert(make_pair(name, value));
-
-}
-
-string CIniFile::GetProperty(const char* name) const
-{
-	assert(name);
-
-	map<string, string>::const_iterator it = m_Ini.find(name);
-	return (it == m_Ini.end() ? string() : it->second);
-}
-
-
-bool CIniFile::ExistProperty(const char* name) const
-{
-	assert(name);
-	return m_Ini.find(name) != m_Ini.end();
 }

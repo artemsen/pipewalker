@@ -19,6 +19,8 @@
 #include "modesettings.h"
 #include "texture.h"
 #include "settings.h"
+#include "game.h"
+#include "rendertext.h"
 
 
 void CModeSettings::Initialize()
@@ -26,74 +28,75 @@ void CModeSettings::Initialize()
 	const GLuint texOn = CTextureBank::Get(CTextureBank::TexRadBtnOn);
 	const GLuint texOff = CTextureBank::Get(CTextureBank::TexRadBtnOff);
 	const float btnSize = 0.6f;
-	const float btnLeft = -1.6f;
+	const float btnLeft = -1.2f;
 
-	m_MapChoose.reserve(3);
-	m_MapChoose.push_back(CRadioButton(false, btnLeft,  1.10f, btnSize, btnSize, texOn, texOff, MapSizeNormal));
-	m_MapChoose.push_back(CRadioButton(false, btnLeft,  0.35f, btnSize, btnSize, texOn, texOff, MapSizeBig));
-	m_MapChoose.push_back(CRadioButton(false, btnLeft, -0.40f, btnSize, btnSize, texOn, texOff, MapSizeParanoid));
-	SetMapSize(CSettings::Settings.Size);
+	m_MapSize.AddButton(CCheckBoxButton(false, btnLeft, 3.7f, btnSize, btnSize, texOn, texOff, MapSizeSmall));
+	m_MapSize.AddButton(CCheckBoxButton(false, btnLeft, 3.0f, btnSize, btnSize, texOn, texOff, MapSizeNormal));
+	m_MapSize.AddButton(CCheckBoxButton(false, btnLeft, 2.3f, btnSize, btnSize, texOn, texOff, MapSizeBig));
+	m_MapSize.AddButton(CCheckBoxButton(false, btnLeft, 1.6f, btnSize, btnSize, texOn, texOff, MapSizeExtra));
+
+	m_WrapMode.AddButton(CCheckBoxButton(false, btnLeft,  0.0f, btnSize, btnSize, texOn, texOff, 1));
+	m_WrapMode.AddButton(CCheckBoxButton(false, btnLeft, -0.7f, btnSize, btnSize, texOn, texOff, 0));
+
+	m_Sound.AddButton(CCheckBoxButton(false, btnLeft, -2.4f, btnSize, btnSize, texOn, texOff, 1));
+	m_Sound.AddButton(CCheckBoxButton(false, btnLeft, -3.1f, btnSize, btnSize, texOn, texOff, 0));
+	Reset();
 }
 
 
-bool CModeSettings::Render(const float mouseX, const float mouseY, const float transition)
+void CModeSettings::Reset()
 {
-	bool redarawIsNeeded = false;
+	m_MapSize.SetChoice(m_Game.Settings().Size);
+	m_WrapMode.SetChoice(m_Game.Settings().Wrapping ? 1 : 0);
+	m_Sound.SetChoice(m_Game.Settings().Sound ? 1 : 0);
+}
+
+
+void CModeSettings::Render(const float mouseX, const float mouseY, const float transition)
+{
+	//Draw text
+	const float colorText[4] = { 0.0f, 0.5f, 1.0f, transition };
+	const float colorTitle[4] = { 0.0f, 0.3f, 1.0f, transition };
+
+	CRenderText::Print(-4.0f, 4.5f, 1.4f, colorTitle, true, "Map size:");
+
+	CRenderText::Print(-0.5f, 3.7f, 1.1f, colorText, true, "Small  [10x10]");
+	CRenderText::Print(-0.5f, 3.0f, 1.1f, colorText, true, "Normal [14x14]");
+	CRenderText::Print(-0.5f, 2.3f, 1.1f, colorText, true, "Big    [20x20]");
+	CRenderText::Print(-0.5f, 1.6f, 1.1f, colorText, true, "Extra  [30x30]");
+
+ 	CRenderText::Print(-4.0f,  0.8f, 1.4f, colorTitle, true, "Wrap mode:");
+	CRenderText::Print(-0.5f,  0.0f, 1.1f, colorText, true, "On");
+	CRenderText::Print(-0.5f, -0.7f, 1.1f, colorText, true, "Off");
+
+	CRenderText::Print(-4.0f, -1.6f, 1.4f, colorTitle, true, "Sound:");
+	CRenderText::Print(-0.5f, -2.4f, 1.1f, colorText, true, "On");
+	CRenderText::Print(-0.5f, -3.1f, 1.1f, colorText, true, "Off");
+
+	const float colorInfo[4] = { 0.0f, 0.3f, 0.8f, transition };
+	CRenderText::Print(-4.8f, -4.2f, 0.87f, colorInfo, true, "http://pipewalker.sourceforge.net");
+	CRenderText::Print(-4.78f, -4.7f, 0.5f, colorInfo, true, "Copyright (C) 2007-2009 Artem A. Senichev, Moscow, Russia");
+
+	//Draw buttons
 	glColor4f(1.0f, 1.0, 1.0f, transition);
-
-	//Draw background
-	static const float vertexBkgr[] =	{ -5.0f, 5.0f, -5.0f, -5.0f, 5.0f, -5.0f, 5.0f, 5.0f };
-	static const short texBkgr[] =		{ 0, 1, 0, 0, 1, 0, 1, 1 };
-	static const unsigned int indicesBkgr[] =	{ 0, 1, 2, 0, 2, 3 };
-	glBindTexture(GL_TEXTURE_2D, CTextureBank::Get(CTextureBank::TexEnvSett));
-	glVertexPointer(2, GL_FLOAT, 0, vertexBkgr);
-	glTexCoordPointer(2, GL_SHORT, 0, texBkgr);
-	glDrawElements(GL_TRIANGLES, (sizeof(indicesBkgr) / sizeof(indicesBkgr[0])), GL_UNSIGNED_INT, indicesBkgr);
-
-	//Radio buttons
-	for (vector<CRadioButton>::const_iterator itBtn = m_MapChoose.begin(); itBtn != m_MapChoose.end(); ++itBtn)
-		itBtn->Render(mouseX, mouseY);
+	m_MapSize.Render(mouseX, mouseY);
+	m_WrapMode.Render(mouseX, mouseY);
+	m_Sound.Render(mouseX, mouseY);
 
 	glColor4f(1.0f, 1.0, 1.0f, 1.0f);
-	return redarawIsNeeded;
 }
 
 
-void CModeSettings::OnMouseClick(const Uint8 button, const float mouseX, const float mouseY)
+void CModeSettings::OnMouseButtonDown(const float mouseX, const float mouseY, const MouseButton btn)
 {
-	if (button != SDL_BUTTON_LEFT)
-		return;
+	if (btn == MouseButton_Left) {
+		bool redrawNeeded = false;
 
-	const MapSize curr = GetMapSize();
-	for (vector<CRadioButton>::iterator itBtn = m_MapChoose.begin(); itBtn != m_MapChoose.end(); ++itBtn)
-		itBtn->SetState(false);
+		redrawNeeded |= m_MapSize.OnClick(mouseX, mouseY);
+		redrawNeeded |= m_WrapMode.OnClick(mouseX, mouseY);
+		redrawNeeded |= m_Sound.OnClick(mouseX, mouseY);
 
-	bool found = false;
-	for (vector<CRadioButton>::iterator itBtn = m_MapChoose.begin(); itBtn != m_MapChoose.end(); ++itBtn) {
-		if (itBtn->IsMouseOver(mouseX, mouseY)) {
-			found = true;
-			itBtn->SetState(true);
-		}
+		if (redrawNeeded)
+			m_Game.WinManager().PostRedisplay();
 	}
-
-	if (!found)
-		SetMapSize(curr);
-}
-
-
-MapSize CModeSettings::GetMapSize() const
-{
-	for (vector<CRadioButton>::const_iterator itBtn = m_MapChoose.begin(); itBtn != m_MapChoose.end(); ++itBtn) {
-		if (itBtn->GetState())
-			return static_cast<MapSize>(itBtn->GetId());
-	}
-	assert(false && "Undefined state");
-	return MapSizeNormal;
-}
-
-
-void CModeSettings::SetMapSize(const MapSize mapSize)
-{
-	for (vector<CRadioButton>::iterator itBtn = m_MapChoose.begin(); itBtn != m_MapChoose.end(); ++itBtn)
-		itBtn->SetState(static_cast<MapSize>(itBtn->GetId()) == mapSize);
 }

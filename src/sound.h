@@ -20,6 +20,11 @@
 
 #include "common.h"
 
+#if defined PW_USE_SDL		//SDL library
+	#include <SDL/SDL.h>
+#elif defined PW_USE_WIN	//Microsoft Windows
+	#include "PipeWalkerRes.h"
+#endif
 
 /**
  * Sound wrapper
@@ -28,7 +33,9 @@ class CSound
 {
 public:
 	//Constructor/destructor
+#if defined PW_USE_SDL
 	CSound() : m_Data(NULL), m_Pos(0), m_Length(0) 	{}
+#endif //PW_USE_SDL
 	~CSound()										{ Free(); }
 
 	/**
@@ -43,9 +50,13 @@ public:
 	void Load(const char* fileName);
 
 public:
+#if defined PW_USE_SDL		//SDL library
 	Uint8*	m_Data;
 	Uint32	m_Pos;
 	Uint32	m_Length;
+#elif defined PW_USE_WIN	//Microsoft Windows
+	vector<unsigned char> m_Data;
+#endif
 };
 
 
@@ -64,7 +75,7 @@ public:
 	/**
 	 * Initialize sound bank (load sounds from files)
 	 */
-	static void Initialize();
+	static void Load();
 
 	/**
 	 * Free sound bank
@@ -78,10 +89,12 @@ public:
 	static void Play(const SoundType type);
 
 private:
+#ifdef PW_USE_SDL
 	//! SDL fill audio buffer callback (see SDL SDK for more info)
 	static void OnFillBuffer(void* userdata, Uint8* stream, int len);
+#endif // PW_USE_SDL
 
 private:
 	static CSound	m_Sound[SndCounter];	///< Sound bank
-	static bool		m_UseSound;				///< Use sound flag
+	static bool		m_SoundInitialized;		///< Sound subsystem initialization flag
 };

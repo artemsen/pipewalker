@@ -20,46 +20,65 @@
 
 #include "common.h"
 #include "button.h"
+#include "winmgr.h"
 #include "map.h"
 
+class CGame;
 
 class CModeSettings
 {
 public:
+	//! Default constructor
+	CModeSettings(CGame& game) : m_Game(game) {}
+
 	/**
 	 * Initialization
 	 */
 	void Initialize();
 
 	/**
+	 * Reset internal state to setting values
+	 */
+	void Reset();
+
+	/**
 	 * Render scene
 	 * \param mouseX an X world mouse coordinate
 	 * \param mouseY an Y world mouse coordinate
 	 * \param transition transition phase [0...1]
-	 * \return true if redraw is needed
 	 */
-	bool Render(const float mouseX, const float mouseY, const float transition);
+	void Render(const float mouseX, const float mouseY, const float transition);
 
 	/**
-	 * Mouse click handler
-	 * \param button mouse button identifier
-	 * \param mouseX world mouse X coordinate
-	 * \param mouseY world mouse Y coordinate
+	 * Mouse button down handler
+	 * \param mouseX an X mouse world coordinate
+	 * \param mouseY an Y mouse world coordinate
+	 * \param btn mouse button identifier
 	 */
-	void OnMouseClick(const Uint8 button, const float mouseX, const float mouseY);
-
-	/**
-	 * Set default map size
-	 * \param map size
-	 */
-	void SetMapSize(const MapSize mapSize);
+	void OnMouseButtonDown(const float mouseX, const float mouseY, const MouseButton btn);
 
 	/**
 	 * Get currently chosen map size
 	 * \return map size
 	 */
-	MapSize GetMapSize() const;
+	inline MapSize GetMapSize() const		{ return static_cast<MapSize>(m_MapSize.GetChoice()); }
+
+	/**
+	 * Get currently chosen wrapping mode
+	 * \return wrapping mode
+	 */
+	inline bool GetWrapMode() const			{ return (m_WrapMode.GetChoice() == 1 ? true : false); }
+
+	/**
+	 * Get currently chosen sound mode
+	 * \return sound mode
+	 */
+	inline bool GetSoundMode() const		{ return (m_Sound.GetChoice() == 1 ? true : false); }
+
 
 private:
-	vector<CRadioButton>	m_MapChoose;	///< Map size choosing buttons
+	CRadioButtons	m_MapSize;		///< Map size radio buttons group
+	CRadioButtons	m_WrapMode;		///< Wrapping mode on/off radio buttons group
+	CRadioButtons	m_Sound;		///< Sound on/off radio buttons group
+	CGame&			m_Game;			///< Game instance
 };

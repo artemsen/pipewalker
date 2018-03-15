@@ -22,9 +22,10 @@
 
 //! Map sizes
 enum MapSize {
-	MapSizeNormal = 10,
-	MapSizeBig = 14,
-	MapSizeParanoid = 20
+	MapSizeSmall = 10,
+	MapSizeNormal = 14,
+	MapSizeBig = 20,
+	MapSizeExtra = 30
 };
 
 
@@ -38,16 +39,18 @@ public:
 	 * Initialize new random map
 	 * \param mapSize map size (in cell)
 	 * \param mapId map ID (begin value for srand())
+	 * \param wrapMode wrap mode on/off flag
 	 */
-	void New(const MapSize mapSize, const unsigned int mapId);
+	void New(const MapSize mapSize, const unsigned long mapId, const bool wrapMode);
 
 	/**
 	 * Load map state from string
 	 * \param mapSize map size (in cell)
-	 * \param mapId map Id
 	 * \param descr map state description
+	 * \param wrapMode wrap mode on/off flag
+	 * \return false if loading fail
 	 */
-	void LoadMap(const MapSize mapSize, const unsigned int mapId, const string& descr);
+	bool LoadMap(const MapSize mapSize, const string& descr, const bool wrapMode);
 
 	/**
 	 * Save map state as text
@@ -92,12 +95,6 @@ public:
 	 * \return current map size
 	 */
 	MapSize GetMapSize() const	{ return static_cast<MapSize>(m_MapSize); }
-
-	/**
-	 * Get current map ID
-	 * \return current map ID
-	 */
-	unsigned int GetMapID() const		{ return m_MapID; }
 
 
 private:
@@ -146,8 +143,8 @@ private:
 private:	//Class variables
 	vector<CCell>	m_CellMap;				///< Object's map
 	bool			m_GameOver;				///< Game over flag
+	bool			m_WrapMode;				///< Wrapping mode on/off flag
 	unsigned short	m_SenderX, m_SenderY;	///< Sender coordinates
 	unsigned short	m_ZeroX, m_ZeroY;		///< Zero point coordinates (sender out)
 	unsigned short	m_MapSize;				///< Map size
-	unsigned int	m_MapID;				///< Current map ID
 };

@@ -104,11 +104,13 @@ bool CBuffer::SetOffset(const size_t offset)
 
 void CBuffer::PutData(const void* data, const size_t size)
 {
-	assert(data);
+	if (size != 0) {
+		assert(data);
 
-	m_Data.resize(m_Data.size() + size);
-	memcpy(&m_Data[m_Offset], data, size);
-	m_Offset += size;
+		m_Data.resize(m_Data.size() + size);
+		memcpy(&m_Data[m_Offset], data, size);
+		m_Offset += size;
+	}
 }
 
 

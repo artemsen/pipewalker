@@ -1,3 +1,21 @@
+/**************************************************************************
+ *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
+ *  Copyright (C) 2007-2009 by Artem A. Senichev <artemsen@gmail.com>     *
+ *                                                                        *
+ *  This program is free software: you can redistribute it and/or modify  *
+ *  it under the terms of the GNU General Public License as published by  *
+ *  the Free Software Foundation, either version 3 of the License, or     *
+ *  (at your option) any later version.                                   *
+ *                                                                        *
+ *  This program is distributed in the hope that it will be useful,       *
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *  GNU General Public License for more details.                          *
+ *                                                                        *
+ *  You should have received a copy of the GNU General Public License     *
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>. *
+ **************************************************************************/
+
 #include "explosion.h"
 #include "texture.h"
 
@@ -23,7 +41,7 @@ void CExplosion::Render()
 
 			const float radius = (m_Force / 2.0f) * (1.0f - m_Particles[i].Life);
 
-			glColor4f(1.0f, 1.0f, 1.0f, m_Particles[i].Life > 0.1f ? m_Particles[i].Life : 0.1f);
+			glColor4f(m_Particles[i].Life + 0.5f, 1.0f - m_Particles[i].Life + 0.5f, 0.0f, m_Particles[i].Life > 0.1f ? m_Particles[i].Life : 0.1f);
 
  			const float vertex[] = {
 				 m_Particles[i].PosX - radius, m_Particles[i].PosY + radius,
@@ -55,14 +73,14 @@ void CExplosion::Render()
 
 void CExplosion::Renew()
 {
-	m_Force = static_cast<float>(rand() % 100) / 100.0f;
+	m_Force = 0.5f + static_cast<float>(rand() % 50) / 100.0f;
 
 	const size_t num = static_cast<size_t>(m_Force * 10.0f);
 	m_Particles.resize(num);
 
 	for (size_t i = 0; i < num; ++i) {
 		//Initialize particle
-		m_Particles[i].Life = m_Force < 0.5f ? 0.5f : m_Force;
+		m_Particles[i].Life = m_Force;
 		m_Particles[i].FadeSpeed = static_cast<float>(rand() % 100) / 1000.0f + 0.005f;
 		m_Particles[i].PosX = m_X;
 		m_Particles[i].PosY = m_Y;

@@ -46,7 +46,13 @@ public:
 	 * \param y mouse y coordinate
 	 * \return true if mouse pointer is over button
 	 */
-	virtual bool IsMouseOver(const float x, const float y) const;
+	bool IsMouseOver(const float x, const float y) const;
+
+	/**
+	 * Get button ID
+	 * \return button ID
+	 */
+	int GetId() const	{ return m_BtnId; }
 
 	/**
 	 * Render button
@@ -54,12 +60,6 @@ public:
 	 * \param y mouse y coordinate
 	 */
 	virtual void Render(const float x, const float y) const;
-
-	/**
-	 * Get button ID
-	 * \return button ID
-	 */
-	virtual int GetId() const	{ return m_BtnId; }
 
 
 protected:
@@ -69,7 +69,7 @@ protected:
 	 * \param y mouse y coordinate
 	 * \param texture texture identifier
 	 */
-	virtual void RenderButton(const float x, const float y, const GLuint texture) const;
+	void RenderButton(const float x, const float y, const GLuint texture) const;
 
 
 protected:	//Class variables
@@ -83,13 +83,13 @@ protected:	//Class variables
 
 
 /**
- * CRadioButton - Simple radio button
+ * CCheckBoxButton - Simple check box button
  */
-class CRadioButton : public CButton
+class CCheckBoxButton : public CButton
 {
 public:
 	//! Default constructor
-	CRadioButton() : CButton(), m_State(false), m_TexOff(0) {}
+	CCheckBoxButton() : CButton(), m_State(false), m_TexOff(0) {}
 
 	/**
 	 * Constructor
@@ -102,7 +102,7 @@ public:
 	 * \param texOff button off-state texture identifier
 	 * \param id button ID
 	 */
-	CRadioButton(const bool state, const float x, const float y, const float width, const float height, const GLuint texOn, const GLuint texOff, const int id);
+	CCheckBoxButton(const bool state, const float x, const float y, const float width, const float height, const GLuint texOn, const GLuint texOff, const int id);
 
 	/**
 	 * Get button state
@@ -122,4 +122,48 @@ public:
 protected:
 	bool	m_State;	///< Button state (on/off)
 	GLuint	m_TexOff;	///< Button second texture identifier
+};
+
+
+/**
+ * CRadioButton - Simple radio buttons group
+ */
+class CRadioButtons
+{
+public:
+	/**
+	 * Add button to group
+	 * \param btn adding button
+	 */
+	void AddButton(const CCheckBoxButton& btn);
+
+	/**
+	 * Render radio button group
+	 * \param mouseX mouse x coordinate
+	 * \param mouseY mouse y coordinate
+	 */
+	void Render(const float mouseX, const float mouseY) const;
+
+	/**
+	 * On mouse click handler
+	 * \param mouseX mouse x coordinate
+	 * \param mouseY mouse y coordinate
+	 * \return true if state has been changed
+	 */
+	bool OnClick(const float mouseX, const float mouseY);
+
+	/**
+	 * Get current choice id
+	 * \return current choice id
+	 */
+	int GetChoice() const;
+
+	/**
+	 * Set current choice id
+	 * \param choiceId current choice id
+	 */
+	void SetChoice(const int choiceId);
+
+private:
+	vector<CCheckBoxButton>	m_Buttons;	///< Buttons groupe
 };

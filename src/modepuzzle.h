@@ -19,38 +19,66 @@
 #pragma once
 
 #include "common.h"
-#include "map.h"
 #include "explosion.h"
 #include "texture.h"
+#include "winmgr.h"
+#include "map.h"
+
+class CGame;
 
 
 class CModePuzzle
 {
 public:
 	//! Default constructor
-	CModePuzzle(CMap* gameMap) : m_Map(gameMap) {}
+	CModePuzzle(CGame& game) : m_Game(game) {}
+
+	/**
+	 * Renew map
+	 */
+	void RenewMap();
+
+	/**
+	 * Load saved map (from settings)
+	 */
+	void LoadMap();
+
+	/**
+	 * Save map to settings
+	 */
+	void SaveMap() const;
 
 	/**
 	 * Render scene
 	 * \param transition transition phase [0...1]
-	 * \return true if redraw is needed
 	 */
-	bool Render(const float transition);
+	void Render(const float transition);
 
 	/**
-	 * Mouse click handler
-	 * \param button mouse button identifier
-	 * \param mouseX world mouse X coordinate
-	 * \param mouseY world mouse Y coordinate
+	 * Mouse button down handler
+	 * \param mouseX an X mouse world coordinate
+	 * \param mouseY an Y mouse world coordinate
+	 * \param btn mouse button identifier
 	 */
-	void OnMouseClick(const Uint8 button, const float mouseX, const float mouseY);
+	void OnMouseButtonDown(const float mouseX, const float mouseY, const MouseButton btn);
 
 	/**
-	 * Reset explosions
+	 * Reset by rotate current map
 	 */
-	void ResetExplosions()	{ m_Explosions.clear(); }
+	void ResetByRotate()		{ StopWinnerAnimation(); m_Map.ResetByRotate(); }
+
+	/**
+	 * Get current map size
+	 * \return current map size
+	 */
+	MapSize GetMapSize() const	{ return m_Map.GetMapSize(); }
 
 private:
+	/**
+	 * Stop winner animation
+	 */
+	inline void StopWinnerAnimation()	{ m_Explosions.clear(); }
+
 	/**
 	 * Render puzzle
 	 * \param transition transition phase [0...1]
@@ -68,9 +96,10 @@ private:
 	 * Get map scale factor
 	 * \return map scale factor
 	 */
-	float GetMapScaleFactor() const				{ return (10.0f / static_cast<float>(m_Map->GetMapSize())); }
+	inline float GetMapScaleFactor() const	{ return (10.0f / static_cast<float>(m_Map.GetMapSize())); }
 
 private:
+	CMap				m_Map;			///< Game map
 	vector<CExplosion>	m_Explosions;	///< Winner explosions
-	CMap*				m_Map;			///< Game map
+	CGame&				m_Game;			///< Game instance
 };

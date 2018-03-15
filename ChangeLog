@@ -1,3 +1,14 @@
+PipeWalker 0.7.1 2009-07-10
+---------------------------
+ * added posibility to resize the application window
+ * added posibility to enable/disable audio
+ * added posibility to choose wrapping mode
+ * added one more map size (30x30)
+ * fixed bug with load/save map state
+ * fixed some small bugs
+ * removed SDL dependency for native MS Windows build
+ * some interface updates (settings page)
+
 PipeWalker 0.6.1 2009-05-28
 ---------------------------
  * added different map size (10x10, 14x14, 20x20)

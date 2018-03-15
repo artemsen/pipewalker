@@ -1,9 +1,7 @@
-SUBDIRS = textures
-
 pkgdatadir = $(datadir)/games/$(PACKAGE)
 pkgdata_DATA = \
 	clatz.wav \
-	PipeWalker.bmp
+	network.tga \
+	font.tga
 
-EXTRA_DIST = \
-	$(pkgdata_DATA)
+EXTRA_DIST = $(pkgdata_DATA)

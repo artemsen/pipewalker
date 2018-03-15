@@ -62,13 +62,13 @@ public:	//Helper functions
 	 * Save cell state as text
 	 * \return cell description
 	 */
-	string Save() const;
+	unsigned short Save() const;
 
 	/**
 	 * Load cell state from text
 	 * \param state cell description
 	 */
-	void Load(const string& state);
+	void Load(const unsigned short state);
 
 	/**
 	 * Reverse lock state of the cell

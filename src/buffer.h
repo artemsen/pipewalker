@@ -53,6 +53,12 @@ public:
 	void Save(const char* fileName);
 
 	/**
+	 * Copy buffer
+	 * \param copyBuf destination buffer
+	 */
+	void Copy(vector<unsigned char>& copyBuf) const	{ copyBuf = m_Data; }
+
+	/**
 	 * Get end-of-buffer (EOB) flag
 	 * \return EOB flag
 	 */

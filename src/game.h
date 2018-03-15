@@ -23,52 +23,55 @@
 #include "button.h"
 #include "modepuzzle.h"
 #include "modesettings.h"
+#include "settings.h"
+#include "winmgr.h"
 
 
-class CGame
+class CGame : public CEventHandler
 {
 public:
 	//! Default constructor
 	CGame();
 
+	//! Destructor
+	virtual ~CGame() {}
+
 	/**
-	 * Do main game loop
+	 * Initialization
 	 */
-	void DoMainLoop();
+	void Initialize(CWinManager& winMgr);
+
+	/**
+	 * Finalize handler
+	 */
+	void Finalize();
+
+public:
+	//From CEventHandler
+	void RenderScene(const float mouseX, const float mouseY);
+	void OnKeyboardKeyDown(const char key);
+	void OnMouseButtonDown(const float mouseX, const float mouseY, const MouseButton btn);
+	void OnMouseMove(const float mouseX, const float mouseY);
 
 private:
-	//! Render modes
-	enum Mode {
-		Puzzle,				///< Puzzle (Play) mode
-		Puzzle2Puzzle,		///< Puzzle to puzzle transition mode
-		Puzzle2Settings,	///< Puzzle to settings transition mode
-		Settings,			///< Settings mode
-		Settings2Puzzle		///< Settings to puzzle transition mode
+	//! Game render modes
+	enum GameMode {
+		Undefined,		///< Undefined mode
+		Puzzle,			///< Puzzle (Play) mode
+		Options,		///< Options mode
 	};
 
 	//! Transition phase
-	enum Phase {
-		FirstPhase,			///< First transition phase
-		SecondPhase			///< Second transition phase
+	enum TransitionPhase {
+		FirstPhase,		///< First transition phase
+		SecondPhase		///< Second transition phase
 	};
 
 	/**
-	 * Get mouse position in world coordinates
-	 * \param mouseX returned X world mouse coordinate
-	 * \param mouseY returned Y world mouse coordinate
-	 * \return false if coordinates is out of the window
+	 * Renew map
+	 * \param nextMapNum next map number
 	 */
-	static bool GetMousePosition(float& mouseX, float& mouseY);
-
-	/**
-	 * Post redraw event
-	 */
-	static void PostRedrawEvent();
-
-	/**
-	 * Render scene
-	 */
-	void RenderScene();
+	void RenewMap(const unsigned long nextMapNum);
 
 	/**
 	 * Render environment
@@ -76,24 +79,36 @@ private:
 	void RenderEnvironment();
 
 	/**
-	 * Mouse click handler
-	 * \param button mouse button identifier
-	 */
-	void OnMouseClick(const Uint8 button);
-
-	/**
 	 * Begin new transition
-	 * \param nextMode next expected mode
+	 * \param nextMode next game render mode
+	 * \param startPhase starting phase
 	 */
-	void BeginTransition(const Mode nextMode);
+	void BeginTransition(const GameMode nextMode, const TransitionPhase startPhase = FirstPhase);
+
+	inline bool TransitionInProgress() const	{ return (m_TrnStartTime != 0); }
+public:
+	//Accessors
+	inline CWinManager& WinManager()	{ return *m_WinManager; }
+	inline CSettings& Settings()		{ return m_Settings; }
 
 private:	//Class variables
-	Mode			m_Mode;				///< Currently active mode
-	Phase			m_TrnPhase;			///< Transition phase (first=true, second=false)
-	unsigned int	m_TrnStartTime;		///< Transition (mode changing) start time (zero if transition is not in active mode)
+	CWinManager*	m_WinManager;		///< Window manager
+	CSettings		m_Settings;			///< Game settings
 
-	CMap			m_Map;				///< Game map
-	unsigned int	m_NextMapId;		///< Next map id (for next new game level)
+	GameMode		m_ActiveMode;		///< Currently active mode
+	GameMode		m_NextMode;			///< Next mode
+	TransitionPhase	m_TrnPhase;			///< Transition phase (first=true, second=false)
+	unsigned int	m_TrnStartTime;		///< Transition (mode changing) start time (zero if transition is not active)
+
+
+
+
+	unsigned long	m_NextMapId;		///< Next map id (for next new game level)
+	bool			m_RenewMap;			///< Map renew flag
+
+
+
+
 
 	CModePuzzle		m_ModePuzzle;		///< Renderer/handler (game mode)
 	vector<CButton>	m_BtnPuzzle;		///< Buttons array (game mode)

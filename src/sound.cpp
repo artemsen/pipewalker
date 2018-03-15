@@ -17,14 +17,18 @@
  **************************************************************************/
 
 #include "sound.h"
+#ifdef PW_USE_WIN
+	#include "buffer.h"
+#endif //PW_USE_WIN
 
-bool CSoundBank::m_UseSound = false;
+bool CSoundBank::m_SoundInitialized = false;
 CSound CSoundBank::m_Sound[SndCounter];
 
-#define PW_AUDIO_FORMAT		AUDIO_S16
-#define PW_AUDIO_FREQ		22050
-#define PW_AUDIO_CHANNELS	1
-
+#ifdef PW_USE_SDL
+	#define PW_AUDIO_FORMAT		AUDIO_S16
+	#define PW_AUDIO_FREQ		22050
+	#define PW_AUDIO_CHANNELS	1
+#endif //PW_USE_SDL
 
 //! Types and files of textures
 struct SndFile {
@@ -37,38 +41,39 @@ static const SndFile SoundFiles[] = {
 };
 
 
-void CSoundBank::Initialize()
+void CSoundBank::Load()
 {
+#if defined PW_USE_SDL		//SDL library
 	if (SDL_InitSubSystem(SDL_INIT_AUDIO) != 0) {
 		fprintf(stderr, "Audio initialization failed: %s\n", SDL_GetError());
+		return;
 	}
-	else {
-		SDL_AudioSpec soundAudiospec;
-		soundAudiospec.freq = PW_AUDIO_FREQ;
-		soundAudiospec.format = PW_AUDIO_FORMAT;
-		soundAudiospec.channels = PW_AUDIO_CHANNELS;
-		soundAudiospec.samples = 512;
-		soundAudiospec.callback = OnFillBuffer;
-		soundAudiospec.userdata = NULL;
-		if (SDL_OpenAudio(&soundAudiospec, NULL) != 0)
-			fprintf(stderr, "Unable to open audio device: %s\n", SDL_GetError());
-		else {
-			SDL_PauseAudio(1);
-
-			assert(SndCounter == sizeof(SoundFiles) / sizeof(SoundFiles[0]));	//Don't forget sync counter and files!
-
-			//Load the textures from files
-			for (size_t i = 0; i < SndCounter; ++i) {
-				char fileName[256];
-				strcpy(fileName, DIR_GAMEDATA);
-				strcat(fileName, SoundFiles[i].FileName);
-
-				m_Sound[i].Load(fileName);
-			}
-
-			m_UseSound = true;
-		}
+	SDL_AudioSpec soundAudiospec;
+	soundAudiospec.freq = PW_AUDIO_FREQ;
+	soundAudiospec.format = PW_AUDIO_FORMAT;
+	soundAudiospec.channels = PW_AUDIO_CHANNELS;
+	soundAudiospec.samples = 512;
+	soundAudiospec.callback = OnFillBuffer;
+	soundAudiospec.userdata = NULL;
+	if (SDL_OpenAudio(&soundAudiospec, NULL) != 0) {
+		fprintf(stderr, "Unable to open audio device: %s\n", SDL_GetError());
+		return;
 	}
+
+	SDL_PauseAudio(1);
+#endif //PW_USE_SDL
+
+	assert(SndCounter == sizeof(SoundFiles) / sizeof(SoundFiles[0]));	//Don't forget sync counter and files!
+
+	//Load the sounds from files
+	for (size_t i = 0; i < SndCounter; ++i) {
+		char fileName[256];
+		strcpy(fileName, DIR_GAMEDATA);
+		strcat(fileName, SoundFiles[i].FileName);
+		m_Sound[i].Load(fileName);
+	}
+
+	m_SoundInitialized = true;
 }
 
 
@@ -82,12 +87,16 @@ void CSoundBank::Free()
 void CSoundBank::Play(const SoundType /*type*/)
 {
 	//assert(type >= 0 && type < SndCounter);
-
-	if (m_UseSound)
+#if defined PW_USE_SDL		//SDL library
+	if (m_SoundInitialized)
 		SDL_PauseAudio(0);
+#elif defined PW_USE_WIN	//Microsoft Windows
+	PlaySound((LPCSTR)&(m_Sound[0].m_Data[0]), NULL, SND_MEMORY | SND_ASYNC);
+#endif
 }
 
 
+#ifdef PW_USE_SDL
 void CSoundBank::OnFillBuffer(void* /*userdata*/, Uint8* stream, int len)
 {
 	const size_t i = SndClatz;
@@ -101,12 +110,15 @@ void CSoundBank::OnFillBuffer(void* /*userdata*/, Uint8* stream, int len)
 		SDL_PauseAudio(1);
 	}
 }
+#endif //PW_USE_SDL
+
 
 
 void CSound::Load(const char* fileName)
 {
 	assert(fileName);
 
+#if defined PW_USE_SDL		//SDL library
 	SDL_AudioSpec wave;
 	Uint8* data;
 	Uint32 dlen;
@@ -124,15 +136,23 @@ void CSound::Load(const char* fileName)
 	m_Data = cvt.buf;
 	m_Pos = 0;
 	m_Length = cvt.len_cvt;
+#elif defined PW_USE_WIN	//Microsoft Windows
+	CBuffer buf;
+	buf.Load(fileName);
+	buf.Copy(m_Data);
+#endif
 }
 
 
 void CSound::Free()
 {
+#if defined PW_USE_SDL		//SDL library
 	if (m_Data)
 		free(m_Data);
-
 	m_Data = NULL;
 	m_Pos = 0;
 	m_Length = 0;
+#elif defined PW_USE_WIN	//Microsoft Windows
+	m_Data.clear();
+#endif
 }

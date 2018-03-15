@@ -20,6 +20,8 @@
 
 #include "common.h"
 
+class CImage;
+
 /**
  * Texture wrapper
  */
@@ -40,6 +42,17 @@ public:
 	 * \return texture identifier
 	 */
 	GLuint GetId() const	{ return m_Id; }
+
+	/**
+	 * Create texture from part of the image
+	 * \param img source image
+	 * \param x an X coordinate of texture
+	 * \param y an Y coordinate of texture
+	 * \param width subimage width
+	 * \param height subimage height
+	 * \param modeWrap wrap texture mode
+	 */
+	void Load(const CImage& img, const size_t x, const size_t y, const size_t width, const size_t height, const int modeWrap = GL_CLAMP);
 
 	/**
 	 * Load texture from file
@@ -63,7 +76,6 @@ public:
 	enum TextureType {
 		TexEnvBkgr = 0,			///< Main environment background
 		TexEnvTitle,			///< Main environment title
-		TexEnvSett,				///< Environment settings window
 		TexCellBackground,		///< Cell background
 		TexSender,				///< Sender
 		TexReceiverActive,		///< Active receiver
@@ -102,7 +114,7 @@ public:
 	/**
 	 * Initialize texture bank (load textures from files)
 	 */
-	static void Initialize();
+	static void Load();
 
 	/**
 	 * Free texture bank

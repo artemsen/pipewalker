@@ -22,127 +22,80 @@
 #include "sound.h"
 #include "game.h"
 #include "texture.h"
-#include "settings.h"
+#include "rendertext.h"
+
+#if defined PW_USE_SDL		//SDL library
+	#include "winmgr_sdl.h"
+#elif defined PW_USE_WIN	//Microsoft Windows
+	#include "winmgr_win.h"
+#else
+	#error Undefined window manager (PW_USE_SDL or PW_USE_WIN must be defined)
+#endif
+
 
 #ifdef WIN32
-#include "PipeWalkerRes.h"
-#endif // WIN32
-
-#define SCREEN_WIDTH	490		///< Initial screen (main window) width
-#define SCREEN_HEIGHT	580		///< Initial screen (main window) height
-
-
 /****************************************************************/
-/*                      ANSI C main routine                     */
+/*                   MS Windows entry point                     */
 /****************************************************************/
-extern "C" int main(int /*argc*/, char** /*argv*/)
+int APIENTRY WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR /*lpCmdLine*/, int /*nCmdShow*/)
 {
+#ifndef NDEBUG
+	//Create console for debug session
+	AllocConsole();
+	freopen("CONOUT$", "wb", stdout);
+	freopen("CONOUT$", "wb", stderr);
+#endif
+#else
+/****************************************************************/
+/*                       ANSI C entry point                     */
+/****************************************************************/
+int main(int /*argc*/, char** /*argv*/)
+{
+#endif
 	//Program result status
 	int resultStatus = EXIT_SUCCESS;
 
-	try {
-#if defined WIN32 && !defined NDEBUG
-		//Create console for debug session
-		AllocConsole();
-		freopen("CONOUT$", "wb", stdout);
-		freopen("CONOUT$", "wb", stderr);
+	CGame game;
+
+#if defined PW_USE_SDL		//SDL library
+	CWinManagerSDL winMgr(game);
+#elif defined PW_USE_WIN	//Microsoft Windows
+	CWinManagerWin winMgr(game);
+#else
+	#error Undefined window manager (PW_USE_SDL or PW_USE_WIN must be defined)
 #endif
 
-		//SDL initialization - step 1
-		if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0)
-			throw CException("Video initialization failed: ", SDL_GetError());
-		//SDL initialization - step 2 (audio)
-		CSoundBank::Initialize();
+	try {
 
-		SDL_WM_SetCaption(PACKAGE_STRING, PACKAGE_STRING);
-#ifdef WIN32
-		HINSTANCE handle = ::GetModuleHandle(NULL);
-		HICON icon = ::LoadIcon(handle, MAKEINTRESOURCE(IDI_PIPEWALKER));
-		SDL_SysWMinfo wminfo;
-		SDL_VERSION(&wminfo.version);
-		if (SDL_GetWMInfo(&wminfo) == 1)
-			::SetClassLong(wminfo.window, GCL_HICON, reinterpret_cast<LONG>(icon));
-#else
-		SDL_WM_SetIcon(SDL_LoadBMP(DIR_GAMEDATA "PipeWalker.bmp"), NULL);
-#endif // WIN32
+		winMgr.CreateGLWindow(PW_SCREEN_WIDTH, PW_SCREEN_HEIGHT);
+		winMgr.InitializeOpenGL(PW_SCREEN_WIDTH, PW_SCREEN_HEIGHT);
 
-		//GL attributes
-		SDL_GL_SetAttribute(SDL_GL_RED_SIZE,     5);
-		SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE,   5);
-		SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,    5);
-		SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE,   5);
-		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE,  16);
-		SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-
-		//Let's get some video information
-		const SDL_VideoInfo* vinfo = SDL_GetVideoInfo();
-		if (!vinfo)
-			throw CException("Unable to get video information: ", SDL_GetError());
-
-		//Create window
-		SDL_Surface* screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, vinfo->vfmt->BitsPerPixel, SDL_OPENGL);
-		if (!screen)
-			throw CException("Unable to set video mode: ", SDL_GetError());
-
-		//Initialize OpenGL subsystem
-		glEnable(GL_CULL_FACE);
-		glEnable(GL_DEPTH_TEST);
-		glEnable(GL_TEXTURE_2D);
-		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-		glDepthFunc(GL_LEQUAL);
-		glShadeModel(GL_SMOOTH);
-		glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glEnable(GL_BLEND);
-
-		//We will use only arrays to draw
-		glEnableClientState(GL_VERTEX_ARRAY);
-		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-
-		//Setup perspective
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		static const GLdouble aspect = static_cast<GLdouble>(SCREEN_WIDTH) / static_cast<GLdouble>(SCREEN_HEIGHT);
-		gluPerspective(70.0, aspect, 1.0, 100.0);
-		gluLookAt(0.0, 0.0, 9.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
-
-#ifndef NDEBUG
-		fprintf(stdout, "GL initialized\n");
-		fprintf(stdout, "GL renderer: %s\n", glGetString(GL_RENDERER));
-		fprintf(stdout, "GL version:  %s\n", glGetString(GL_VERSION));
-		fprintf(stdout, "GL vendor:   %s\n", glGetString(GL_VENDOR));
-#endif // _NDEBUG
-
+		CSoundBank::Load();
 		CSynchro::Start();
-		CTextureBank::Initialize();
-		CSettings::Load();
+		CTextureBank::Load();
+		CRenderText::Load();
 
-		CGame game;
-		game.DoMainLoop();
-
-		CTextureBank::Free();
-		CSettings::Save();
-
-#ifdef WIN32
-		::DestroyIcon(icon);
-#endif	//WIN32
-
+		game.Initialize(winMgr);
+		winMgr.MainLoop();
+		game.Finalize();
 	}
 	catch (const CException& ex) {
-		fprintf(stderr, "Error: %s\n", ex.what());
+		winMgr.ShowError(ex.what());
 		resultStatus = EXIT_FAILURE;
 	}
 	catch (exception& ex) {
-		fprintf(stderr, "Unhandled std exception: %s\n", ex.what());
+		winMgr.ShowError(ex.what());
 		resultStatus = EXIT_FAILURE;
 	}
 	catch (...) {
-		fprintf(stderr, "Unknown fatal error\n");
+		winMgr.ShowError("Unknown fatal error");
 		resultStatus = EXIT_FAILURE;
 	}
 
-	SDL_Quit();
+	CRenderText::Free();
+	CTextureBank::Free();
+	CSoundBank::Free();
+
+	winMgr.OnApplicationExit();
 	return resultStatus;
 }

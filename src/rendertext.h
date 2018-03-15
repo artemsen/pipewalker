@@ -19,41 +19,36 @@
 #pragma once
 
 #include "common.h"
-#include "map.h"
+#include "texture.h"
 
 
-/**
- * CSettings - load / save game state
- */
-class CSettings
+class CRenderText
 {
 public:
-	//! Default constructor
-	CSettings();
+	/**
+	 * Load font data
+	 */
+	static void Load();
 
 	/**
-	 * Load state
+	 * Free font data
 	 */
-	void Load();
+	static void Free();
 
 	/**
-	 * Save state
+	 * Print string
+	 * \param type font type
+	 * \param x an X coordinate of top left text corner (window coordinates begin from top left)
+	 * \param y an Y coordinate of top left text corner (window coordinates begin from top left)
+	 * \param scale scale coefficient
+	 * \param color[4] pointer to RGBA text color value
+	 * \param shadow draw shadow flag
+	 * \param text output string
 	 */
-	void Save() const;
+	static void Print(const float x, const float y, const float scale, const float color[4], const bool shadow, const char* text);
 
-private:
-	/**
-	 * Get file name
-	 * \return file name
-	 */
-	string GetFileName() const;
 
-public:
-	//Application properties
-	unsigned long	MapId;		///< Map MapId
-	MapSize			Size;		///< Map size (in cell)
-	string			State;		///< Map state
-	//bool			Blackout;	///< Blackout mode on/off flag
-	bool			Wrapping;	///< Wrapping mode on/off flag
-	bool			Sound;		///< Sound on/off flag
+private:	//Class variables
+	static GLuint	m_DispList;		///< First display list identifier for normal font
+	static CTexture	m_Texture;		///< Fonts texture
 };

@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;PW_USE_WIN"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -60,6 +60,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="opengl32.lib glu32.lib Winmm.lib"
 				LinkIncremental="2"
 				GenerateDebugInformation="true"
 				SubSystem="2"
@@ -180,11 +181,23 @@
 			>
 		</File>
 		<File
-			RelativePath=".\PipeWalker.rc"
+			RelativePath=".\src\PipeWalker.rc"
 			>
 		</File>
 		<File
 			RelativePath=".\src\PipeWalkerRes.h"
+			>
+		</File>
+		<File
+			RelativePath=".\src\rendertext.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\src\rendertext.h"
+			>
+		</File>
+		<File
+			RelativePath=".\resource.h"
 			>
 		</File>
 		<File
@@ -217,6 +230,30 @@
 		</File>
 		<File
 			RelativePath=".\src\texture.h"
+			>
+		</File>
+		<File
+			RelativePath=".\src\winmgr.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\src\winmgr.h"
+			>
+		</File>
+		<File
+			RelativePath=".\src\winmgr_sdl.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\src\winmgr_sdl.h"
+			>
+		</File>
+		<File
+			RelativePath=".\src\winmgr_win.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\src\winmgr_win.h"
 			>
 		</File>
 	</Files>

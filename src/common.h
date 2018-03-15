@@ -26,40 +26,32 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <string.h>
+
+#ifdef WIN32
+#include <windows.h>
+#endif	//WIN32
 
 using namespace std;
 
 
 #ifndef PACKAGE_STRING
-	#define PACKAGE_STRING		"PipeWalker 0.6.1"
+	#define PACKAGE_STRING		"PipeWalker 0.7.1"
 #endif	//PACKAGE_STRING
 
 #ifndef DIR_GAMEDATA
 	#define DIR_GAMEDATA		"./data/"
 #endif	//DIR_GAMEDATA
 
-#ifndef DIR_TEXTURES
-	#define DIR_TEXTURES		DIR_GAMEDATA "textures/"
-#endif	//DIR_TEXTURES
-
-
-#if defined WIN32 && !defined NDEBUG		//Microsoft Windows NT (MS VS debug session): make release in MinGW32!
-	#pragma comment(lib, "opengl32.lib")
-	#pragma comment(lib, "glu32.lib")
-	#pragma comment(lib, "SDL.lib")
-	#pragma comment(lib, "SDLmain.lib")
-#endif
-
-
-//SDL library
-#include <SDL/SDL.h>
-#include <SDL/SDL_syswm.h>
 
 //OpenGL library
 #include <GL/gl.h>
 #include <GL/glu.h>
 
 #include "exception.h"
+
+#define PW_SCREEN_WIDTH		490	///< Initial screen (main window) width
+#define PW_SCREEN_HEIGHT	580	///< Initial screen (main window) height
 
 
 /**

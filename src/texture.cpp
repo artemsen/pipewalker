@@ -19,51 +19,6 @@
 #include "texture.h"
 #include "image.h"
 
-//! Types and files of textures
-struct TexFile {
-	CTextureBank::TextureType	Type;
-	const char*					FileName;
-};
-
-static const TexFile TextureFiles[] = {
-	{ CTextureBank::TexEnvBkgr,			"env_bkgr.tga"		},
-	{ CTextureBank::TexEnvTitle,		"env_title.tga"		},
-	{ CTextureBank::TexEnvSett,			"env_sett.tga"		},
-	{ CTextureBank::TexCellBackground,	"cell_bkg.tga"		},
-	{ CTextureBank::TexSender,			"cell_sender.tga"	},
-	{ CTextureBank::TexReceiverActive,	"cell_rcv_a.tga"	},
-	{ CTextureBank::TexReceiverPassive,	"cell_rcv_p.tga"	},
-	{ CTextureBank::TexLock,			"cell_lock.tga"		},
-	{ CTextureBank::TexTubeHalfPassive,	"cell_ph_p.tga"		},
-	{ CTextureBank::TexTubeHalfActive,	"cell_ph_a.tga"		},
-	{ CTextureBank::TexTubeCrvPassive,	"cell_pc_p.tga"		},
-	{ CTextureBank::TexTubeCrvActive,	"cell_pc_a.tga"		},
-	{ CTextureBank::TexTubeStrPassive,	"cell_ps_p.tga"		},
-	{ CTextureBank::TexTubeStrActive,	"cell_ps_a.tga"		},
-	{ CTextureBank::TexTubeJnrPassive,	"cell_pj_p.tga"		},
-	{ CTextureBank::TexTubeJnrActive,	"cell_pj_a.tga"		},
-	{ CTextureBank::TexExplosionPart,	"expl_part.tga"		},
-	{ CTextureBank::TexNum0,			"num_0.tga"			},
-	{ CTextureBank::TexNum1,			"num_1.tga"			},
-	{ CTextureBank::TexNum2,			"num_2.tga"			},
-	{ CTextureBank::TexNum3,			"num_3.tga"			},
-	{ CTextureBank::TexNum4,			"num_4.tga"			},
-	{ CTextureBank::TexNum5,			"num_5.tga"			},
-	{ CTextureBank::TexNum6,			"num_6.tga"			},
-	{ CTextureBank::TexNum7,			"num_7.tga"			},
-	{ CTextureBank::TexNum8,			"num_8.tga"			},
-	{ CTextureBank::TexNum9,			"num_9.tga"			},
-	{ CTextureBank::TexButtonNext,		"btn_next.tga"		},
-	{ CTextureBank::TexButtonPrev,		"btn_prev.tga"		},
-	{ CTextureBank::TexButtonReset,		"btn_reset.tga"		},
-	{ CTextureBank::TexButtonSett,		"btn_sett.tga"		},
-	{ CTextureBank::TexButtonOK,		"btn_ok.tga"		},
-	{ CTextureBank::TexButtonCancel,	"btn_cancel.tga"	},
-	{ CTextureBank::TexRadBtnOn,		"btn_radon.tga"		},
-	{ CTextureBank::TexRadBtnOff,		"btn_radoff.tga"	},
-};
-
-
 CTexture CTextureBank::m_Texture[CTextureBank::TexCounter];
 
 
@@ -72,6 +27,27 @@ void CTexture::Free()
 	if (m_Id)
 		glDeleteTextures(1, &m_Id);
 	m_Id = 0;
+}
+
+
+void CTexture::Load(const CImage& img, const size_t x, const size_t y, const size_t width, const size_t height, const int modeWrap /*= GL_CLAMP*/)
+{
+	assert(!(width & width - 1));	//Pow of 2
+	assert(!(height & height - 1));	//Pow of 2
+
+	vector<unsigned char> imgData;
+	img.GetSubImage(x, y, width, height, imgData);
+
+	glGenTextures(1, &m_Id);
+
+	glBindTexture(GL_TEXTURE_2D, m_Id);
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, modeWrap);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, modeWrap);
+	glTexImage2D(GL_TEXTURE_2D, 0, img.GetMode(), width, height, 0, img.GetMode(), GL_UNSIGNED_BYTE, &imgData[0]);
 }
 
 
@@ -100,23 +76,47 @@ void CTexture::Load(const char* fileName, const int modeWrap /*= GL_CLAMP*/)
 }
 
 
-void CTextureBank::Initialize()
+void CTextureBank::Load()
 {
-	assert(TexCounter == sizeof(TextureFiles) / sizeof(TextureFiles[0]));	//Don't forget sync counter and files!
-
 	Free();
 
-	//Load the textures from files
-	for (size_t i = 0; i < TexCounter; ++i) {
-		char fileName[256];
-		strcpy(fileName, DIR_TEXTURES);
-		strcat(fileName, TextureFiles[i].FileName);
+	CImage img;
+	img.Load(DIR_GAMEDATA "network.tga");
 
-		if (i == CTextureBank::TexEnvBkgr || i == CTextureBank::TexCellBackground)
-			m_Texture[i].Load(fileName, GL_REPEAT);
-		else
-			m_Texture[i].Load(fileName);
-	}
+	m_Texture[TexEnvBkgr].          Load(img,  8 * 64, 0 * 64, 64, 64, GL_REPEAT);
+	m_Texture[TexEnvTitle].         Load(img,  0 * 64, 0 * 64, 8 * 64, 64, GL_CLAMP);
+	m_Texture[TexCellBackground].   Load(img,  9 * 64, 0 * 64, 64, 64, GL_REPEAT);
+	m_Texture[TexSender].           Load(img,  0 * 64, 2 * 64, 64, 64, GL_CLAMP);
+	m_Texture[TexReceiverPassive].  Load(img,  1 * 64, 2 * 64, 64, 64, GL_CLAMP);
+	m_Texture[TexReceiverActive].   Load(img,  2 * 64, 2 * 64, 64, 64, GL_CLAMP);
+	m_Texture[TexLock].             Load(img,  3 * 64, 2 * 64, 64, 64, GL_CLAMP);
+	m_Texture[TexTubeHalfPassive].  Load(img,  4 * 64, 2 * 64, 64, 64, GL_CLAMP);
+	m_Texture[TexTubeHalfActive].   Load(img,  5 * 64, 2 * 64, 64, 64, GL_CLAMP);
+	m_Texture[TexTubeStrPassive].   Load(img,  6 * 64, 2 * 64, 64, 64, GL_CLAMP);
+	m_Texture[TexTubeStrActive].    Load(img,  7 * 64, 2 * 64, 64, 64, GL_CLAMP);
+	m_Texture[TexTubeCrvPassive].   Load(img,  8 * 64, 2 * 64, 64, 64, GL_CLAMP);
+	m_Texture[TexTubeCrvActive].    Load(img,  9 * 64, 2 * 64, 64, 64, GL_CLAMP);
+	m_Texture[TexTubeJnrPassive].   Load(img, 10 * 64, 2 * 64, 64, 64, GL_CLAMP);
+	m_Texture[TexTubeJnrActive].    Load(img, 11 * 64, 2 * 64, 64, 64, GL_CLAMP);
+	m_Texture[TexExplosionPart].    Load(img,  6 * 64, 1 * 64 + 32, 32, 32, GL_CLAMP);
+	m_Texture[TexNum0].	            Load(img,  7 * 64, 1 * 64, 32, 64, GL_CLAMP);
+	m_Texture[TexNum1].	            Load(img,  7 * 64 + 32, 1 * 64, 32, 64, GL_CLAMP);
+	m_Texture[TexNum2].	            Load(img,  8 * 64, 1 * 64, 32, 64, GL_CLAMP);
+	m_Texture[TexNum3].	            Load(img,  8 * 64 + 32, 1 * 64, 32, 64, GL_CLAMP);
+	m_Texture[TexNum4].	            Load(img,  9 * 64, 1 * 64, 32, 64, GL_CLAMP);
+	m_Texture[TexNum5].	            Load(img,  9 * 64 + 32, 1 * 64, 32, 64, GL_CLAMP);
+	m_Texture[TexNum6].	            Load(img, 10 * 64, 1 * 64, 32, 64, GL_CLAMP);
+	m_Texture[TexNum7].	            Load(img, 10 * 64 + 32, 1 * 64, 32, 64, GL_CLAMP);
+	m_Texture[TexNum8].	            Load(img, 11 * 64, 1 * 64, 32, 64, GL_CLAMP);
+	m_Texture[TexNum9].	            Load(img, 11 * 64 + 32, 1 * 64, 32, 64, GL_CLAMP);
+	m_Texture[TexButtonPrev].       Load(img,  0 * 64, 1 * 64, 64, 64, GL_CLAMP);
+	m_Texture[TexButtonNext].       Load(img,  1 * 64, 1 * 64, 64, 64, GL_CLAMP);
+	m_Texture[TexButtonOK].         Load(img,  2 * 64, 1 * 64, 64, 64, GL_CLAMP);
+	m_Texture[TexButtonCancel].     Load(img,  3 * 64, 1 * 64, 64, 64, GL_CLAMP);
+	m_Texture[TexButtonReset].      Load(img,  4 * 64, 1 * 64, 64, 64, GL_CLAMP);
+	m_Texture[TexButtonSett].       Load(img,  5 * 64, 1 * 64, 64, 64, GL_CLAMP);
+	m_Texture[TexRadBtnOff].        Load(img, 10 * 64, 0 * 64, 64, 64, GL_CLAMP);
+	m_Texture[TexRadBtnOn].         Load(img, 11 * 64, 0 * 64, 64, 64, GL_CLAMP);
 }
 
 

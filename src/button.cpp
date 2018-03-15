@@ -75,13 +75,57 @@ void CButton::RenderButton(const float x, const float y, const GLuint texture) c
 }
 
 
-CRadioButton::CRadioButton(const bool state, const float x, const float y, const float width, const float height, const GLuint texOn, const GLuint texOff, const int id)
+CCheckBoxButton::CCheckBoxButton(const bool state, const float x, const float y, const float width, const float height, const GLuint texOn, const GLuint texOff, const int id)
 : CButton(x, y, width, height, texOn, id), m_State(state), m_TexOff(texOff)
 {
 }
 
 
-void CRadioButton::Render(const float x, const float y) const
+void CCheckBoxButton::Render(const float x, const float y) const
 {
 	RenderButton(x, y, m_State ? m_TexId : m_TexOff);
+}
+
+
+void CRadioButtons::AddButton(const CCheckBoxButton& btn)
+{
+	m_Buttons.push_back(btn);
+}
+
+
+void CRadioButtons::Render(const float mouseX, const float mouseY) const
+{
+	for (vector<CCheckBoxButton>::const_iterator itBtn = m_Buttons.begin(); itBtn != m_Buttons.end(); ++itBtn)
+		itBtn->Render(mouseX, mouseY);
+}
+
+
+bool CRadioButtons::OnClick(const float mouseX, const float mouseY)
+{
+	bool stateChanged = false;
+	for (vector<CCheckBoxButton>::const_iterator itBtn = m_Buttons.begin(); itBtn != m_Buttons.end() && !stateChanged; ++itBtn)
+		stateChanged = itBtn->IsMouseOver(mouseX, mouseY) && !itBtn->GetState();
+
+	if (stateChanged) {
+		for (vector<CCheckBoxButton>::iterator itBtn = m_Buttons.begin(); itBtn != m_Buttons.end(); ++itBtn)
+			itBtn->SetState(itBtn->IsMouseOver(mouseX, mouseY));
+	}
+	return stateChanged;
+}
+
+
+int CRadioButtons::GetChoice() const
+{
+	int id = -1;
+	for (vector<CCheckBoxButton>::const_iterator itBtn = m_Buttons.begin(); itBtn != m_Buttons.end() && id < 0; ++itBtn)
+		if (itBtn->GetState())
+			id = itBtn->GetId();
+	return id;
+}
+
+
+void CRadioButtons::SetChoice(const int choiceId)
+{
+	for (vector<CCheckBoxButton>::iterator itBtn = m_Buttons.begin(); itBtn != m_Buttons.end(); ++itBtn)
+		itBtn->SetState(itBtn->GetId() == choiceId);
 }

@@ -30,19 +30,17 @@ public:
 	CImage();
 
 	/**
-	 * Copy constructor
-	 * \param img existing image
-	 */
-	CImage(const CImage& img);
-
-	//! Destructor
-	~CImage();
-
-	/**
 	 * Load image from file
 	 * \param fileName a file name
 	 */
 	void Load(const char* fileName);
+
+	/**
+	 * Load XPM image
+	 * \param data image data
+	 * \param strNum string number in image data
+	 */
+	void LoadXPM(const char* data[], const size_t strNum);
 
 	/**
 	 * Image properties: Get image width
@@ -66,34 +64,37 @@ public:
 	 * Image properties: Get image size in bytes
 	 * \return image format
 	 */
-	inline size_t GetSize() const				{ return m_ImgWidth * m_ImgHeight * GetBPP(); }
+	inline size_t SizeInBytes() const			{ return m_ImgWidth * m_ImgHeight * BytesPerPixel(); }
 
 	/**
 	 * Image properties: Get number of bytes per pixel
 	 * \return number byte per pixel
 	 */
-	inline unsigned char GetBPP() const			{ return m_ImgMode == GL_RGB ? 3 : m_ImgMode == GL_RGBA ? 4 : 1; }
+	inline unsigned char BytesPerPixel() const	{ return m_ImgMode == GL_RGB ? 3 : m_ImgMode == GL_RGBA ? 4 : 1; }
 
 	/**
 	 * Image properties: Get image data
 	 * \return image data (bitmap)
 	 */
-	inline unsigned char* const GetData() const	{ return m_Data; }
+	inline const unsigned char* GetData() const	{ return m_Data.empty() ? NULL : &m_Data[0]; }
 
+	/**
+	 * Image properties: Get image data
+	 * \return image data (bitmap)
+	 */
+	inline unsigned char* GetData()				{ return m_Data.empty() ? NULL : &m_Data[0]; }
+
+	/**
+	 * Get sub image
+	 * \param x left corner coordinates
+	 * \param y top coordinates
+	 * \param width sub image width
+	 * \param height sub image height
+	 * \param data sub image array data
+	 */
+	void GetSubImage(const size_t x, const size_t y, const size_t width, const size_t height, vector<unsigned char>& data) const;
 
 private:
-	/**
-	 * Targa image (TGA) loader
-	 * \param buf image data
-	 */
-	void LoadTarga(CBuffer* buf);
-
-	/**
-	 * Bitmap image (BMP) loader
-	 * \param buf image data
-	 */
-	void LoadBitmap(CBuffer* buf);
-
 	/**
 	 * Convert BGR to RGB mode
 	 */
@@ -105,8 +106,8 @@ private:
 	void FlipVertical();
 
 private:	//Class variables
-	size_t			m_ImgWidth;		///< Image width
-	size_t			m_ImgHeight;	///< Image height
-	GLint			m_ImgMode;		///< Image mode
-	unsigned char*	m_Data;			///< Image data
+	size_t					m_ImgWidth;		///< Image width
+	size_t					m_ImgHeight;	///< Image height
+	GLint					m_ImgMode;		///< Image mode
+	vector<unsigned char>	m_Data;			///< Image data
 };
