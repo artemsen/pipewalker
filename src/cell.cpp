@@ -19,7 +19,7 @@
 #include "cell.h"
 
 
-CCell::CCell()
+CCell::CCell(void)
 {
 	Reset();
 }
@@ -30,80 +30,101 @@ CCell::~CCell()
 }
 
 
+CCell& CCell::operator=(const CCell& cell) 
+{
+	Reset();
+	Type = cell.Type;
+	Sides = cell.Sides;
+	return *this;
+}
+
+
 void CCell::Reset()
 {
 	//Reset state of the object to default values
-	Type = ObjNone,
+	Type = Free,
 	State = false;
-	ConnSide = CONNECT_UNDEF;
-	RotateAngle = 0.0f;
-	RotateAngleEnd = 0.0f;
-	RotateCurr = 0.0f;
-	RotateStart = 0;
-	RotateTwice = false;
+	m_fLock = false;
+	Sides = CONNECT_UNDEF;
 	Weight = MAX_WEIGHT;
 	Used = false;
+
+	Rotate.StartTime = 0;
+	Rotate.Angle = 0.0f;
+	Rotate.Twice = false;
 }
 
 
-void CCell::SetAngleBySide()
+void CCell::StartRotate(const Direction enuDir)
 {
-	switch (Type) {
-		case ObjNone:
-			break;
-		case ObjStrTube:
-		case ObjCurTube:
-			switch (ConnSide) {
-				case (CONNECT_UP | CONNECT_DOWN):		RotateAngle = 0 * 90;	break;
-				case (CONNECT_UP | CONNECT_RIGHT):		RotateAngle = 0 * 90;	break;
-				case (CONNECT_RIGHT | CONNECT_DOWN):	RotateAngle = 1 * 90;	break;
-				case (CONNECT_RIGHT | CONNECT_LEFT):	RotateAngle = 1 * 90;	break;
-				case (CONNECT_DOWN | CONNECT_LEFT):		RotateAngle = 2 * 90;	break;
-				case (CONNECT_LEFT | CONNECT_UP):		RotateAngle = 3 * 90;	break;
-			}
-			break;
-		case ObjTubeJoint:
-			switch (ConnSide) {
-				case (CONNECT_UP | CONNECT_RIGHT | CONNECT_DOWN):	RotateAngle = 0 * 90;	break;
-				case (CONNECT_RIGHT | CONNECT_DOWN | CONNECT_LEFT):	RotateAngle = 1 * 90;	break;
-				case (CONNECT_DOWN | CONNECT_LEFT | CONNECT_UP):	RotateAngle = 2 * 90;	break;
-				case (CONNECT_LEFT | CONNECT_UP | CONNECT_RIGHT):	RotateAngle = 3 * 90;	break;
-			}
-			break;
-		case ObjReceiver:
-		case ObjSender:
-			switch (ConnSide) {
-				case CONNECT_UP:	RotateAngle = 0 * 90;	break;
-				case CONNECT_RIGHT:	RotateAngle = 1 * 90;	break;
-				case CONNECT_DOWN:	RotateAngle = 2 * 90;	break;
-				case CONNECT_LEFT:	RotateAngle = 3 * 90;	break;
-			}
-			break;
-	}
-}
+	assert(Type != Free);	//Nothing to rotate
 
-
-void CCell::SetConnectionSideByRotate(bool fClockwise)
-{
-	if (fClockwise)
-		ConnSide = (ConnSide << 1) | (ConnSide >> 3);
-	else
-		ConnSide = (ConnSide >> 1) | (ConnSide << 3);
-	ConnSide &= 0xF;
-}
-
-
-void CCell::StartRotate(bool fClockwise, bool fTwice)
-{
-	if (Type == ObjNone)
-		return;	//Nothing to rotate
-
-	if (RotateStart != 0) {
+	if (IsRotationInProgress()) {
 		//Rotation already in progress
-		RotateTwice = true;
+		Rotate.Twice = true;
 		return;
 	}
-	RotateTwice = fTwice;
-	RotateStart = GetTickCount();
-	RotateAngleEnd = RotateAngle + (fClockwise ? 90.0f : -90.0f);
+
+	Rotate.Dir = enuDir;
+	Rotate.Twice = false;
+	Rotate.StartTime = GetTickCount();
+}
+
+
+void CCell::EndRotate(void)
+{
+	assert(IsRotationInProgress());
+
+	Rotate.StartTime = 0;
+	Rotate.Angle = 0.0f;
+
+	//Define new connected sides
+	unsigned int unNewSides = 0;
+	if (Sides & CONNECT_UP)
+		unNewSides |= (Rotate.Dir == Positive ? CONNECT_RIGHT : CONNECT_LEFT);
+	if (Sides & CONNECT_DOWN)
+		unNewSides |= (Rotate.Dir == Positive ? CONNECT_LEFT : CONNECT_RIGHT);
+	if (Sides & CONNECT_LEFT)
+		unNewSides |= (Rotate.Dir == Positive ? CONNECT_UP : CONNECT_DOWN);
+	if (Sides & CONNECT_RIGHT)
+		unNewSides |= (Rotate.Dir == Positive ? CONNECT_DOWN : CONNECT_UP);
+#ifndef NDEBUG
+	char szRotSt[5];
+	szRotSt[0] = Sides & CONNECT_UP ? 'U' : '-';
+	szRotSt[1] = Sides & CONNECT_DOWN ? 'D' : '-';
+	szRotSt[2] = Sides & CONNECT_LEFT ? 'L' : '-';
+	szRotSt[3] = Sides & CONNECT_RIGHT ? 'R' : '-';
+	szRotSt[4] = 0;
+	char szRotFn[5];
+	szRotFn[0] = unNewSides & CONNECT_UP ? 'U' : '-';
+	szRotFn[1] = unNewSides & CONNECT_DOWN ? 'D' : '-';
+	szRotFn[2] = unNewSides & CONNECT_LEFT ? 'L' : '-';
+	szRotFn[3] = unNewSides & CONNECT_RIGHT ? 'R' : '-';
+	szRotFn[4] = 0;
+	printf("Rotation: %s -> %s\n", szRotSt, szRotFn);
+#endif	//NDEBUG
+	Sides = unNewSides;
+
+	if (Rotate.Twice)
+		StartRotate(Rotate.Dir);
+}
+
+
+unsigned short CCell::GetSideCount(void) const
+{
+	unsigned short nCount = 0;
+	for (unsigned int i = 0; i < sizeof(unsigned int) * 8 /*bits per byte*/; i++) {
+		if (Sides & (1 << i))
+			nCount++;
+	}
+	return nCount;
+}
+
+
+bool CCell::IsCurved(void) const
+{
+	return (
+		GetSideCount() > 2 ||
+		((Sides & CONNECT_UP || Sides & CONNECT_DOWN) && (Sides & CONNECT_LEFT || Sides & CONNECT_RIGHT))
+		);
 }

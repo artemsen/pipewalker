@@ -16,7 +16,9 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>. * 
  **************************************************************************/
 
-#include "xserver.h"
+#ifdef PW_SYSTEM_NIX
+
+#include "wss_x11.h"
 #include "PipeWalker.xpm"	//Window icon
 
 
@@ -48,7 +50,7 @@ bool CXServer::Initialize(void)
 
 		//Create new window
 		m_xWnd = XCreateWindow(m_xDisp, RootWindow(m_xDisp, pVI->screen),
-							0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, pVI->depth, InputOutput, pVI->visual,
+							0, 0, PW_SCREEN_WIDTH, PW_SCREEN_HEIGHT, 0, pVI->depth, InputOutput, pVI->visual,
 							/*CWBorderPixel | CWColormap | CWEventMask*/ 0, 0);
 		if (!m_xWnd)
 			throw("Can't create window");
@@ -60,11 +62,11 @@ bool CXServer::Initialize(void)
 		//Set window properties
 		XSizeHints xSize;	//Set min/max window size (to avoid window size changes)
 		xSize.flags = PMinSize | PMaxSize;
-		xSize.min_width = xSize.max_width = SCREEN_WIDTH;
-		xSize.min_height = xSize.max_height = SCREEN_HEIGHT;
+		xSize.min_width = xSize.max_width = PW_SCREEN_WIDTH;
+		xSize.min_height = xSize.max_height = PW_SCREEN_HEIGHT;
 		Pixmap xIcon;
-		XpmCreatePixmapFromData(m_xDisp, m_xWnd, PipeWalker_xpm, &xIcon, NULL, NULL);
-		XSetStandardProperties(m_xDisp, m_xWnd, WINDOW_TITLE, WINDOW_TITLE, xIcon, NULL, 0, &xSize);
+		XpmCreatePixmapFromData(m_xDisp, m_xWnd, const_cast<char**>(PipeWalker_xpm), &xIcon, NULL, NULL);
+		XSetStandardProperties(m_xDisp, m_xWnd, PW_WINDOW_TITLE, PW_WINDOW_TITLE, xIcon, NULL, 0, &xSize);
 
 		//Register handled events
 		XSelectInput(m_xDisp, m_xWnd, ExposureMask | KeyPressMask | ButtonPressMask);
@@ -158,10 +160,18 @@ void CXServer::PostRedisplay(void)
 		xExpEvent.xexpose.send_event = True;
 		xExpEvent.xexpose.x = 0;
 		xExpEvent.xexpose.y = 0;
-		xExpEvent.xexpose.width = SCREEN_WIDTH;
-		xExpEvent.xexpose.height = SCREEN_HEIGHT;
+		xExpEvent.xexpose.width = PW_SCREEN_WIDTH;
+		xExpEvent.xexpose.height = PW_SCREEN_HEIGHT;
 		xExpEvent.xexpose.count = 0;
 		xExpEvent.xexpose.serial = 1;
 	}
 	XSendEvent(m_xDisp, m_xWnd, True, ExposureMask, &xExpEvent);
 }
+
+void CXServer::ShowErrorMessage(const char* pszErrorMsg)
+{
+	printf(pszErrorMsg);
+	printf("\n");
+}
+
+#endif	//PW_SYSTEM_NIX

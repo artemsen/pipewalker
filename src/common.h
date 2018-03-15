@@ -26,30 +26,26 @@
 #include <time.h>
 #include <string>
 
-#if defined PWTARGET_WINNT
-	//Microsoft Windows NT
+#if defined PW_SYSTEM_WINNT		//Microsoft Windows NT
 	#define WIN32_LEAN_AND_MEAN
 	#include <windows.h>
-
 	#pragma comment(lib, "opengl32.lib")
-	#pragma comment(lib, "glu32.lib")
-#elif defined PWTARGET_XSERVER
-	//Linux/Unix using X server
+#elif defined PW_SYSTEM_NIX		//Linux/Unix using X server
 	#include <sys/time.h>
-	#include <X11/Xlib.h>
-	#include <X11/Xutil.h>
-	#include <X11/keysym.h>
-	#include <X11/xpm.h>
-	#include <GL/glx.h>
 #else
-	#error Undefined target: Please define PWTARGET_WINNT or PWTARGET_XSERVER
+	#error Undefined target: Please define PW_SYSTEM_WINNT or PW_SYSTEM_NIX
 #endif
 
-//OpenGL and GLu library
-#include <GL/gl.h>
-#include <GL/glu.h>
+#if defined PW_USE_GLUT && defined PW_SYSTEM_WINNT
+	//Using GLUT
+	#pragma comment(lib, "glut32.lib")
+#endif
 
-//Helper macros (32 bit only!)
+
+//OpenGL library
+#include <GL/gl.h>
+
+//Helper macros
 #ifndef MAKEWORD
 	#define MAKEWORD(a, b)      ((unsigned short)(((unsigned char)(a)) | ((unsigned short)((unsigned char)(b))) << 8))
 #endif
@@ -69,22 +65,17 @@
 	#define HIBYTE(w)           ((unsigned char)(((unsigned short)(w) >> 8) & 0xFF))
 #endif
 
-//Map properties
-#define MAP_WIDTH_NUM	10		///< Cells by horizontal
-#define MAP_HEIGHT_NUM	10		///< Cells by vertical
-#define MAP_RCV_NUM		30		///< Receivers number
+#define PW_ROTATION_TIME	300		///< Time in ms for rotate operation
+#define PW_ROTATION_ANGLE	90		///< Degree of angle
+#define PW_SCREEN_HEIGHT	600		///< Screen (main window) height
+#define PW_SCREEN_WIDTH		480		///< Screen (main window) width
+#define PW_WINDOW_TITLE		"PipeWalker ver.0.4.1"	///< Main window title
 
-#define MAX_WEIGHT		0xFFFFF	///< Maximum weight of cell
-
-//Screen (main window) properties
-#define SCREEN_WIDTH	450
-#define SCREEN_HEIGHT	550
-
-//Main window title
-#define WINDOW_TITLE	"PipeWalker ver.0.3.1"
-
-
-#ifdef PWTARGET_XSERVER
+#ifndef PW_SYSTEM_WINNT
+/**
+ * Analog of function GetTickCount() by MS Windows for unix systems (used to calculate time for rotate tubes)
+ * @return milliseconds
+ */
 inline unsigned long GetTickCount(void)
 {
 	timeval tv;
@@ -97,10 +88,9 @@ inline unsigned long GetTickCount(void)
 /**
  * Generate random number
  * @param nMax maximum value
- * @param nMin minimum value
- * @return random number from range [min, max]
+ * @return random number from range [0, max]
  */
-inline unsigned int GetRandom(const unsigned int nMax, const unsigned int nMin = 0)
+inline unsigned int GetRandom(const unsigned int nMax)
 {
-	return abs(static_cast<int>(static_cast<double>(rand()) / (RAND_MAX + 1) * (nMax - nMin) + nMin));
+	return abs(static_cast<unsigned int>(static_cast<double>(rand()) / (RAND_MAX + 1) * nMax));
 }

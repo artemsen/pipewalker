@@ -26,14 +26,17 @@ class CGame
 public:
 	//! Default constructor
 	CGame(void);
+
 	//! Default destructor
 	~CGame();
 
 	/**
 	 * Initialize new random map
-	 * @return result (false = unable to create map (to many workstation?))
+	 * @param nSize map size (map is [nSize * nSize])
+	 * @param nReceiversNum number of receivers on map
+	 * @param nMapId map ID (begin value for srand())
 	 */
-	bool New(void);
+	void New(const unsigned short nSize = 0, const unsigned short nReceiversNum = 0, const unsigned int nMapId = 0);
 
 	/**
 	 * Reset current map
@@ -61,23 +64,50 @@ public:
 	CCell* GetObject(const int nXPoint, const int nYPoint);
 
 	/**
+	 * Rotate the tube
+	 * @param pCell pointer to object
+	 * @param enuDir rotate direction
+	 */
+	void RotateTube(CCell* pCell, const CCell::Direction enuDir);
+
+	/**
 	 * Event handle for finishing rotate of the tube
 	 * @param pCell pointer to object
-	 * @return true if rotation on progress (twice rotation is active)
 	 */
-	bool OnTubeRotated(CCell* pCell);
+	void OnTubeRotated(CCell* pCell);
+
+	/**
+	 * Get current map size
+	 * @return current map size
+	 */
+	unsigned short GetMapSize(void) const	{ return m_nMapSize; }
+
+	/**
+	 * Get current map ID
+	 * @return current map ID
+	 */
+	unsigned int GetMapID(void) const		{ return m_nMapID; }
+
 
 private:	//Class variables
-	bool m_fGameOver;
-	unsigned int m_nXSndrPos, m_nYSndrPos;			///< Sender coordinates
-	unsigned int m_nXZeroPos, m_nYZeroPos;			///< Zero point coordinates (sender out)
-	CCell m_vMap[MAP_WIDTH_NUM * MAP_HEIGHT_NUM];	///< Object's map
+	CCell* m_pMap;							///< Object's map
+	bool m_fGameOver;						///< Game over flag
+	unsigned int m_nXSndrPos, m_nYSndrPos;	///< Sender coordinates
+	unsigned int m_nXZeroPos, m_nYZeroPos;	///< Zero point coordinates (sender out)
+	unsigned int m_nMapID;					///< Map ID
+	unsigned int m_nMapSize;				///< Map size
+	unsigned int m_nReceiversNum;			///< Number of receivers on map
 
 private:
 	/**
-	 * Reset current map
+	 * Create new map
 	 */
-	void ResetMap(void);
+	void CreateMap(void)	{ assert(m_pMap == NULL); m_pMap = new CCell[m_nMapSize * m_nMapSize]; }
+
+	/**
+	 * Destroy current map
+	 */
+	void DestroyMap(void)	{ if (m_pMap) { delete[] m_pMap; m_pMap = NULL; } }
 
 	/**
 	 * Install receiver on map
@@ -99,34 +129,14 @@ private:
 	void FillMapWeight(int nXPoint = 0, int nYPoint = 0, int nWeight = 1);
 
 	/**
-	 * Test and make maximal route from receiver to sender
+	 * Test and make route from receiver to sender
 	 * @param nXPoint X coordinate of cell
 	 * @param nYPoint Y coordinate of cell
-	 * @param nWeight maximal weight
-	 * @param fTestOnly test route flag (true = only check if route exist)
+	 * @param nWeight maximal/minimal weight
+	 * @param fUseMaxRoute use max route algorithm at first
 	 * @return result (true = route found)
 	 */
-	bool MakeMaxRoute(int nXPoint, int nYPoint, int nWeight, bool fTestOnly);
-
-	/**
-	 * Test and make minimal route from receiver to sender
-	 * @param nXPoint X coordinate of cell
-	 * @param nYPoint Y coordinate of cell
-	 * @param nWeight maximal weight
-	 * @param fTestOnly test route flag (true = only check if route exist)
-	 * @return result (true = route found)
-	 */
-	bool MakeMinRoute(int nXPoint, int nYPoint, int nWeight, bool fTestOnly);
-
-	/**
-	 * Set connection side status
-	 * @param nPrevXPoint Previous X point
-	 * @param nPrevYPoint Previous Y point
-	 * @param nCurrXPoint Current X point
-	 * @param nCurrYPoint Current Y point
-	 */
-	void SetConnectStatus(int nPrevXPoint, int nPrevYPoint, int nCurrXPoint, int nCurrYPoint);
-
+	bool MakeRoute(unsigned int nXPoint, unsigned int nYPoint, int nWeight, bool fUseMaxRoute);
 
 	/**
 	 * Define connection status

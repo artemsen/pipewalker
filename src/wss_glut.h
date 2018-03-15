@@ -16,47 +16,39 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>. * 
  **************************************************************************/
 
-#ifdef PWTARGET_WINNT	//Only for MS Windows
+#ifdef PW_USE_GLUT
 
 #pragma once
 
 #include "base.h"
 #include "common.h"
-#include "PipeWalkerRes.h"
+#include <GL/glut.h>
 
 
-class CMSWindows : public CWinSubsystem
+class CGlut : public CWinSubsystem
 {
 public:
 	//! Default constructor
-	CMSWindows(CEventHandler* pEventHandler) : CWinSubsystem(pEventHandler), m_hWnd(NULL), m_hDC(NULL)	{}
+	CGlut(CEventHandler* pEventHandler) : CWinSubsystem(pEventHandler), m_nWnd(0)	{}
+
 	//! Default destructor
-	~CMSWindows(void)	{}
+	~CGlut()	{}
 
 public:	//From CWinSubsystem
 	bool Initialize(void);
 	int DoMainLoop(void);
 	void PostExit(void);
 	void PostRedisplay(void);
+	void ShowErrorMessage(const char* pszErrorMsg);
 
 private:
-	HWND	m_hWnd;		///< Holds Our Window Handle
-	HDC		m_hDC;		///< Private GDI Device Context
+	int				m_nWnd;		///< Number of our GLUT window
+	static CGlut*	m_pThis;	///< This class
 
-	/**
-	 * Destroy window and post exit message
-	 */
-	void DestroyAndQuit(void);
-
-	/**
-	 * The WindowProc function (for more information see MSDN)
-	 * @param hWnd Handle to the window
-	 * @param uMsg Specifies the message
-	 * @param wParam Specifies additional message information
-	 * @param lParam Specifies additional message information
-	 * @return result of the message processing, depends on the message sent
-	 */
-	static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+	//Glut callback functions
+	static void OnMouseButton(int nButton, int nState, int nX, int nY);
+	static void OnKeyPressed(unsigned char ucKey, int nX, int nY);
+	static void OnDrawGLScene(void);
 };
 
-#endif
+#endif	//PW_USE_GLUT

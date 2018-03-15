@@ -16,10 +16,28 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>. * 
  **************************************************************************/
 
-#include "texload.h"
+#include "tgaloader.h"
 
 
-bool CTextureLoader::LoadTexture(int* pnTexture, const char* pszFileName)
+bool CTGALoader::LoadTexture(GLuint* pnTexture, const char* pszFileName, char* pszErrorDescr)
+{
+	Image hImage;
+	if (LoadImage(&hImage, pszFileName, pszErrorDescr)) {
+		//Create Texture
+		glGenTextures(1, pnTexture);
+		glBindTexture(GL_TEXTURE_2D, *pnTexture);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); //scale linearly when image bigger than texture
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); //scale linearly when image smalled than texture
+
+		glTexImage2D(GL_TEXTURE_2D, 0, hImage.Format, hImage.Width, hImage.Height, 0, hImage.Format, GL_UNSIGNED_BYTE, hImage.Data);
+		return true;
+	}
+	return false;
+}
+
+
+bool CTGALoader::LoadImage(Image* pImage, const char* pszFileName, char* pszErrorDescr)
 {
 	bool fResult = false;
 
@@ -44,10 +62,25 @@ bool CTextureLoader::LoadTexture(int* pnTexture, const char* pszFileName)
 		if (fread(pImgData, nSize, 1, pFile) != 1)
 			throw("Error reading file");
 
-		fResult = LoadTexture(pnTexture, pImgData, nSize);
+		//Image headers
+		static const char HdrTGAUnc[] = {0x00,0x00,0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};	//Uncompressed TGA
+		static const char HdrTGARle[] = {0x00,0x00,0x0A,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};	//RLE compressed TGA
+
+		CBuffer imgBuf(pImgData, nSize);
+
+		//Check header to define format
+		if (memcmp(HdrTGAUnc, pImgData, sizeof(HdrTGAUnc)) == 0 ||
+			memcmp(HdrTGARle, pImgData, sizeof(HdrTGARle)) == 0) {
+			LoadTGA(&imgBuf, pImage);
+		}
+		else
+			throw("Unknown format");
+		
+		fResult = true;
 	}
 	catch(const char* pszErr) {
-		printf("Error loading textures from file %s: %s\n", pszFileName, pszErr);
+		sprintf(pszErrorDescr, "Error loading textures from file \"%s\": %s\n", pszFileName, pszErr);
+		fResult = false;
 	}
 
 	if (pFile)
@@ -60,122 +93,7 @@ bool CTextureLoader::LoadTexture(int* pnTexture, const char* pszFileName)
 }
 
 
-#ifdef PWTARGET_WINNT
-bool CTextureLoader::LoadTexture(int* pnTexture, unsigned int nIDRes)
-{
-	bool fResult = false;
-
-	unsigned char* pImgData = NULL;
-	HRSRC hRsrc = NULL;
-
-	try {
-		hRsrc = FindResource(NULL, MAKEINTRESOURCE(nIDRes), "TEXTURES");
-		if (!hRsrc)
-			throw("Resource not found");
-
-		DWORD dwLen = SizeofResource(NULL, hRsrc);
-		unsigned char* pRsrc = (unsigned char*)LoadResource(NULL, hRsrc);
-		if (!pRsrc)
-			throw("Failed to load resource");
-
-		pImgData = new unsigned char[dwLen];
-		if (pImgData == NULL)
-			throw("Memory allocation error");
-
-		memcpy(pImgData, pRsrc, dwLen);
-
-		fResult = LoadTexture(pnTexture, pImgData, dwLen);
-	}
-	catch(const char* pszErr) {
-		printf("Error loading textures from from resources: %s\n", pszErr);
-	}
-
-	if (pImgData)
-		delete[] pImgData;
-
-	if (hRsrc)
-		FreeResource(hRsrc);
-
-	return fResult;
-}
-#endif
-
-
-bool CTextureLoader::LoadTexture(int* pnTexture, unsigned char* pImgData, const long nLength)
-{
-	Image hImage;
-
-	//Image headers
-	const char HdrTGAUnc[] = {0x00,0x00,0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};	//Uncompressed TGA
-	const char HdrTGARle[] = {0x00,0x00,0x0A,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};	//RLE compressed TGA
-	const char HdrBMP[]    = {0x42,0x4D};													//Bitmap (BMP)
-
-	try {
-		CBuffer imgBuf(pImgData, nLength);
-
-		//Check header to define format
-		if (memcmp(HdrTGAUnc, pImgData, sizeof(HdrTGAUnc)) == 0 ||
-			memcmp(HdrTGARle, pImgData, sizeof(HdrTGARle)) == 0) {
-			LoadTextureTGA(&imgBuf, &hImage);
-		}
-		else if (memcmp(HdrBMP, pImgData, sizeof(HdrBMP)) == 0) {
-			LoadTextureBMP(&imgBuf, &hImage);
-		}
-		else {
-			throw("Unknown format");
-		}
-	}
-	catch(const char* pszErr) {
-		printf("Error loading textures: %s\n", pszErr);
-		return false;
-	}
-
-	//Create Texture
-	glGenTextures(1, (GLuint*)pnTexture);
-	glBindTexture(GL_TEXTURE_2D, (GLuint)*pnTexture);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); //scale linearly when image bigger than texture
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); //scale linearly when image smalled than texture
-
-	glTexImage2D(GL_TEXTURE_2D, 0, hImage.Format, hImage.Width, hImage.Height, 0, hImage.Format, GL_UNSIGNED_BYTE, hImage.Data);
-
-	return true;
-}
-
-
-void CTextureLoader::LoadTextureBMP(CBuffer* pBuf, Image* pImg)
-{
-	pImg->Format = GL_RGB;
-
-	pBuf->GetData(18);	//Seek through the bmp header, up to the width/height
-
-	//Read the width and height
-	pImg->Width = pBuf->GetUINT32();
-	pImg->Height = pBuf->GetUINT32();
-
-	//Read the number of planes in image (must be 1)
-	if (pBuf->GetUSORT16() != 1)
-		throw("Planes from is not 1");
-
-	//Read the number of bits per pixel (must be 24)
-	if (pBuf->GetUSORT16() != 24)
-		throw("BPP is not 24");
-
-	//Seek past the rest of the bitmap header
-	pBuf->GetData(24);
-
-	//Calculate the size (assuming 24 bits or 3 bytes per pixel).
-	unsigned long ulSize = pImg->Width * pImg->Height * 3;
-	//assert(ulSize + nPos <= nLength);
-
-	//Read the data.
-	pImg->Data = const_cast<unsigned char *>(pBuf->GetData(ulSize));
-
-	ConvertBGR2RGB(pImg->Data, ulSize, 3);
-}
-
-
-void CTextureLoader::LoadTextureTGA(CBuffer* pBuf, Image* pImg)
+void CTGALoader::LoadTGA(CBuffer* pBuf, Image* pImg)
 {
 	pBuf->GetData(2);
 	bool fUseRLE = (pBuf->GetUCHAR8() == 0x0A);
@@ -195,7 +113,7 @@ void CTextureLoader::LoadTextureTGA(CBuffer* pBuf, Image* pImg)
 	else if (pszHeader[4] == 32)
 		pImg->Format = GL_RGBA;
 	else
-		throw("Incorrect format");
+		throw("Incorrect format (color type unsupported)");
 
 	//Calculate the number of bytes per pixel
 	unsigned short int usBPP = pszHeader[4] / 8;
@@ -205,12 +123,11 @@ void CTextureLoader::LoadTextureTGA(CBuffer* pBuf, Image* pImg)
 	//assert(ulSize + nPos <= nLength);
 
 	//Read the data
+	pImg->Data = new unsigned char[ulSize];
 	if (!fUseRLE)
-		pImg->Data = const_cast<unsigned char *>(pBuf->GetData(ulSize));
+		memcpy(pImg->Data, pBuf->GetData(ulSize), ulSize); 
 	else {
 		//Create new own buffer to store image data
-		pImg->Data = new unsigned char[ulSize];
-		pImg->OwnBuffer = true;
 		unsigned int nBufPos = 0;
 
 		while (nBufPos < ulSize) {
@@ -228,11 +145,16 @@ void CTextureLoader::LoadTextureTGA(CBuffer* pBuf, Image* pImg)
 			}
 		}
 	}
-	ConvertBGR2RGB(pImg->Data, ulSize, usBPP);
+	//Convert BGR to RGB
+	for (unsigned long i = 0; i < ulSize; i += usBPP) {
+		unsigned char cTmp = pImg->Data[i];
+		pImg->Data[i] = pImg->Data[i + 2];
+		pImg->Data[i + 2] = cTmp;
+	}
 }
 
 
-void CTextureLoader::ConvertBGR2RGB(unsigned char* pImgData, const unsigned long nLength, const unsigned short nBPP)
+void CTGALoader::ConvertBGR2RGB(unsigned char* pImgData, const unsigned long nLength, const unsigned short nBPP)
 {
 	assert(nBPP == 3 || nBPP == 4);
 	assert(nLength % nBPP == 0);

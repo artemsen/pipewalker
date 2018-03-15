@@ -18,28 +18,68 @@
 
 #include "opengl.h"
 #include "common.h"
-#include "texload.h"
+
 
 //Window subsystem
-#ifdef PWTARGET_WINNT
-#include "mswindows.h"
+#if defined PW_USE_GLUT
+	#include "wss_glut.h"
+#elif defined PW_SYSTEM_WINNT
+	#include "wss_winnt.h"
+#elif defined PW_SYSTEM_NIX
+	#include "wss_x11.h"
 #else
-#include "xserver.h"
+	#error Undefined window subsystem
 #endif
 
-//Screen buttons identifiers
-#define ID_BUTTON_NEW	0xBBBB0001
-#define ID_BUTTON_RESET	0xBBBB0002
+
+//Game properties
+static unsigned short PW_GAME_MODES[3][2] = {
+	{10, 25},	///< Game map mode 10 (width) * 10 (heigth) with 25 (receivers) - deafult mode
+	{20, 90},	///< Game map mode 20 (width) * 20 (heigth) with 90 (receivers)
+	{30, 150}	///< Game map mode 30 (width) * 30 (heigth) with 150 (receivers)
+};
+
+struct GameSettings {
+	GameSettings() : Size(PW_GAME_MODES[0]), ID(0) {}
+	unsigned short*	Size;
+	unsigned int	ID;
+} NewGameSettings;
+
+
+//Screen objects identifiers (Hi word)
+#define PW_BUTTONS_ID			0xB0
+#define PW_CELL_ID				0xF0
+#define PW_CUST_SPINUP_ID		0xA1
+#define PW_CUST_SPINDN_ID		0xA2
+#define PW_CUST_MAPSIZE_ID		0xA3
+//Screen buttons (Lo word)
+#define PW_BTN_NEW_ID			0x01
+#define PW_BTN_RESET_ID			0x02
+#define PW_BTN_INFO_ID			0x03
+#define PW_BTN_INFO_OK_ID		0x04
+#define PW_BTN_CUSTOM_ID		0x05
+#define PW_BTN_CUSTOM_OK_ID		0x06
+#define PW_BTN_CUSTOM_CANCEL_ID	0x07
 
 
 COpenGL::COpenGL(void)
-: m_pWinSubsystem(0)
+: m_enuCurrentMode(ModeInfo),
+  m_enuNewMode(ModeInfo),
+  m_fMotionFirstPhase(true),
+  m_nMotionStartTime(0),
+  m_pGameLogic(NULL),
+  m_pWinSubsystem(NULL),
+  m_pObjects(NULL)
 {
 }
 
 
-COpenGL::~COpenGL(void)
+COpenGL::~COpenGL()
 {
+	if (m_pGameLogic)
+		delete m_pGameLogic;
+	if (m_pObjects)
+		delete m_pObjects;
 }
 
 
@@ -48,15 +88,27 @@ int COpenGL::Run(void)
 	COpenGL gl;
 
 	//Set window manager
-#ifdef PWTARGET_WINNT
+#if defined PW_USE_GLUT
+	CGlut wndMgr(&gl);
+#elif defined PW_SYSTEM_WINNT
 	CMSWindows wndMgr(&gl);
-#else
+#elif defined PW_SYSTEM_NIX
 	CXServer wndMgr(&gl);
 #endif
 	if (!wndMgr.Initialize())
 		return 1;
 
-	gl.SetWndSubsystem(&wndMgr);
+	if (!gl.Initialize(&wndMgr))
+		return 1;
+
+	return wndMgr.DoMainLoop();
+}
+
+
+bool COpenGL::Initialize(CWinSubsystem* pWinSubsystem)
+{
+	//Set current window manager
+	m_pWinSubsystem = pWinSubsystem;
 
 	//Initialize OpenGL subsystem
 	glEnable(GL_TEXTURE_2D);
@@ -73,18 +125,17 @@ int COpenGL::Run(void)
 	glDepthFunc(GL_LEQUAL);
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
-	glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+	glViewport(0, 0, PW_SCREEN_WIDTH, PW_SCREEN_HEIGHT);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(45.0f, static_cast<GLfloat>(SCREEN_WIDTH) / static_cast<GLfloat>(SCREEN_HEIGHT), 1.0f, 20.0f);
-	gluLookAt(0,0,15,0,0,-10,0,1,0);
+	SetupProjection();
 	glMatrixMode(GL_MODELVIEW);
 
 	//Set up lights
 	GLfloat LightAmbient[]	= { 1.0f, 1.0f, 1.0f, 1.0f };
 	GLfloat LightDiffuse[]	= { 1.0f, 1.0f, 1.0f, 1.0f };
 	GLfloat LightSpc[]    	= {-0.2f,-0.2f,-0.2f, 1.0f };
-	GLfloat LightPosition[] = {-3.0f, 3.0f,10.0f, 1.0f };	//Light position
+	GLfloat LightPosition[] = {-5.0f, 5.0f, 10.0f, 1.0f };	//Light position
 	glLightfv(GL_LIGHT1, GL_AMBIENT, LightAmbient);
 	glLightfv(GL_LIGHT1, GL_DIFFUSE, LightDiffuse);
 	glLightfv(GL_LIGHT1, GL_POSITION, LightPosition);
@@ -92,56 +143,28 @@ int COpenGL::Run(void)
 	glEnable(GL_LIGHT1);
 	glEnable(GL_LIGHTING);
 
-	//Load the textures from resources
-#ifdef PWTARGET_WINNT
-	if (!CTextureLoader::LoadTexture(&gl.m_aTextures[TxrCell],			IDTEX_CELLBKGR) ||
-		!CTextureLoader::LoadTexture(&gl.m_aTextures[TxrEnvironment],	IDTEX_BKGR) ||
-		!CTextureLoader::LoadTexture(&gl.m_aTextures[TxrActiveTube],	IDTEX_TUBEACT) ||
-		!CTextureLoader::LoadTexture(&gl.m_aTextures[TxrPassiveTube],	IDTEX_TUBEPSV) ||
-		!CTextureLoader::LoadTexture(&gl.m_aTextures[TxrSender],		IDTEX_SENDER) ||
-		!CTextureLoader::LoadTexture(&gl.m_aTextures[TxrButtonNew],		IDTEX_BTNNEW) ||
-		!CTextureLoader::LoadTexture(&gl.m_aTextures[TxrButtonRst],		IDTEX_BTNRSET) ||
-		!CTextureLoader::LoadTexture(&gl.m_aTextures[TxrWebLink],		IDTEX_WEBLINK) ||
-		!CTextureLoader::LoadTexture(&gl.m_aTextures[TxrTitle],			IDTEX_TITLE) ||
-		!CTextureLoader::LoadTexture(&gl.m_aTextures[TxrWinTitle],		IDTEX_CONGR) ||
-		!CTextureLoader::LoadTexture(&gl.m_aTextures[TxrRcvActive],		IDTEX_DISPACT) ||
-		!CTextureLoader::LoadTexture(&gl.m_aTextures[TxrRcvPassive],	IDTEX_DISPPSV) ||
-		!CTextureLoader::LoadTexture(&gl.m_aTextures[TxrRcvBack],		IDTEX_RECV))
-		return 1;
-#else
-	//Load the textures from file
-	if (!CTextureLoader::LoadTexture(&gl.m_aTextures[TxrCell],			"textures/cellbkg.tga") ||
-		!CTextureLoader::LoadTexture(&gl.m_aTextures[TxrEnvironment],	"textures/bkgr.tga") ||
-		!CTextureLoader::LoadTexture(&gl.m_aTextures[TxrActiveTube],	"textures/tube_act.tga") ||
-		!CTextureLoader::LoadTexture(&gl.m_aTextures[TxrPassiveTube],	"textures/tube_psv.tga") ||
-		!CTextureLoader::LoadTexture(&gl.m_aTextures[TxrSender],		"textures/sender.tga") ||
-		!CTextureLoader::LoadTexture(&gl.m_aTextures[TxrButtonNew],		"textures/btn_new.tga") ||
-		!CTextureLoader::LoadTexture(&gl.m_aTextures[TxrButtonRst],		"textures/btn_reset.tga") ||
-		!CTextureLoader::LoadTexture(&gl.m_aTextures[TxrWebLink],		"textures/weblink.tga") ||
-		!CTextureLoader::LoadTexture(&gl.m_aTextures[TxrTitle],			"textures/title.tga") ||
-		!CTextureLoader::LoadTexture(&gl.m_aTextures[TxrWinTitle],		"textures/congr.tga") ||
-		!CTextureLoader::LoadTexture(&gl.m_aTextures[TxrRcvActive],		"textures/display_act.tga") ||
-		!CTextureLoader::LoadTexture(&gl.m_aTextures[TxrRcvPassive],	"textures/display_psv.tga") ||
-		!CTextureLoader::LoadTexture(&gl.m_aTextures[TxrRcvBack],		"textures/recv.tga"))
-		return 1;
-#endif
+	//Create class objects
+	m_pGameLogic = new CGame;
+	m_pObjects = new CGLObjects;
+
+	//Load textures and create display lists
+	if (!m_pObjects->Initialize()) {
+		m_pWinSubsystem->ShowErrorMessage(m_pObjects->GetLastError());
+		return false;
+	}
 
 	//Start new game
-	gl.NewGame();
+	SetNewMode(ModeNewGame);
 
-	return wndMgr.DoMainLoop();
-}
-
-
-void COpenGL::SetWndSubsystem(CWinSubsystem* pWinSubsystem)
-{
-	//Set current window manager
-	m_pWinSubsystem = pWinSubsystem;
+	return true;
 }
 
 
 void COpenGL::OnMouseClick(const MouseButton enuButton, const int nXCoord, const int nYCoord)
 {
+	if (m_nMotionStartTime != 0)	//Motion in progress
+		return;
+
 	GLint	glViewport[4];
 	GLuint	glBuffer[512];
 
@@ -150,16 +173,19 @@ void COpenGL::OnMouseClick(const MouseButton enuButton, const int nXCoord, const
 
 	glRenderMode(GL_SELECT);
 	glInitNames();	//Initializes the name stack
-	glPushName(0);	//Push 0 (at least one entry) onto the stack
+	glPushName(0);	//Push 0 (at least one entry) into the stack
 
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
-		gluPickMatrix(static_cast<GLdouble>(nXCoord), static_cast<GLdouble>(glViewport[3]) - nYCoord, 1.0f, 1.0f, glViewport);
-		gluPerspective(45.0f, static_cast<GLfloat>(SCREEN_WIDTH) / static_cast<GLfloat>(SCREEN_HEIGHT), 1.0f, 20.0f);
-		gluLookAt(0,0,15,0,0,-10,0,1,0);
+		PickMatrix(static_cast<GLdouble>(nXCoord), static_cast<GLdouble>(glViewport[3]) - nYCoord, 0.001f, 0.001f, glViewport);
+		SetupProjection();
 		glMatrixMode(GL_MODELVIEW);
-		RenderEnv();					//Render to get objects names
-		RenderBackground();
+		//Render to get objects names
+		DrawEnvironment();
+		if (m_enuCurrentMode == ModePlayGame)
+			DrawGame(GL_SELECT);
+		else if (m_enuCurrentMode == ModeCustomGame)
+			DrawSetUpGame(GL_SELECT);
 		glMatrixMode(GL_PROJECTION);
 	glPopMatrix();
 	glMatrixMode(GL_MODELVIEW);
@@ -167,33 +193,103 @@ void COpenGL::OnMouseClick(const MouseButton enuButton, const int nXCoord, const
 
 	if (nSelNum > 1) {
 		unsigned int nIDChoose = glBuffer[((nSelNum - 1) * 4) + 3];
-		if (nIDChoose == ID_BUTTON_NEW) {
-			NewGame();
+#ifndef NDEBUG
+		printf("Processing ID 0x%08x\n", nIDChoose);
+#endif	//NDEBUG
+		if (HIWORD(nIDChoose) == PW_BUTTONS_ID) {
+			//Screen button (environment) click
+			switch (LOWORD(nIDChoose)) {
+				case PW_BTN_NEW_ID:
+					SetNewMode(ModeNewGame);
+					break;
+				case PW_BTN_RESET_ID:
+					ResetGame();
+					break;
+				case PW_BTN_INFO_ID:
+					SetNewMode(ModeInfo);
+					break;
+				case PW_BTN_CUSTOM_ID:
+					SetNewMode(ModeCustomGame);
+					break;
+				case PW_BTN_INFO_OK_ID:
+				case PW_BTN_CUSTOM_CANCEL_ID:
+					SetNewMode(ModePlayGame);
+					break;
+				case PW_BTN_CUSTOM_OK_ID:
+					SetNewMode(ModeNewGame);
+					break;
+				default:
+					assert(NULL && "Undefined button identifier");
+					break;
+			}
 		}
-		else if (nIDChoose == ID_BUTTON_RESET) {
-			ResetGame();
-		}
-		else if (!m_objGame.IsGameOver()) {
-			CCell* pObj = m_objGame.GetObject(LOBYTE(nIDChoose), HIBYTE(nIDChoose));
-			pObj->StartRotate(enuButton != RightButton, enuButton == MiddleButton);
-			m_pWinSubsystem->PostRedisplay();
+		else {
+			bool fRedisplay = false;
+			switch (m_enuCurrentMode) {
+				case ModePlayGame:
+					assert(HIWORD(nIDChoose) == PW_CELL_ID);
+					if (!m_pGameLogic->IsGameOver()) {
+						#ifndef NDEBUG
+						printf("Processing cell %02i x %02i\n", LOBYTE(LOWORD(nIDChoose)), HIBYTE(LOWORD(nIDChoose)));
+						#endif	//NDEBUG
+						CCell* pCell = m_pGameLogic->GetObject(LOBYTE(LOWORD(nIDChoose)), HIBYTE(LOWORD(nIDChoose)));
+						if (pCell->Type != CCell::Free) {
+							if (enuButton == MiddleButton)
+								pCell->ReverseLock();
+							else
+								m_pGameLogic->RotateTube(pCell, enuButton == RightButton ? CCell::Positive : CCell::Negative);
+							fRedisplay = true;
+						}
+					}
+					break;
+				case ModeInfo:
+				case ModeNewGame:
+					//Nothing - it must be "ureachable code"
+					break;
+				case ModeCustomGame:
+					if (HIWORD(nIDChoose) == PW_CUST_MAPSIZE_ID)
+						NewGameSettings.Size = PW_GAME_MODES[LOWORD(nIDChoose)];
+					else {
+						assert(HIWORD(nIDChoose) == PW_CUST_SPINUP_ID || HIWORD(nIDChoose) == PW_CUST_SPINDN_ID);
+						//unsigned short nMapIdNum = (m_nMapId & (0xF0000000 >> (HIBYTE(nChooseID) * sizeof(unsigned int)))) >> (sizeof(unsigned int) * 8 - sizeof(unsigned int) - HIBYTE(nChooseID) * sizeof(unsigned int));
+						unsigned int nDelta = 0x10000000 >> (LOWORD(nIDChoose) * sizeof(unsigned int));
+						NewGameSettings.ID += (HIWORD(nIDChoose) == PW_CUST_SPINUP_ID ? nDelta : -nDelta);
+					}
+					fRedisplay = true;
+					break;
+			}
+			if (fRedisplay)
+				m_pWinSubsystem->PostRedisplay();
 		}
     }
 }
 
+
 void COpenGL::OnKeyPress(const int nKeyCode)
 {
+	if (m_nMotionStartTime != 0)	//Motion in progress
+		return;
+
 	switch (nKeyCode) {
 		case 27:	//ASCII code for the escape key
-			m_pWinSubsystem->PostExit();
+			if (m_enuCurrentMode == ModePlayGame)
+				m_pWinSubsystem->PostExit();
+			else
+				SetNewMode(ModePlayGame);
 			break;
 		case 'R':
 		case 'r':	//Reset current map
-			ResetGame();
+			if (m_enuCurrentMode == ModePlayGame)
+				ResetGame();
 			break;
 		case 'N':
 		case 'n':	//Create new map
-			NewGame();
+			SetNewMode(ModeNewGame);
+			break;
+		case 'H':
+		case 'h':	//Help
+			if (m_enuCurrentMode == ModePlayGame)
+				SetNewMode(ModeInfo);
 			break;
 	}
 }
@@ -204,206 +300,338 @@ void COpenGL::OnDraw(void)
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glLoadIdentity();
 
-	//Draw background
-	RenderBackground();
+	bool fRedisplay = false;
 
-	//Draw shadow
-	glDisable(GL_DEPTH_TEST);
-	glDisable(GL_TEXTURE_2D);
-	glDisable(GL_LIGHTING);
+
 	glPushMatrix();
-		glTranslatef(0.05f, -0.05f, 0.0f);
-		glColor3f(0.3f, 0.3f, 0.3f);
-		RenderScene(true);
-	glPopMatrix();
-	glEnable(GL_LIGHTING);
-	glEnable(GL_TEXTURE_2D);
-	glEnable(GL_DEPTH_TEST);
+		if (m_nMotionStartTime != 0) {
+			//Motion in progress
+			GLfloat dMotionAngle = 0.0f;
+			unsigned long nCurrTime = GetTickCount();
+			unsigned long nDiffTime = nCurrTime - m_nMotionStartTime;
+			if (nDiffTime < PW_ROTATION_TIME * 1.5f) {
+				dMotionAngle = -(static_cast<float>(nDiffTime) / static_cast<float>(PW_ROTATION_TIME * 1.5f)) * PW_ROTATION_ANGLE;
+				if (!m_fMotionFirstPhase)
+					dMotionAngle += PW_ROTATION_ANGLE;
+			}
+			else {
+				//Next phase finished
+				if (m_fMotionFirstPhase) {
+					if (m_enuNewMode == ModeNewGame) {
+						//Show waiting message and generate new level
+						m_pGameLogic->New(NewGameSettings.Size[0], NewGameSettings.Size[1], NewGameSettings.ID);
+						NewGameSettings.ID = 0;
+						m_enuNewMode = ModePlayGame;
+					}
+					else {
+						m_fMotionFirstPhase = false;
+						m_enuCurrentMode = m_enuNewMode;
+						m_nMotionStartTime = GetTickCount();
+					}
+					dMotionAngle = PW_ROTATION_ANGLE;
+				}
+				else {
+					m_nMotionStartTime = 0;	//Motion finished
+				}
+			}
+			glRotatef(dMotionAngle, 0.0f, 1.0f, 0.0f);
+			fRedisplay = true;
+		}
 
-	//Draw scene
-	RenderScene(false);
+		switch (m_enuCurrentMode) {
+			case ModePlayGame:
+				fRedisplay |= DrawGame(GL_RENDER);
+				break;
+			case ModeInfo:
+				m_pObjects->BindTexture(CGLObjects::TxrEnvironment);
+				glBegin(GL_QUADS);
+					glNormal3f(0.0f, 0.0f, 1.0f);
+					glTexCoord2f(0.0f, 1.0f); glVertex3f(-5.0f, 5.0f, 0.0f);
+					glTexCoord2f(1.0f, 1.0f); glVertex3f( 5.0f, 5.0f, 0.0f);
+					glTexCoord2f(1.0f, 0.0f); glVertex3f( 5.0f,-5.0f, 0.0f);
+					glTexCoord2f(0.0f, 0.0f); glVertex3f(-5.0f,-5.0f, 0.0f);
+				glEnd();
+				m_pObjects->BindTexture(CGLObjects::TxrWndInfo);
+				glBegin(GL_QUADS);
+					glNormal3f(0.0f, 0.0f, 1.0f);
+					glTexCoord2f(0.0f, 1.0f); glVertex3f(-5.0f, 5.0f, 0.0f);
+					glTexCoord2f(1.0f, 1.0f); glVertex3f( 5.0f, 5.0f, 0.0f);
+					glTexCoord2f(1.0f, 0.0f); glVertex3f( 5.0f,-5.0f, 0.0f);
+					glTexCoord2f(0.0f, 0.0f); glVertex3f(-5.0f,-5.0f, 0.0f);
+				glEnd();
+				break;
+			case ModeCustomGame:
+				DrawSetUpGame(GL_RENDER);
+				break;
+			case ModeNewGame:
+				break;
+		}
+	glPopMatrix();
 
 	//Draw environment
-	RenderEnv();
+	DrawEnvironment();
 
-	if (m_objGame.IsGameOver()) {
-		// Game is over... Draw win title
-		glBindTexture(GL_TEXTURE_2D, m_aTextures[TxrWinTitle]);
-		glBegin(GL_QUADS);
-			glNormal3b(0, 0, 1);
-			glTexCoord2i(0, 1); glVertex3f(-2.8f, -5.3f, -1.0f);
-			glTexCoord2i(1, 1); glVertex3f( 2.8f, -5.3f, -1.0f);
-			glTexCoord2i(1, 0); glVertex3f( 2.8f, -6.0f, -1.0f);
-			glTexCoord2i(0, 0); glVertex3f(-2.8f, -6.0f, -1.0f);
-		glEnd();
-
-#ifdef PWTARGET_WINNT
-		Sleep(50);
-#endif
-		//wait(50)
-		m_pWinSubsystem->PostRedisplay();
+	//Draw map ID
+	if (m_nMotionStartTime == 0 && m_enuCurrentMode == ModePlayGame) {
+		glPushMatrix();
+			glTranslatef(-3.0f, -5.5f, 0.0f);
+			m_pObjects->DrawStatusBar(m_pGameLogic->GetMapID());
+		glPopMatrix();
 	}
+
+	if (fRedisplay)
+		m_pWinSubsystem->PostRedisplay();
 }
 
-void COpenGL::RenderEnv(void)
+
+void COpenGL::DrawEnvironment(void)
 {
-	glBindTexture(GL_TEXTURE_2D, m_aTextures[TxrEnvironment]);
-
-	//Main field sides
-	glBegin(GL_QUADS);
-		glNormal3b(-1, 0, 0);
-		glTexCoord2i(0, 0); glVertex3f(5.0f, -5.0f, -1.2f);
-		glTexCoord2i(0, 5);	glVertex3f(5.0f,  5.0f, -1.2f);
-		glTexCoord2i(1, 5); glVertex3f(5.0f,  5.0f, -0.5f);
-		glTexCoord2i(1, 0); glVertex3f(5.0f, -5.0f, -0.5f);
-	glEnd();
-	glBegin(GL_QUADS);
-		glNormal3b(1, 0, 0);
-		glTexCoord2i(0, 0); glVertex3f(-5.0f, -5.0f, -1.2f);
-		glTexCoord2i(0, 5); glVertex3f(-5.0f,  5.0f, -1.2f);
-		glTexCoord2i(1, 5); glVertex3f(-5.0f,  5.0f, -0.5f);
-		glTexCoord2i(1, 0); glVertex3f(-5.0f, -5.0f, -0.5f);
-	glEnd();
-	glBegin(GL_QUADS);
-		glNormal3b(0, -1, 0);
-		glTexCoord2i(0, 0); glVertex3f(-5.0f, 5.0f, -1.2f);
-		glTexCoord2i(0, 1); glVertex3f(-5.0f, 5.0f, -0.5f);
-		glTexCoord2i(5, 1); glVertex3f( 5.0f, 5.0f, -0.5f);
-		glTexCoord2i(5, 0); glVertex3f( 5.0f, 5.0f, -1.2f);
-	glEnd();
-	glBegin(GL_QUADS);
-		glNormal3b(0, 1, 0);
-		glTexCoord2i(0, 0); glVertex3f(-5.0f, -5.0f, -1.2f);
-		glTexCoord2i(0, 1); glVertex3f(-5.0f, -5.0f, -0.5f);
-		glTexCoord2i(5, 1); glVertex3f( 5.0f, -5.0f, -0.5f);
-		glTexCoord2i(5, 0); glVertex3f( 5.0f, -5.0f, -1.2f);
-	glEnd();
-
-	//Top front side
-	glBegin(GL_QUADS);
-		glNormal3b(0, 0, 1);
-		glTexCoord2i(0, 0); glVertex3f( 9.0f,  9.0f, -2.5f);
-		glTexCoord2i(0, 2); glVertex3f(-9.0f,  9.0f, -2.5f);
-		glTexCoord2i(3, 2); glVertex3f(-9.0f, -9.0f, -2.5f);
-		glTexCoord2i(3, 0); glVertex3f( 9.0f, -9.0f, -2.5f);
-	glEnd();
+	//Draw environment
+	m_pObjects->DrawObject(CGLObjects::ObjEnvironment);
 
 	//Title
-	glBindTexture(GL_TEXTURE_2D, m_aTextures[TxrTitle]);
+	glLoadName(MAKELONG(PW_BTN_INFO_ID, PW_BUTTONS_ID));
+	m_pObjects->BindTexture(CGLObjects::TxrTitle);
 	glBegin(GL_QUADS);
 		glNormal3b(0, 0, 1);
-		glTexCoord2i(0, 1); glVertex3f(-3.0f, 6.3f, -1.0f);
-		glTexCoord2i(1, 1); glVertex3f( 3.0f, 6.3f, -1.0f);
-		glTexCoord2i(1, 0); glVertex3f( 3.0f, 5.4f, -1.0f);
-		glTexCoord2i(0, 0); glVertex3f(-3.0f, 5.4f, -1.0f);
+		glTexCoord2i(0, 1); glVertex3f(-5.1f, 6.5f, 0.0f);
+		glTexCoord2i(1, 1); glVertex3f( 5.1f, 6.5f, 0.0f);
+		glTexCoord2i(1, 0); glVertex3f( 5.1f, 5.2f, 0.0f);
+		glTexCoord2i(0, 0); glVertex3f(-5.1f, 5.2f, 0.0f);
 	glEnd();
 
-	//Web link
-	glBindTexture(GL_TEXTURE_2D, m_aTextures[TxrWebLink]);
-	glBegin(GL_QUADS);
-		glNormal3b(0, 0, 1);
-		glTexCoord2i(0, 1); glVertex3f(-3.0f, -6.1f, -1.0f);
-		glTexCoord2i(1, 1); glVertex3f( 3.0f, -6.1f, -1.0f);
-		glTexCoord2i(1, 0); glVertex3f( 3.0f, -6.4f, -1.0f);
-		glTexCoord2i(0, 0); glVertex3f(-3.0f, -6.4f, -1.0f);
-	glEnd();
+	if (m_nMotionStartTime != 0)
+		return;	//Don't draw buttons in motion mode
 
-	//Button properties
-	const GLfloat dBtnWitdh = 3.0f;
-	const GLfloat dBtnHeight = 0.8f;
-	GLfloat dBtnX, dBtnY;
+	const GLfloat dButtonY = -6.5f;
 
-	//New button
-	glLoadName(ID_BUTTON_NEW);
-	glBindTexture(GL_TEXTURE_2D, m_aTextures[TxrButtonNew]);
-	dBtnX = -5.0f;
-	dBtnY = -5.3f;
-	glBegin(GL_QUADS);
-		glNormal3b(0, 0, 1);
-		glTexCoord2i(0, 1); glVertex3f(dBtnX,             dBtnY,              -1.0f);
-		glTexCoord2i(1, 1); glVertex3f(dBtnX + dBtnWitdh, dBtnY,              -1.0f);
-		glTexCoord2i(1, 0); glVertex3f(dBtnX + dBtnWitdh, dBtnY - dBtnHeight, -1.0f);
-		glTexCoord2i(0, 0); glVertex3f(dBtnX,             dBtnY - dBtnHeight, -1.0f);
-	glEnd();
-
-	//Reset button
-	glLoadName(ID_BUTTON_RESET);
-	glBindTexture(GL_TEXTURE_2D, m_aTextures[TxrButtonRst]);
-	dBtnX = 2.0f;
-	glBegin(GL_QUADS);
-		glNormal3b(0, 0, 1);
-		glTexCoord2i(0, 1); glVertex3f(dBtnX,             dBtnY,              -1.0f);
-		glTexCoord2i(1, 1); glVertex3f(dBtnX + dBtnWitdh, dBtnY,              -1.0f);
-		glTexCoord2i(1, 0); glVertex3f(dBtnX + dBtnWitdh, dBtnY - dBtnHeight, -1.0f);
-		glTexCoord2i(0, 0); glVertex3f(dBtnX,             dBtnY - dBtnHeight, -1.0f);
-	glEnd();
-}
-
-
-void COpenGL::RenderBackground(void)
-{
-	for (int nY = 0; nY < MAP_HEIGHT_NUM; nY++) {
-		GLfloat dY = -4.5f + nY;
-		for (int nX = 0; nX < MAP_WIDTH_NUM; nX++) {
-			GLfloat dX = -4.5f + nX;
-			glLoadName(MAKEWORD(nX, nY));
+	//Draw buttons
+	switch (m_enuCurrentMode) {
+		case ModePlayGame:
+			//New button
+			glLoadName(MAKELONG(PW_BTN_NEW_ID, PW_BUTTONS_ID));
 			glPushMatrix();
-				glTranslatef(dX, dY, -1.0f);
-				glBindTexture(GL_TEXTURE_2D, m_aTextures[TxrCell]);
-				glBegin(GL_QUADS);
-					glNormal3b(0, 0, 1);
-					glTexCoord2i(0, 0); glVertex3f( 0.5f, 0.5f, -0.2f);
-					glTexCoord2i(0, 1); glVertex3f(-0.5f, 0.5f, -0.2f);
-					glTexCoord2i(1, 1); glVertex3f(-0.5f,-0.5f, -0.2f);
-					glTexCoord2i(1, 0); glVertex3f( 0.5f,-0.5f, -0.2f);
-				glEnd();
+				glTranslatef(-5.0f, dButtonY, 0.0f);
+				m_pObjects->BindTexture(CGLObjects::TxrButtonNew);
+				m_pObjects->DrawObject(CGLObjects::ObjButton);
 			glPopMatrix();
-		}
+			//Custom button
+			glLoadName(MAKELONG(PW_BTN_CUSTOM_ID, PW_BUTTONS_ID));
+			glPushMatrix();
+				glTranslatef(-1.3f, dButtonY, 0.0f);
+				m_pObjects->BindTexture(CGLObjects::TxrButtonCust);
+				m_pObjects->DrawObject(CGLObjects::ObjButton);
+			glPopMatrix();
+			//Reset button
+			glLoadName(MAKELONG(PW_BTN_RESET_ID, PW_BUTTONS_ID));
+			glPushMatrix();
+				glTranslatef(2.2f, dButtonY, 0.0f);
+				m_pObjects->BindTexture(CGLObjects::TxrButtonRset);
+				m_pObjects->DrawObject(CGLObjects::ObjButton);
+			glPopMatrix();
+			break;
+		case ModeInfo:
+		case ModeNewGame:
+		case ModeCustomGame:
+			break;
+	}
+
+	if (m_enuCurrentMode == ModeCustomGame || m_enuCurrentMode == ModeInfo) {
+		//OK button
+		glPushMatrix();
+			glLoadName(MAKELONG(m_enuCurrentMode == ModeCustomGame ? PW_BTN_CUSTOM_OK_ID : PW_BTN_INFO_OK_ID, PW_BUTTONS_ID));
+			glTranslatef(2.2f, dButtonY, 0.0f);
+			m_pObjects->BindTexture(CGLObjects::TxrButtonOk);
+			m_pObjects->DrawObject(CGLObjects::ObjButton);
+		glPopMatrix();
+	}
+
+	if (m_enuCurrentMode == ModeCustomGame) {
+		//Cancel button
+		glLoadName(MAKELONG(PW_BTN_CUSTOM_CANCEL_ID, PW_BUTTONS_ID));
+		glPushMatrix();
+			glTranslatef(-5.0f, dButtonY, 0.0f);
+			m_pObjects->BindTexture(CGLObjects::TxrButtonCncl);
+			m_pObjects->DrawObject(CGLObjects::ObjButton);
+		glPopMatrix();
 	}
 }
 
 
-void COpenGL::RenderScene(bool fIsShadow)
+void COpenGL::DrawSetUpGame(int nGLMode)
+{
+	if (nGLMode != GL_SELECT) {
+		m_pObjects->BindTexture(CGLObjects::TxrEnvironment);
+		glBegin(GL_QUADS);
+			glNormal3f(0.0f, 0.0f, 1.0f);
+			glTexCoord2f(0.0f, 1.0f); glVertex3f(-5.0f, 5.0f, 0.0f);
+			glTexCoord2f(1.0f, 1.0f); glVertex3f( 5.0f, 5.0f, 0.0f);
+			glTexCoord2f(1.0f, 0.0f); glVertex3f( 5.0f,-5.0f, 0.0f);
+			glTexCoord2f(0.0f, 0.0f); glVertex3f(-5.0f,-5.0f, 0.0f);
+		glEnd();
+
+		m_pObjects->BindTexture(CGLObjects::TxrWndCustom);
+		glBegin(GL_QUADS);
+			glNormal3f(0.0f, 0.0f, 1.0f);
+			glTexCoord2f(0.0f, 1.0f); glVertex3f(-5.0f, 5.0f, 0.0f);
+			glTexCoord2f(1.0f, 1.0f); glVertex3f( 5.0f, 5.0f, 0.0f);
+			glTexCoord2f(1.0f, 0.0f); glVertex3f( 5.0f,-5.0f, 0.0f);
+			glTexCoord2f(0.0f, 0.0f); glVertex3f(-5.0f,-5.0f, 0.0f);
+		glEnd();
+	}
+
+	int i;	//Counter
+
+	//Draw radio buttons
+	for (i = 0; i < 3; i++) {
+		glLoadName(MAKELONG(i, PW_CUST_MAPSIZE_ID));
+		glPushMatrix();
+			glTranslatef(-4.4f, 2.7f - i * 1.4f, 0.1f);
+			m_pObjects->DrawRadioButton(NewGameSettings.Size == PW_GAME_MODES[i]);
+		glPopMatrix();
+	}
+
+
+	//Draw map id choose
+	for (i = 0; i < 8; i++) {
+		glPushMatrix();
+			glTranslatef(-1.7f + i / 2.0f, -2.8f, 0.1f);
+
+			//Top spin
+			glLoadName(MAKELONG(i, PW_CUST_SPINUP_ID));
+			m_pObjects->DrawObject(CGLObjects::ObjSpin);
+
+			//Map id
+			glTranslatef(-0.2f, -1.2f, 0.0f);
+			unsigned short nMapIdNum = (NewGameSettings.ID & (0xF0000000 >> (i * sizeof(unsigned int)))) >> (sizeof(unsigned int) * 8 - sizeof(unsigned int) - i * sizeof(unsigned int));
+			m_pObjects->PrintHexNumber(nMapIdNum);
+
+			//Bottom spin
+			glLoadName(MAKELONG(i, PW_CUST_SPINDN_ID));
+			glTranslatef(0.2f, -0.7f, 0.0f);
+			glRotatef(180.0f, 0.0f, 0.0f, 1.0f);
+			m_pObjects->DrawObject(CGLObjects::ObjSpin);
+		glPopMatrix();
+	}
+}
+
+
+bool COpenGL::DrawGame(int nGLMode)
 {
 	bool fRedisplay = false;
 
-	for (int nY = 0; nY < MAP_HEIGHT_NUM; nY++) {
-		GLfloat dY = -4.5f + nY;
-		for (int nX = 0; nX < MAP_WIDTH_NUM; nX++) {
-			GLfloat dX = -4.5f + nX;
-			CCell* pCell = m_objGame.GetObject(nX, nY);
+	DrawMapCells();
+
+	if (nGLMode != GL_SELECT) {
+		//Draw objects shadow
+		glDisable(GL_DEPTH_TEST);
+		glDisable(GL_TEXTURE_2D);
+		glDisable(GL_LIGHTING);
+		glPushMatrix();
+			glTranslatef(0.05f, -0.05f, 0.0f);
+			glColor3f(0.3f, 0.3f, 0.3f);
+			fRedisplay |= DrawMapObjects(true);
+		glPopMatrix();
+		glEnable(GL_LIGHTING);
+		glEnable(GL_TEXTURE_2D);
+		glEnable(GL_DEPTH_TEST);
+
+		//Draw objects
+		fRedisplay |= DrawMapObjects(false);
+	}
+
+	return fRedisplay;
+}
+
+
+void COpenGL::DrawMapCells(void)
+{
+	glPushMatrix();
+	//Set scale
+	GLfloat glScale = 10.0f / m_pGameLogic->GetMapSize();	//10.0f is a usual size
+	glScalef(glScale, glScale, glScale);
+
+	//Draw cells background
+	for (unsigned short nY = 0; nY < m_pGameLogic->GetMapSize(); nY++) {
+		GLfloat dY = -m_pGameLogic->GetMapSize() / 2.0f + 0.5f + nY;
+		for (unsigned short nX = 0; nX < m_pGameLogic->GetMapSize(); nX++) {
+			GLfloat dX = -m_pGameLogic->GetMapSize() / 2.0f + 0.5f + nX;
+			glLoadName(MAKELONG(MAKEWORD(nX, nY), PW_CELL_ID));	//Set current coordinates by cell on map as name
 			glPushMatrix();
-				glTranslatef(dX, dY, -1.0f);
+				glTranslatef(dX, -dY, 0.0f);
+				m_pObjects->DrawObject(CGLObjects::ObjCell);
+			glPopMatrix();
+		}
+	}
+	glPopMatrix();
+}
+
+
+bool COpenGL::DrawMapObjects(bool fIsShadow)
+{
+	bool fRedisplay = false;
+
+	glPushMatrix();
+	//Set scale
+	GLfloat glScale = 10.0f / m_pGameLogic->GetMapSize();	//10.0f is a usual size
+	glScalef(glScale, glScale, glScale);
+
+	for (unsigned short nY = 0; nY < m_pGameLogic->GetMapSize(); nY++) {
+		GLfloat dY = -m_pGameLogic->GetMapSize() / 2.0f + 0.5f + nY;
+		for (unsigned short nX = 0; nX < m_pGameLogic->GetMapSize(); nX++) {
+			GLfloat dX = -m_pGameLogic->GetMapSize() / 2.0f + 0.5f + nX;
+			CCell* pCell = m_pGameLogic->GetObject(nX, nY);
+			glPushMatrix();
+				glTranslatef(dX, -dY, 0.0f);
 				//Draw object
 				switch (pCell->Type) {
-					case CCell::ObjNone:
+					case CCell::Free:
 						break;	//Free cell
-					case CCell::ObjStrTube:
-					case CCell::ObjCurTube:
-					case CCell::ObjTubeJoint:
+					case CCell::Tube:
 						fRedisplay |= DrawTube(pCell, fIsShadow);
 						break;
-					case CCell::ObjReceiver:
+					case CCell::Receiver:
 						glPushMatrix();
-						fRedisplay |= DrawTube(pCell, fIsShadow);	//Half tube
+						fRedisplay |= DrawTube(pCell, fIsShadow);
 						glPopMatrix();
-						DrawReciever(pCell);
+						//Draw system block
+						m_pObjects->DrawObject(CGLObjects::ObjReceiverSb);
+						if (m_pGameLogic->IsGameOver()) {
+							//Make user happy!
+							static GLfloat dAngle = 1.0f;
+							static GLfloat dDir = 0.005f;
+							if (dAngle > 5.0f || dAngle < -5.0f)
+								dDir = -dDir;
+							dAngle += dDir;
+							glRotatef(dAngle, 0.0f, 0.0f, 1.0f);
+							glTranslatef(-dAngle / 100.0f, 0.0f, 0.0f);
+							fRedisplay = true;
+						}
+						//Draw monitor
+						m_pObjects->BindTexture(pCell->State ? CGLObjects::TxrRcvActive : CGLObjects::TxrRcvPassive);
+						m_pObjects->DrawObject(CGLObjects::ObjReceiverMon);
 						break;
-					case CCell::ObjSender:
+					case CCell::Sender:
 						glPushMatrix();
-						fRedisplay |= DrawTube(pCell, fIsShadow);	//Half tube
+						fRedisplay |= DrawTube(pCell, fIsShadow);
 						glPopMatrix();
-						DrawSender(pCell);
+						m_pObjects->DrawObject(CGLObjects::ObjSender);
 						break;
 					default:
 						assert(false && "Unknow object type");
 						break;
 				}
+				//Draw lock
+				if (!fIsShadow && pCell->IsLocked()) {
+					glDisable(GL_DEPTH_TEST);
+						m_pObjects->DrawObject(CGLObjects::ObjLock);
+					glEnable(GL_DEPTH_TEST);
+				}
 			glPopMatrix();
 		}
 	}
-	if (fRedisplay)
-		m_pWinSubsystem->PostRedisplay();
+	glPopMatrix();
+	return fRedisplay;
 }
 
 
@@ -412,172 +640,155 @@ bool COpenGL::DrawTube(CCell* pCell, bool fIsShadow)
 	bool fRedisplay = false;
 
 	//Rotation the tube
-	GLfloat glTubeAngle = pCell->RotateAngle;
-	if (pCell->RotateStart != 0) {
-		if (fIsShadow) {
+	if (pCell->IsRotationInProgress()) {
+		if (fIsShadow) {	//Calculate new angle
 			//Rotation in progress
 			unsigned long nCurrTime = GetTickCount();
-			unsigned long nDiffTime = nCurrTime - pCell->RotateStart;
-			const unsigned long nRotationTime = 300;	//We have to rotate the tube by 300 ms on angle of 90 degree
-			if (nDiffTime < nRotationTime) {
-				GLfloat glDeg = (static_cast<GLfloat>(nDiffTime) / static_cast<GLfloat>(nRotationTime)) * 90.0f;
-				glTubeAngle += pCell->RotateAngleEnd > pCell->RotateAngle ? glDeg : -glDeg;
+			unsigned long nDiffTime = nCurrTime - pCell->Rotate.StartTime;
+			if (nDiffTime < PW_ROTATION_TIME) {
+				GLfloat dDegree = (static_cast<float>(nDiffTime) / static_cast<float>(PW_ROTATION_TIME)) * PW_ROTATION_ANGLE;
+				pCell->Rotate.Angle = (pCell->Rotate.Dir == CCell::Negative ? dDegree : -dDegree);
 			}
-			else {
-				if (!m_objGame.OnTubeRotated(pCell))
-					glTubeAngle = pCell->RotateAngleEnd;
-				else
-					glTubeAngle = pCell->RotateAngle;
-				m_objGame.CheckGameOver();
-			}
-			pCell->RotateCurr = glTubeAngle;
+			else
+				m_pGameLogic->OnTubeRotated(pCell);
 		}
-		else {
-			glTubeAngle = pCell->RotateCurr;
-		}
+		glRotatef(pCell->Rotate.Angle, 0.0f, 0.0f, 1.0f);
 		fRedisplay = true;
 	}
 
-	glRotatef(glTubeAngle, 0.0f, 0.0f, 1.0f);
+	if (!fIsShadow)
+		m_pObjects->BindTexture(pCell->State || pCell->Type == CCell::Sender ? CGLObjects::TxrActiveTube : CGLObjects::TxrPassiveTube);
 
-	//Set usual position for tube
-	glRotatef(90, 0.0f, 1.0f, 0.0f);
-	glRotatef(90, 1.0f, 0.0f, 0.0f);
+	//Draw tubes
+	if (pCell->IsCurved())
+		m_pObjects->DrawObject(CGLObjects::ObjTubeJoiner);
+	if (pCell->Sides & CONNECT_UP)
+		m_pObjects->DrawObject(CGLObjects::ObjTube);
 
-	GLUquadric* pQuadric = gluNewQuadric();
-	gluQuadricNormals(pQuadric, GLU_SMOOTH);
-	gluQuadricTexture(pQuadric, GL_TRUE);
-
-	if (!fIsShadow) {
-		glBindTexture(GL_TEXTURE_2D, pCell->State || pCell->Type == CCell::ObjSender ? m_aTextures[TxrActiveTube] : m_aTextures[TxrPassiveTube]);
+	if (pCell->Sides & CONNECT_DOWN) {
+		glPushMatrix();
+			glRotatef(PW_ROTATION_ANGLE * 2.0f, 0.0f, 0.0f, 1.0f);
+			m_pObjects->DrawObject(CGLObjects::ObjTube);
+		glPopMatrix();
 	}
 
-	if (pCell->Type == CCell::ObjReceiver || pCell->Type == CCell::ObjSender) {
-		//Half tube
-		gluCylinder(pQuadric, 0.1f, 0.1f, 0.5f, 8, 8);
-	}
-	else {
-
-		glTranslatef(0.0f, 0.0f, -0.5f);
-
-		if (pCell->Type == CCell::ObjStrTube || pCell->Type == CCell::ObjTubeJoint) {
-			gluCylinder(pQuadric, 0.1f, 0.1f, 1.0f, 8, 8);
-		}
-
-		if (pCell->Type == CCell::ObjTubeJoint) {
-			glTranslatef(0.0f, 0.5f, 0.5f);
-			glRotatef(90, 1.0f, 0.0f, 0.0f);
-			gluCylinder(pQuadric, 0.1f, 0.1f, 0.5f, 8, 8);
-		}
-		if (pCell->Type == CCell::ObjCurTube) {
-			glTranslatef(0.0f, 0.5f, 0.5f);
-			glRotatef(90, 1.0f, 0.0f, 0.0f);
-			gluCylinder(pQuadric, 0.1f, 0.1f, 0.55f, 8, 8);
-			glTranslatef(0.0f, 0.5f, 0.5f);
-			glRotatef(90, 1.0f, 0.0f, 0.0f);
-			gluCylinder(pQuadric, 0.1f, 0.1f, 0.55f, 8, 8);
-		}
-
-		if (pCell->Type != CCell::ObjStrTube) {
-			glTranslatef(0.0f, 0.0f, 0.5f);
-			gluSphere(pQuadric, 0.14f, 5, 5);
-		}
+	if (pCell->Sides & CONNECT_RIGHT) {
+		glPushMatrix();
+			glRotatef(-PW_ROTATION_ANGLE, 0.0f, 0.0f, 1.0f);
+			m_pObjects->DrawObject(CGLObjects::ObjTube);
+		glPopMatrix();
 	}
 
-	gluDeleteQuadric(pQuadric);
+	if (pCell->Sides & CONNECT_LEFT) {
+		glPushMatrix();
+			glRotatef(PW_ROTATION_ANGLE, 0.0f, 0.0f, 1.0f);
+			m_pObjects->DrawObject(CGLObjects::ObjTube);
+		glPopMatrix();
+	}
+
 	return fRedisplay;
 }
 
 
-void COpenGL::DrawSender(CCell* /*pCell*/)
+void COpenGL::SetNewMode(const Mode enuNewMode)
 {
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_NORMAL_ARRAY);
-	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-
-	glBindTexture(GL_TEXTURE_2D, m_aTextures[TxrSender]);
-
-	GLfloat SenderVert[] = {
-		-0.35f, 0.45f, 0.3f,	//0
-		 0.35f, 0.45f, 0.3f,	//1
-		 0.35f,-0.45f, 0.3f,	//2
-		-0.35f,-0.45f, 0.3f,	//3
-		 0.35f, 0.45f,-0.1f,	//4
-		-0.35f, 0.45f,-0.1f,	//5
-		 0.35f,-0.45f,-0.1f,	//6
-		-0.35f,-0.45f,-0.1f		//7
-	};
-	GLushort SenderInd[] = {
-		0, 1, 2, 3,				//Front
-		0, 1, 4, 5,				//Top
-		3, 2, 6, 7,				//Bottom
-		0, 5, 7, 3,				//Left
-		1, 4, 6, 2				//Right
-	};
-	GLshort SenderText[] = {
-		0, 1, 1, 1, 1, 0, 0, 0,	//Front
-		0, 1, 1, 1, 1, 0, 0, 0,	//Top
-		0, 1, 1, 1, 1, 0, 0, 0,	//Bottom
-		0, 1, 1, 1, 1, 0, 0, 0,	//Left
-		0, 1, 1, 1, 1, 0, 0, 0	//Right
-	};
-	GLshort SenderNorm[] = {
-		 0, 0,-1,				//Front
-		 0, 1, 0,				//Top
-		 0,-1, 0,				//Bottom
-		-1, 0, 0,				//Left
-		 1, 0, 0				//Right
-	};
-
-	glVertexPointer(3, GL_FLOAT, 0, SenderVert);
-	glTexCoordPointer(2, GL_SHORT, 0, SenderText);
-	glNormalPointer(GL_SHORT, 0, SenderNorm);
-	glDrawElements(GL_QUADS, sizeof(SenderInd) / sizeof(SenderInd[0]), GL_UNSIGNED_SHORT, SenderInd);
-
-	glDisableClientState(GL_VERTEX_ARRAY);
-	glDisableClientState(GL_NORMAL_ARRAY);
-	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-}
-
-
-void COpenGL::DrawReciever(CCell* pCell)
-{
-	//Draw system block
-	glBindTexture(GL_TEXTURE_2D, m_aTextures[TxrRcvBack]);
-	glBegin(GL_QUADS);
-		glNormal3b(0, 0, 1);
-		glTexCoord2i(0, 1); glVertex3f(-0.4f,-0.17f, 0.2f);
-		glTexCoord2i(1, 1); glVertex3f( 0.4f,-0.17f, 0.2f);
-		glTexCoord2i(1, 0); glVertex3f( 0.4f,-0.4f, 0.2f);
-		glTexCoord2i(0, 0); glVertex3f(-0.4f,-0.4f, 0.2f);
-	glEnd();
-
-	//Draw monitors prop
-	glBegin(GL_QUADS);
-		glNormal3b(0, 0, 1);
-		glTexCoord2i(0, 1); glVertex3f(-0.1f, 0.0f, 0.15f);
-		glTexCoord2i(1, 1); glVertex3f( 0.1f, 0.0f, 0.15f);
-		glTexCoord2i(1, 0); glVertex3f( 0.1f,-0.2f, 0.15f);
-		glTexCoord2i(0, 0); glVertex3f(-0.1f,-0.2f, 0.15f);
-	glEnd();
-
-	if (m_objGame.IsGameOver()) {
-		//Make user happy!
-		static GLfloat dAngle = 1.0f;
-		static GLfloat dDir = 0.05f;
-		if (dAngle > 5.0f || dAngle < -5.0f)
-			dDir = -dDir;
-		dAngle += dDir;
-		glRotatef(dAngle, 0.0f, 0.0f, 1.0f);
+	m_enuNewMode = enuNewMode;
+	if (m_enuNewMode == ModeCustomGame) {
+		NewGameSettings.ID = m_pGameLogic->GetMapID();
 	}
-
-	//Draw monitor
-	glBindTexture(GL_TEXTURE_2D, pCell->State ? m_aTextures[TxrRcvActive] : m_aTextures[TxrRcvPassive]);
-	glBegin(GL_QUADS);
-		glNormal3b(0, 0, 1);
-		glTexCoord2f(0.0f, 0.0f); glVertex3f(-0.4f, 0.4f, 0.2f);
-		glTexCoord2f(1.0f, 0.0f); glVertex3f( 0.4f, 0.4f, 0.2f);
-		glTexCoord2f(1.0f, -0.75f); glVertex3f( 0.4f,-0.15f, 0.2f);
-		glTexCoord2f(0.0f, -0.75f); glVertex3f(-0.4f,-0.15f, 0.2f);
-	glEnd();
+	m_fMotionFirstPhase = true;
+	m_nMotionStartTime = GetTickCount();
+	m_pWinSubsystem->PostRedisplay();
 }
+
+
+void COpenGL::LookAt(GLfloat eyeX, GLfloat eyeY, GLfloat eyeZ, GLfloat lookAtX, GLfloat lookAtY, GLfloat lookAtZ, GLfloat upX, GLfloat upY, GLfloat upZ) const
+{
+	//Vector
+	GLfloat f[3];
+	
+	//Calculating the viewing vector
+	f[0] = lookAtX - eyeX;
+	f[1] = lookAtY - eyeY;
+	f[2] = lookAtZ - eyeZ;
+	
+	GLfloat dMag = sqrt(f[0] * f[0] + f[1] * f[1] + f[2] * f[2]);
+	GLfloat upMag = sqrt(upX * upX + upY * upY + upZ * upZ);
+	
+	//Normalizing the viewing vector
+	if (dMag != 0) {
+		f[0] = f[0] / dMag;
+		f[1] = f[1] / dMag;
+		f[2] = f[2] / dMag;
+	}
+	
+	//Normalising the up vector. no need for this here if you have your
+	//   up vector already normalised, which is mostly the case
+	if (upMag != 0) {
+		upX = upX / upMag;
+		upY = upY / upMag;
+		upZ = upZ / upMag;
+	}
+	
+	GLfloat s[3], u[3];
+	
+	CrossProd(f[0], f[1], f[2], upX, upY, upZ, s);
+	CrossProd(s[0], s[1], s[2], f[0], f[1], f[2], u);
+	
+	GLfloat M[] = {
+		s[0], u[0], -f[0], 0,
+		s[1], u[1], -f[1], 0,
+		s[2], u[2], -f[2], 0,
+		0,    0,     0,    1
+	};
+	
+	glMultMatrixf(M);
+	glTranslatef (-eyeX, -eyeY, -eyeZ);
+}
+
+
+void COpenGL::PickMatrix(GLfloat x, GLfloat y, GLfloat width, GLfloat height, const GLint viewport[4]) const
+{
+	GLfloat m[16];
+	GLfloat sx, sy;
+	GLfloat tx, ty;
+	
+	sx = viewport[2] / width;
+	sy = viewport[3] / height;
+	tx = (viewport[2] + 2.0f * (viewport[0] - x)) / width;
+	ty = (viewport[3] + 2.0f * (viewport[1] - y)) / height;
+	
+#define M(row, col) m[col * 4 + row]
+	M(0, 0) = sx;   M(0, 1) = 0.0f; M(0, 2) = 0.0f; M(0, 3) = tx;
+	M(1, 0) = 0.0f; M(1, 1) = sy;   M(1, 2) = 0.0f; M(1, 3) = ty;
+	M(2, 0) = 0.0f; M(2, 1) = 0.0f; M(2, 2) = 1.0f; M(2, 3) = 0.0f;
+	M(3, 0) = 0.0f; M(3, 1) = 0.0f; M(3, 2) = 0.0f; M(3, 3) = 1.0f;
+#undef M
+	
+	glMultMatrixf(m);
+}
+
+
+void COpenGL::CrossProd(GLfloat x1, GLfloat y1, GLfloat z1, GLfloat x2, GLfloat y2, GLfloat z2, GLfloat res[3]) const
+{
+	res[0] = y1 * z2 - y2 * z1;
+	res[1] = x2 * z1 - x1 * z2;
+	res[2] = x1 * y2 - x2 * y1;
+}
+
+
+void COpenGL::SetupProjection() const
+{
+	GLfloat dAspect = static_cast<GLfloat>(PW_SCREEN_WIDTH) / static_cast<GLfloat>(PW_SCREEN_HEIGHT);
+	const GLfloat dFov = 50.0f;
+    const GLfloat dNear = 1.0f;
+	GLfloat dTop = tan(dFov * 3.14159f / 360.0f) * dNear;
+    GLfloat dBottom = -dTop;
+    GLfloat dLeft = dAspect * dBottom;
+    GLfloat dRight = dAspect * dTop;
+
+	glFrustum(dLeft, dRight, dBottom, dTop, dNear, 20.0f);
+
+	LookAt(0.0f, 0.0f, 14.3f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f);
+}
+	

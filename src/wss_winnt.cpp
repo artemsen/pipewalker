@@ -16,9 +16,9 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>. * 
  **************************************************************************/
 
-#ifdef PWTARGET_WINNT	//Only for MS Windows
+#ifdef PW_SYSTEM_WINNT	//Only for MS Windows
 
-#include "mswindows.h"
+#include "wss_winnt.h"
 
 
 bool CMSWindows::Initialize(void)
@@ -49,14 +49,14 @@ bool CMSWindows::Initialize(void)
 		//Adjust window to true requested size
 		RECT rcWnd;
 		rcWnd.top = rcWnd.left = 0;
-		rcWnd.right = SCREEN_WIDTH;
-		rcWnd.bottom = SCREEN_HEIGHT;
+		rcWnd.right = PW_SCREEN_WIDTH;
+		rcWnd.bottom = PW_SCREEN_HEIGHT;
 		AdjustWindowRectEx(&rcWnd, dwWndStyle, FALSE, dwWndStyleEx);
 
 		//Create main window
 		m_hWnd = CreateWindowEx(dwWndStyleEx,
 								pszWindowClassName,
-								WINDOW_TITLE,
+								PW_WINDOW_TITLE,
 								dwWndStyle,
 								CW_USEDEFAULT, 0,
 								rcWnd.right - rcWnd.left,
@@ -160,14 +160,12 @@ LRESULT CALLBACK CMSWindows::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
 		case WM_MBUTTONDOWN:
 	    case WM_RBUTTONDOWN:
 			assert(pThis);
-			{
-			CEventHandler::MouseButton enuButton;
-			switch (uMsg) {
-				case WM_LBUTTONDOWN: enuButton = CEventHandler::LeftButton;		break;
-				case WM_MBUTTONDOWN: enuButton = CEventHandler::MiddleButton;	break;
-				case WM_RBUTTONDOWN: enuButton = CEventHandler::RightButton;	break;
-			}
-			pThis->m_pEventHandler->OnMouseClick(enuButton, LOWORD(lParam), HIWORD(lParam));
+			//Mouse button press event
+			if (uMsg == WM_LBUTTONDOWN || uMsg == WM_MBUTTONDOWN || uMsg == WM_RBUTTONDOWN) {
+				pThis->m_pEventHandler->OnMouseClick(
+					uMsg == WM_LBUTTONDOWN ? CEventHandler::LeftButton :
+					uMsg == WM_MBUTTONDOWN ? CEventHandler::MiddleButton : CEventHandler::RightButton,
+					LOWORD(lParam), HIWORD(lParam));
 			}
 			break;
 		default:
@@ -198,4 +196,10 @@ void CMSWindows::DestroyAndQuit()
 	PostQuitMessage(0);
 }
 
-#endif
+
+void CMSWindows::ShowErrorMessage(const char* pszErrorMsg)
+{
+	MessageBox(m_hWnd, pszErrorMsg, "Error", MB_ICONERROR | MB_OK);
+}
+
+#endif	//PW_SYSTEM_WINNT

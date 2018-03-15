@@ -1,11 +1,11 @@
 SRC      = src
 INCLUDE  = -I/usr/include/ @X_CFLAGS@
 LIBS     = @LIBS@
-CPPC     = @CXX@
-CPPFLAGS = -Wall -ansi -DPWTARGET_XSERVER -DNDEBUG
+CXXC     = @CXX@
+CXXFLAGS = @CXXFLAGS@ -DPW_SYSTEM_NIX -DNDEBUG
 
 all:
-	$(CPPC) $(SRC)/*.cpp $(CPPFLAGS) $(INCLUDE) -o pipewalker $< $(LIBS)
+	$(CXXC) $(SRC)/*.cpp $(CXXFLAGS) $(INCLUDE) -o pipewalker $< $(LIBS)
 
 clean:
 	@echo Cleaning up...

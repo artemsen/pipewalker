@@ -1,5 +1,5 @@
 /* XPM */
-static char * PipeWalker_xpm[] = {
+static const char* PipeWalker_xpm[] = {
 "32 32 426 2",
 "  	c None",
 ". 	c #BCC8E1",

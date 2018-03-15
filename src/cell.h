@@ -20,64 +20,119 @@
 
 #include "common.h"
 
+#define MAX_WEIGHT		0xFFFF	///< Maximum weight of cell
 
 //Connected sides
-#define CONNECT_UNDEF	0x0
-#define CONNECT_UP		0x1
-#define CONNECT_RIGHT	0x2
-#define CONNECT_DOWN	0x4
-#define CONNECT_LEFT	0x8
+#define CONNECT_UNDEF	0x00
+#define CONNECT_UP		0x01
+#define CONNECT_RIGHT	0x02
+#define CONNECT_DOWN	0x04
+#define CONNECT_LEFT	0x08
+
 
 class CCell
 {
 public:
 	//! Default constructor
-	CCell();
+	CCell(void);
+
 	//! Default destructor
 	~CCell();
 
 	//! Object type enum
 	enum Type {
-		ObjNone,		///< Free cell
-		ObjStrTube,		///< straight tube
-		ObjCurTube,		///< curved tube
-		ObjTubeJoint,	///< tube joint
-		ObjSender,		///< sender (server)
-		ObjReceiver		///< receiver (client)
+		Free,			///< free cell
+		Tube,			///< tube
+		Sender,			///< sender (server)
+		Receiver		///< receiver (client)
 	};
 
-	Type		Type;				///< Object type
-	bool		State;				///< Object state (true = active, false = passive)
-	int			ConnSide;			///< Connection side
-	float		RotateAngle;		///< Rotate angle
-	float		RotateAngleEnd;		///< Finishing rotate angle (for smooth rotate)
-	float		RotateCurr;			///< Current angle of rotate (for shadow draw)
-	unsigned long RotateStart;		///< Rotate start time
-	bool		RotateTwice;		///< Rotate twice (180 angle)
-	int			Weight;				///< Cell's weight
-	bool		Used;				///< Flag 'Used' for route calculate
+	//! Rotate direction
+	enum Direction {
+		Positive,		///< positive direction (from down to up/left to right/clockwise)
+		Negative		///< negative direction (from up to down/right to left/anticlockwise)
+	};
+
+	Type			Type;			///< Object type
+	bool			State;			///< Object state (true = active, false = passive)
+	unsigned int	Sides;			///< Connection side
+
+	//Used for calculate routes
+	int				Weight;			///< Cell's weight
+	bool			Used;			///< Flag 'Used' by current route
+
+	//Rotate description
+	struct Rotation {
+		Direction		Dir;		///< Rotate direction
+		unsigned long	StartTime;	///< Rotate start time
+		bool			Twice;		///< Rotate twice flag (180 degree)
+		float			Angle;		///< Current rotate angle
+	} Rotate;
+
+
+public:	//Helper functions
+	
+	//! Assignment operator
+	CCell& operator=(const CCell& cell);
 
 	/**
-	 * Reset object
+	 * Reset object state
 	 */
 	void Reset();
 
 	/**
-	 * Calculate rotation angle by connected side
+	 * Reverse lock state of the cell
 	 */
-	void SetAngleBySide();
+	void ReverseLock(void)		{ m_fLock = !m_fLock; }
 
 	/**
-	 * Calculate connection side by rotate
-	 * @param fClockwise diretion if rotate
+	 * Get current lock state of the cell
+	 * @return true if cell is locked
 	 */
-	void SetConnectionSideByRotate(bool fClockwise);
+	bool IsLocked(void) const	{ return m_fLock; }
 
+	/**
+	 * Add tube to cell
+	 * @param unSide side of the added tube
+	 * @return new connected sides flags
+	 */
+	inline unsigned int AddTube(const unsigned int unSide) { Sides |= unSide; return Sides; }
+
+	/**
+	 * Get connected side count
+	 * @return connected side count
+	 */
+	unsigned short GetSideCount(void) const;
+
+	/**
+	 * Check for add tube
+	 * @return true if tube can be added
+	 */
+	bool CanAddTube(void) const { return Type == Free || (Type == Tube && GetSideCount() < 3); }
+
+	/**
+	 * Check for curved tube
+	 * @return true if tube is curved
+	 */
+	bool IsCurved(void) const;
 
 	/**
 	 * Start tube rotation
-	 * @param fClockwise a direction flag of rotate
-	 * @param fTwice twice direction flag of rotate
+	 * @param enuDir direction of rotation
 	 */
-	void StartRotate(bool fClockwise, bool fTwice);
+	void StartRotate(const Direction enuDir);
+	
+	/**
+	 * Finish rotate handler
+	 */
+	void EndRotate(void);
+
+	/**
+	 * Check if rotation in progress
+	 * @return true if rotation in progress
+	 */
+	inline bool IsRotationInProgress(void) const { return (Rotate.StartTime != 0); }
+	
+private:
+	bool	m_fLock;				///< Cell lock status
 };

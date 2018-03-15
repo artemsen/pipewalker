@@ -20,6 +20,7 @@
 
 #include "base.h"
 #include "game.h"
+#include "globjects.h"
 
 
 class COpenGL : public CEventHandler
@@ -27,75 +28,87 @@ class COpenGL : public CEventHandler
 public:
 	//! Default constructor
 	COpenGL(void);
+
 	//! Default destructor
-	virtual ~COpenGL(void);
+	virtual ~COpenGL();
 
 	/**
-	 * Main routine (intialize OpenGL and run the application)
+	 * Main routine
 	 * @return result
 	 */
 	static int Run(void);
 
+public:
 	//From CEventHandler
 	void OnMouseClick(const MouseButton enuButton, const int nXCoord, const int nYCoord);
 	void OnKeyPress(const int nKeyCode);
 	void OnDraw(void);
 
 private:	//Class variables
-	//! Texture type enum
-	enum Texture {
-		TxrCell = 0,	///< simple cell
-		TxrActiveTube,	///< active tube
-		TxrPassiveTube,	///< passive tube
-		TxrSender,		///< sender (server)
-		TxrRcvActive,	///< active receiver (client)
-		TxrRcvPassive,	///< passive receiver (client)
-		TxrRcvBack,		///< receiver (client) back side
-		TxrEnvironment,	///< environment texture
-		TxrButtonNew,	///< "new" button
-		TxrButtonRst,	///< "reset" button
-		TxrWebLink,		///< web link texture
-		TxrWinTitle,	///< win title
-		TxrTitle,		///< title
-		TxrCounter		///< texture type counter (for static memory allocation)
-	};
-	int				m_aTextures[TxrCounter];	///< Textures used by objects
-	CGame			m_objGame;					///< Game logic class
-	CWinSubsystem*	m_pWinSubsystem;			///< Window manager
+
+	//! Game modes
+	enum Mode {
+		ModePlayGame,
+		ModeNewGame,
+		ModeCustomGame,
+		ModeInfo
+	} m_enuCurrentMode, m_enuNewMode;	///< Game modes
+	bool			m_fMotionFirstPhase;///< First motion phase (first 90 degree)
+	unsigned long	m_nMotionStartTime;	///< Motion start time
+
+	CGame*			m_pGameLogic;		///< Game logic class
+	CWinSubsystem*	m_pWinSubsystem;	///< Window manager
+	CGLObjects*		m_pObjects;			///< OpenGL objects drawer
 
 private:
-	/**
-	 * Set windows manager
-	 * @param pWinSubsystem pointer to window manager class
-	 */
-	void SetWndSubsystem(CWinSubsystem* pWinSubsystem);
 
 	/**
-	 * Start new game
+	 * Set new game mode
+	 * @param enuNewMode new game mode
 	 */
-	void NewGame(void)		{ m_objGame.New(); m_pWinSubsystem->PostRedisplay(); }
+	void SetNewMode(const Mode enuNewMode);
 
 	/**
 	 * Reset current game
 	 */
-	void ResetGame(void)	{ m_objGame.Reset(); m_pWinSubsystem->PostRedisplay(); }
-
-private:	//Drawing functions
-	/**
-	 * Draw environment (title, buttons, etc)
-	 */
-	void RenderEnv(void);
+	void ResetGame(void)						{ m_pGameLogic->Reset(); m_pWinSubsystem->PostRedisplay(); }
 
 	/**
-	 * Draw background cells
+	 * Initialization
+	 * @param pWinSubsystem pointer to window manager class
+	 * @return false if error
 	 */
-	void RenderBackground(void);
+	bool Initialize(CWinSubsystem* pWinSubsystem);
+	
+	/**
+	 * Draw environment (title, buttons etc)
+	 */
+	void DrawEnvironment(void);
+
+	/**
+	 * Draw setup game window
+	 * @param nGLMode render mode
+	 */
+	void DrawSetUpGame(int nGLMode);
+
+	/**
+	 * Draw scene
+	 * @param nGLMode render mode
+	 * @return true if redisplay is needed
+	 */
+	bool DrawGame(int nGLMode);
+
+	/**
+	 * Draw map cells
+	 */
+	void DrawMapCells(void);
 
 	/**
 	 * Draw scene (tubes, sender, recievers)
 	 * @param fIsShadow true if it is shadow projection drawing
+	 * @return true if redisplay is needed
 	 */
-	void RenderScene(bool fIsShadow);
+	bool DrawMapObjects(bool fIsShadow);
 
 	/**
 	 * Draw tube (ObjStrTube, ObjHalfTube, ObjCurTube, ObjTubeJoint)
@@ -105,14 +118,20 @@ private:	//Drawing functions
 	bool DrawTube(CCell* pCell, bool fIsShadow);
 
 	/**
-	 * Draw sender (TxrSender)
-	 * @param pCell an object
+	 * Set up projection matrix
 	 */
-	void DrawSender(CCell* pCell);
+	void SetupProjection(void) const;
 
-	/**
-	 * Draw receiver (ObjReceiver)
-	 * @param pCell an object
-	 */
-	void DrawReciever(CCell* pCell);
+private:	//Implementation functions from GLu
+	
+	//! gluLookAt implementation
+	void LookAt(GLfloat eyeX, GLfloat eyeY, GLfloat eyeZ, GLfloat lookAtX, GLfloat lookAtY, GLfloat lookAtZ, GLfloat upX, GLfloat upY, GLfloat upZ) const;
+	
+	//! gluPickMatrix implementation
+	void PickMatrix(GLfloat x, GLfloat y, GLfloat width, GLfloat height, const GLint viewport[4]) const;
+	
+	//! Perform cross product between 2 vectors
+	void CrossProd(GLfloat x1, GLfloat y1, GLfloat z1, GLfloat x2, GLfloat y2, GLfloat z2, GLfloat res[3]) const;
+
+
 };

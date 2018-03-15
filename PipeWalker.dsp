@@ -43,7 +43,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /YX /FD /c
-# ADD CPP /nologo /W3 /GX /O2 /D "PWTARGET_WINNT" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /FD /c
+# ADD CPP /nologo /W3 /GX /O2 /D "PW_SYSTEM_WINNT" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
@@ -70,7 +70,7 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /YX /FD /GZ /c
-# ADD CPP /nologo /W3 /Gm /GX /ZI /Od /D "PWTARGET_WINNT" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /FR /FD /GZ /c
+# ADD CPP /nologo /W3 /Gm /GX /ZI /Od /D "PW_SYSTEM_WINNT" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /FR /FD /GZ /c
 # SUBTRACT CPP /YX
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /win32
@@ -89,125 +89,9 @@ LINK32=link.exe
 
 # Name "PipeWalker - Win32 Release"
 # Name "PipeWalker - Win32 Debug"
-# Begin Group "Source Files"
-
-# PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
-# Begin Source File
-
-SOURCE=src\cell.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=src\game.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=src\main.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=src\mswindows.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=src\opengl.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=src\texload.cpp
-# End Source File
-# End Group
-# Begin Group "Header Files"
-
-# PROP Default_Filter "h;hpp;hxx;hm;inl"
-# Begin Source File
-
-SOURCE=src\base.h
-# End Source File
-# Begin Source File
-
-SOURCE=src\cell.h
-# End Source File
-# Begin Source File
-
-SOURCE=src\common.h
-# End Source File
-# Begin Source File
-
-SOURCE=src\game.h
-# End Source File
-# Begin Source File
-
-SOURCE=src\mswindows.h
-# End Source File
-# Begin Source File
-
-SOURCE=src\opengl.h
-# End Source File
-# Begin Source File
-
-SOURCE=src\texload.h
-# End Source File
-# End Group
 # Begin Group "Resource Files"
 
 # PROP Default_Filter "ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"
-# Begin Group "Textures"
-
-# PROP Default_Filter ""
-# Begin Source File
-
-SOURCE=.\textures\bkgr.tga
-# End Source File
-# Begin Source File
-
-SOURCE=.\textures\btn_new.tga
-# End Source File
-# Begin Source File
-
-SOURCE=.\textures\btn_reset.tga
-# End Source File
-# Begin Source File
-
-SOURCE=.\textures\cellbkg.tga
-# End Source File
-# Begin Source File
-
-SOURCE=.\textures\congr.tga
-# End Source File
-# Begin Source File
-
-SOURCE=.\textures\display_act.tga
-# End Source File
-# Begin Source File
-
-SOURCE=.\textures\display_psv.tga
-# End Source File
-# Begin Source File
-
-SOURCE=.\textures\recv.tga
-# End Source File
-# Begin Source File
-
-SOURCE=.\textures\sender.tga
-# End Source File
-# Begin Source File
-
-SOURCE=.\textures\title.tga
-# End Source File
-# Begin Source File
-
-SOURCE=.\textures\tube_act.tga
-# End Source File
-# Begin Source File
-
-SOURCE=.\textures\tube_psv.tga
-# End Source File
-# Begin Source File
-
-SOURCE=.\textures\weblink.tga
-# End Source File
-# End Group
 # Begin Source File
 
 SOURCE=.\PipeWalker.ico
@@ -221,5 +105,81 @@ SOURCE=src\PipeWalker.rc
 SOURCE=src\PipeWalkerRes.h
 # End Source File
 # End Group
+# Begin Source File
+
+SOURCE=.\src\base.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\cell.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\cell.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\common.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\game.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\game.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\globjects.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\globjects.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\main.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opengl.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\opengl.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\tgaloader.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\tgaloader.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\wss_glut.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\wss_glut.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\wss_winnt.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\wss_winnt.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\wss_x11.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\wss_x11.h
+# End Source File
 # End Target
 # End Project

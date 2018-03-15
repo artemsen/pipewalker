@@ -26,6 +26,12 @@
 class CEventHandler
 {
 public:
+	//! Default constructor
+	CEventHandler(void)			{}
+
+	//! Default destructor
+	virtual ~CEventHandler()	{}
+
 	//! Mouse button types
 	enum MouseButton {
 		LeftButton,
@@ -66,6 +72,7 @@ public:
 	 * @param pEventHandler an event handler
 	 */
 	CWinSubsystem(CEventHandler* pEventHandler) : m_pEventHandler(pEventHandler) {}
+
 	//! Default destructor
 	virtual ~CWinSubsystem() {}
 
@@ -91,6 +98,13 @@ public:
 	 */
 	virtual void PostRedisplay(void) = 0;
 
-protected:
-	CEventHandler* m_pEventHandler;	///< event handler
+	/**
+	 * Show error message
+	 * @param pszErrorMessage an error message to show
+	 */
+	virtual void ShowErrorMessage(const char* pszErrorMsg) = 0;
+
+protected:	//Class variables
+
+	CEventHandler* m_pEventHandler;	///< an event handler
 };

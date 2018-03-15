@@ -1,0 +1,27 @@
+PipeWalker 0.4.1 2008-05-05
+---------------------------
+ * added map id to choose custom map
+ * added map levels (10x10, 20x20, 30x30 map resolution)
+ * added lock/unlock status for cells
+ * some interface changes
+ * removed GLU dependency
+ * added GLUT (as alternative) support (to solve some problem with launching under X)
+ * minor map generator optimizations
+ * major rendering optimizations
+ * some important bugs fixed
+
+
+PipeWalker 0.3.1 2008-04-18
+---------------------------
+ * game engine ported to OpenGL
+ * removed Qt dependency
+
+
+PipeWalker 0.2.1 2007-06-28
+---------------------------
+ * some important bugs fixed
+
+
+PipeWalker 0.1.1 2007-06-09
+---------------------------
+ * first official release! :-)

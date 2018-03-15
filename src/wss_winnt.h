@@ -16,29 +16,49 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>. * 
  **************************************************************************/
 
+#ifdef PW_SYSTEM_WINNT	//Only for MS Windows
+
+#pragma once
+
+#include "base.h"
 #include "common.h"
-#include "opengl.h"
+#include "PipeWalkerRes.h"
 
 
-#ifdef PW_SYSTEM_WINNT
-/****************************************************************/
-/*                  MS Windows main routine                     */
-/****************************************************************/
-int APIENTRY WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR /*lpCmdLine*/, int /*nCmdShow*/)
+class CMSWindows : public CWinSubsystem
 {
-	#ifndef NDEBUG
-		//Create console for debug session
-		AllocConsole();
-		freopen("CONOUT$", "wb", stdout);
-		freopen("CONOUT$", "wb", stderr);
-	#endif
-#else
-/****************************************************************/
-/*                      ANSI C main routine                     */
-/****************************************************************/
-int main(int /*argc*/, char** /*argv*/)
-{
-#endif
-	
-	return COpenGL::Run();
-}
+public:
+	//! Default constructor
+	CMSWindows(CEventHandler* pEventHandler) : CWinSubsystem(pEventHandler), m_hWnd(NULL), m_hDC(NULL)	{}
+
+	//! Default destructor
+	~CMSWindows()	{}
+
+public:	//From CWinSubsystem
+	bool Initialize(void);
+	int DoMainLoop(void);
+	void PostExit(void);
+	void PostRedisplay(void);
+	void ShowErrorMessage(const char* pszErrorMsg);
+
+private:
+	HWND	m_hWnd;		///< Holds Our Window Handle
+	HDC		m_hDC;		///< Private GDI Device Context
+
+	/**
+	 * Destroy window and post exit message
+	 */
+	void DestroyAndQuit(void);
+
+	/**
+	 * The WindowProc function (for more information see MSDN)
+	 * @param hWnd Handle to the window
+	 * @param uMsg Specifies the message
+	 * @param wParam Specifies additional message information
+	 * @param lParam Specifies additional message information
+	 * @return result of the message processing, depends on the message sent
+	 */
+	static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+};
+
+#endif	//PW_SYSTEM_WINNT

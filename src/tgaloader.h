@@ -21,7 +21,18 @@
 #include "common.h"
 
 
-class CTextureLoader
+//! Image description - contains height, width, data and format by picture
+struct Image {
+	Image() : Width(0), Height(0), Data(NULL), Format(-1) {}
+	~Image() { if (Data) delete[] Data; }
+	unsigned long	Width;		///< width of the image
+	unsigned long	Height;		///< height of the image
+	unsigned char*	Data;		///< image data
+	int				Format;		///< format of the image (GL_RGB, GL_RGBA)
+};
+
+
+class CTGALoader
 {
 
 public:
@@ -30,42 +41,22 @@ public:
 	 * Load texture from file
 	 * @param pnTexture texture
 	 * @param pszFileName a file name
+	 * @param pszErrorDescr an output buffer to store error message
 	 * @return true if texture loaded
 	 */
-	static bool LoadTexture(int* pnTexture, const char* pszFileName);
-
-#ifdef PWTARGET_WINNT
-	/**
-	 * Load texture from exe-file resources
-	 * @param pnTexture texture
-	 * @param nIDRes resource ID
-	 * @return true if texture loaded
-	 */
-	static bool LoadTexture(int* pnTexture, unsigned int nIDRes);
-#endif
+	static bool LoadTexture(GLuint* pnTexture, const char* pszFileName, char* pszErrorDescr);
 
 	/**
-	 * Load texture from memory
-	 * @param pnTexture texture
+	 * Load image from file
+	 * @param pImgData pointer to output structure
 	 * @param pszFileName a file name
-	 * @return true if texture loaded
+	 * @param pszErrorDescr an output buffer to store error message
+	 * @return true if image loaded
 	 */
-	static bool LoadTexture(int* pnTexture, unsigned char* pImgData, const long nLength);
+	static bool LoadImage(Image* pImage, const char* pszFileName, char* pszErrorDescr);
 
 
 private:
-
-	//! Image description - contains height, width, data and format by picture
-	struct Image {
-		Image() : Width(0), Height(0), OwnBuffer(false), Data(0), Format(-1) {}
-		~Image() { if (OwnBuffer && Data) delete[] Data; }
-	    unsigned long	Width;		///< width of the image
-	    unsigned long	Height;		///< height of the image
-	    bool			OwnBuffer;	///< flag using own buffer to store image data
-	    unsigned char*	Data;		///< image data
-		int				Format;		///< format of the image (GL_RGB, GL_RGBA)
-	};
-
 	//! Class to work with image data buffer
 	class CBuffer
 	{
@@ -83,18 +74,11 @@ private:
 	};
 
 	/**
-	 * Bitmap loader (24 bit bitmaps with 1 plane only) (fuction trow exception if error)
+	 * TGA loader (24 bit bitmaps with 1 plane only) (fuction trow exception if error)
 	 * @param pBuf image data
 	 * @param pImg a pointer to output Image structure
 	 */
-	static void LoadTextureBMP(CBuffer* pBuf, Image* pImg);
-
-	/**
-	 * TGA uncompressed loader (24 bit bitmaps with 1 plane only) (fuction trow exception if error)
-	 * @param pBuf image data
-	 * @param pImg a pointer to output Image structure
-	 */
-	static void LoadTextureTGA(CBuffer* pBuf, Image* pImg);
+	static void LoadTGA(CBuffer* pBuf, Image* pImg);
 
 	/**
 	 * Convert data from BGR to RGB mode

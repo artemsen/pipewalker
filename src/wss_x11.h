@@ -16,10 +16,18 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>. * 
  **************************************************************************/
 
+#ifdef PW_SYSTEM_NIX
+
 #pragma once
 
 #include "base.h"
 #include "common.h"
+
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <X11/keysym.h>
+#include <X11/xpm.h>
+#include <GL/glx.h>
 
 
 class CXServer : public CWinSubsystem
@@ -27,14 +35,16 @@ class CXServer : public CWinSubsystem
 public:
 	//! Default constructor
 	CXServer(CEventHandler* pEventHandler) : CWinSubsystem(pEventHandler), m_xDisp(NULL), m_xCtx(NULL), m_fDone(false)	{}
+
 	//! Default destructor
-	~CXServer(void)	{}
+	~CXServer()	{}
 
 public:	//From CWinSubsystem
 	bool Initialize(void);
 	int DoMainLoop(void);
 	void PostExit(void);
 	void PostRedisplay(void);
+	void ShowErrorMessage(const char* pszErrorMsg);
 
 private:
 	Display*	m_xDisp;	///< X display
@@ -42,3 +52,5 @@ private:
 	GLXContext	m_xCtx;		///< X drawing context
 	bool		m_fDone;	///< done flag (used for stopping drawing and destroy window)
 };
+
+#endif	//PW_SYSTEM_NIX

@@ -2,21 +2,29 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(PipeWalker, 0.3.1, artemsen@gmail.com)
+AC_INIT(PipeWalker, 0.4.1, artemsen@gmail.com)
 AC_CONFIG_SRCDIR([src/PipeWalker.xpm])
 
 # Checks for programs.
 AC_PROG_CXX
 
-# Check for X Server
+#Check for X.
 AC_PATH_XTRA
-LIBS="$X_LIBS $LIBS"
+LIBS="$LIBS $X_LIBS"
+
+AC_ARG_WITH(glut, [  --with-glut             use GLUT library instead of native X],
+	[
+	AC_CHECK_LIB([glut], [glutInit], [], AC_MSG_ERROR([libglut not found]))
+	CXXFLAGS="$CXXFLAGS -DPW_USE_GLUT"
+	],
+	[
+	AC_CHECK_LIB([X11], [XOpenDisplay], [], AC_MSG_ERROR([libX11 not found]))
+	AC_CHECK_LIB([Xpm], [XpmCreatePixmapFromData], [], AC_MSG_ERROR([libXpm not found]))
+	]
+)
 
 # Checks for libraries.
 AC_CHECK_LIB([GL], [glBegin], [], AC_MSG_ERROR([libGL not found]))
-AC_CHECK_LIB([GLU], [gluPerspective], [], AC_MSG_ERROR([libGLU not found]))
-AC_CHECK_LIB([X11], [XOpenDisplay], [], AC_MSG_ERROR([libX11 not found]))
-AC_CHECK_LIB([Xpm], [XpmCreatePixmapFromData], [], AC_MSG_ERROR([libXpm not found]))
 
 # Checks for header files.
 AC_HEADER_STDC
@@ -30,7 +38,7 @@ AC_HEADER_TIME
 
 # Checks for library functions.
 AC_FUNC_MEMCMP
-AC_CHECK_FUNCS([gettimeofday])
+AC_CHECK_FUNCS([gettimeofday sqrt])
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

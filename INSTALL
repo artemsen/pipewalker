@@ -8,6 +8,10 @@ The simplest way to compile this package is:
 
      Running `configure` might take a while.  While running, it prints
      some messages telling which features it is checking for.
+     
+     If you have trubles with launching application under X server,
+     please, try configure the package with option '--with-glut'.
+     (You need GLUT headers and library to use this option).
 
   2. Type `make` to compile the package.
 
