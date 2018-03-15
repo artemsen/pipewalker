@@ -21,9 +21,17 @@
 #include "image.h"
 #include "settings.h"
 #include "../extra/pipewalker.xpm"
+
 #ifdef WIN32
 #include <SDL/SDL_syswm.h>
+
+//! SDL window procedure
+WNDPROC sdl_wnd_proc = NULL;
+
+//! Own WNDPROC
+LRESULT pw_win32_wnd_proc(HWND wnd, UINT msg, WPARAM w_param, LPARAM l_param);
 #endif // WIN32
+
 
 /**
  * Parse command line parameters
@@ -67,6 +75,7 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
+	//Save desktop size
 	const int desktop_width = vinfo->current_w;
 	const int desktop_height = vinfo->current_h;
 
@@ -95,10 +104,8 @@ int main(int argc, char* argv[])
 	SDL_SysWMinfo wmi;
 	SDL_VERSION(&wmi.version);
 	if (SDL_GetWMInfo(&wmi)) {
-		//Disable 'maximize' button
-		LONG_PTR ws = GetWindowLongPtr(wmi.window, GWL_STYLE);
-		ws ^= WS_MAXIMIZEBOX;
-		SetWindowLongPtr(wmi.window, GWL_STYLE, ws);
+		//Set own window procedure
+		sdl_wnd_proc = reinterpret_cast<WNDPROC>(SetWindowLongPtr(wmi.window, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(&pw_win32_wnd_proc)));
 		//Set normal icon
 		static HICON icon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(0));
 		if (icon)
@@ -128,7 +135,10 @@ int main(int argc, char* argv[])
 				last_mouse_state = SDL_GetMouseState(NULL, NULL);
 				break;
 			case SDL_MOUSEBUTTONUP:
-				game_instance.on_mouse_click(last_mouse_state);
+				if (last_mouse_state) {
+					game_instance.on_mouse_click(last_mouse_state);
+					last_mouse_state = 0;
+				}
 				break;
 			case SDL_KEYDOWN:
 				if (event.key.keysym.sym == SDLK_F4 && (SDL_GetModState() == KMOD_LALT || SDL_GetModState() == KMOD_RALT))
@@ -147,8 +157,8 @@ int main(int argc, char* argv[])
 					int wnd_width = event.resize.w;
 					int wnd_height = event.resize.h;
 
+					//Set correct aspect ratio
 					if (wnd_width != desktop_width && wnd_height != desktop_height) {
-						//Set correct aspect ratio
 						if (wnd_height != vinfo->current_h)
 							wnd_width = static_cast<int>(static_cast<float>(wnd_height) / PW_ASPECT_RATIO);
 						else if (wnd_width != vinfo->current_w)
@@ -166,7 +176,7 @@ int main(int argc, char* argv[])
 					expose_event.type = SDL_VIDEOEXPOSE;
 					SDL_PushEvent(&expose_event);
 				}
-			break;
+				break;
 		}
 	}
 
@@ -276,3 +286,36 @@ Uint32 timer_callback(Uint32 interval)
 	}
 	return interval;
 }
+
+
+#ifdef WIN32
+LRESULT pw_win32_wnd_proc(HWND wnd, UINT msg, WPARAM w_param, LPARAM l_param)
+{
+	assert(sdl_wnd_proc);
+
+	if (msg == WM_GETMINMAXINFO) {
+		static LONG max_width = 0;
+		static LONG max_height = 0;
+		if (!max_height) {
+			max_height = GetSystemMetrics(SM_CYMAXIMIZED);
+			//Calculate correct aspect ratio
+			RECT aspect;
+			aspect.top = aspect.left = 0;
+			aspect.right = PW_SCREEN_WIDTH;
+			aspect.bottom = PW_SCREEN_HEIGHT;
+			AdjustWindowRectEx(&aspect, GetWindowLongPtr(wnd, GWL_STYLE), FALSE, GetWindowLongPtr(wnd, GWL_EXSTYLE));
+			const float need_aspect = static_cast<float>(aspect.bottom - aspect.top) / static_cast<float>(aspect.right - aspect.left);
+			max_width = static_cast<LONG>(static_cast<float>(max_height) / need_aspect);
+		}
+
+		LPMINMAXINFO mmi = reinterpret_cast<LPMINMAXINFO>(l_param);
+		mmi->ptMaxSize.x = mmi->ptMaxTrackSize.x = max_width;
+		mmi->ptMaxSize.y = mmi->ptMaxTrackSize.y = max_height;
+		mmi->ptMinTrackSize.x = PW_SCREEN_WIDTH / 3;
+		mmi->ptMinTrackSize.y = PW_SCREEN_HEIGHT / 3;
+		return 0;
+	}
+
+	return CallWindowProc(sdl_wnd_proc, wnd, msg, w_param, l_param);
+}
+#endif // WIN32

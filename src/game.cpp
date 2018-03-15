@@ -130,6 +130,10 @@ void game::on_mouse_move(const int x, const int y)
 	_mouse_x = static_cast<float>(x) * (PW_BASE_WIDTH / static_cast<float>(_wnd_width)) - PW_BASE_WIDTH / 2.0f;
 	_mouse_y = PW_ASPECT_RATIO * (PW_BASE_WIDTH / 2.0f - static_cast<float>(y) * (PW_BASE_WIDTH / static_cast<float>(_wnd_height)));
 
+#ifndef NDEBUG
+	printf("Mouse motion: %03i %03i on %.02f %.02f\n", x, y, _mouse_x, _mouse_y);
+#endif //NDEBUG
+
 	_need_redisplay |= _curr_mode->on_mouse_move(_mouse_x, _mouse_y);
 }
 

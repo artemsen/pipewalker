@@ -206,14 +206,33 @@ void cell::rotate(const bool dir)
 	if (locked())
 		return;
 	if (rotation_in_progress()) {
-		_rotate.twice = true;
-		return;
+		if (dir == _rotate.direction)
+			_rotate.twice = true;
+		else {
+			//Back rotation
+			const bool new_conn_top =    _rotate.direction ? _left_conn : _right_conn;
+			const bool new_conn_bottom = _rotate.direction ? _right_conn : _left_conn;
+			const bool new_conn_left =   _rotate.direction ? _bottom_conn : _top_conn;
+			const bool new_conn_right =  _rotate.direction ? _top_conn : _bottom_conn;
+			_top_conn = new_conn_top;
+			_bottom_conn = new_conn_bottom;
+			_left_conn = new_conn_left;
+			_right_conn = new_conn_right;
+			_rotate.direction = !_rotate.direction;
+			_rotate.twice = false;
+			const unsigned long curr_tick = SDL_GetTicks();
+			_rotate.start_time = curr_tick - (PW_ROTATE_TUBE_SPEED - (curr_tick - _rotate.start_time));
+			_rotate.need_angle = _rotate.init_angle;
+			_rotate.init_angle += (_rotate.direction ? 90.0f : -90.0f);
+		}
 	}
-	_rotate.direction = dir;
-	_rotate.start_time = SDL_GetTicks();
-	_rotate.twice = false;
-	_rotate.init_angle = _angle;
-	_rotate.need_angle = _angle + (_rotate.direction ? -90.0f : 90.0f);
+	else {
+		_rotate.direction = dir;
+		_rotate.start_time = SDL_GetTicks();
+		_rotate.twice = false;
+		_rotate.init_angle = _angle;
+		_rotate.need_angle = _angle + (_rotate.direction ? -90.0f : 90.0f);
+	}
 }
 
 
@@ -238,8 +257,8 @@ cell::state cell::calculate_state()
 		const unsigned int diff_time = SDL_GetTicks() - _rotate.start_time;
 		if (diff_time < PW_ROTATE_TUBE_SPEED) {
 			const float degree = static_cast<float>(diff_time) / static_cast<float>(PW_ROTATE_TUBE_SPEED) * 90.0f;
-			_angle = (_rotate.direction ? -degree : degree);
-			_angle += _rotate.init_angle;
+			_angle = _rotate.init_angle;
+			_angle += (_rotate.direction ? -degree : degree);
 			st = st_updated;
 		}
 		else {
@@ -267,22 +286,10 @@ void cell::update_rotate_state()
 	_rotate.start_time = 0;
 
 	//Calculate new connection sides
-	bool new_conn_top = false;
-	bool new_conn_bottom = false;
-	bool new_conn_left = false;
-	bool new_conn_right = false;
-	if (_rotate.direction) {
-		new_conn_top = _left_conn;
-		new_conn_bottom = _right_conn;
-		new_conn_left = _bottom_conn;
-		new_conn_right = _top_conn;
-	}
-	else {
-		new_conn_top = _right_conn;
-		new_conn_bottom = _left_conn;
-		new_conn_left = _top_conn;
-		new_conn_right = _bottom_conn;
-	}
+	const bool new_conn_top =    _rotate.direction ? _left_conn : _right_conn;
+	const bool new_conn_bottom = _rotate.direction ? _right_conn : _left_conn;
+	const bool new_conn_left =   _rotate.direction ? _bottom_conn : _top_conn;
+	const bool new_conn_right =  _rotate.direction ? _top_conn : _bottom_conn;
 	_top_conn = new_conn_top;
 	_bottom_conn = new_conn_bottom;
 	_left_conn = new_conn_left;

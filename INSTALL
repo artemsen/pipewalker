@@ -17,9 +17,8 @@ Installing PipeWalker
   ------------------
   Use PipeWalker.sln solution file to build
   in Visual Studio 2010.
-
   You need Windows Platform SDK and SDL developer
-  libraries and header files to build solution.
+  libraries and header files to build the solution.
 
   or
 
@@ -28,4 +27,3 @@ Installing PipeWalker
     export LDFLAGS="-L/usr/local/lib"
     ./configure --build=i586-mingw32
     make                    
-    make install

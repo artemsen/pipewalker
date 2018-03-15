@@ -79,10 +79,10 @@ Section "Install"
   ;Create shortcuts
   SetOutPath "$INSTDIR"
   !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
-    CreateDirectory "$SMPROGRAMS\$StartMenuFolder"
-    CreateShortCut  "$SMPROGRAMS\$StartMenuFolder\PipeWalker.lnk" "$INSTDIR\PipeWalker.exe"
-    CreateShortCut  "$SMPROGRAMS\$StartMenuFolder\Read me.lnk" "$INSTDIR\ReadMe.txt"
-    CreateShortCut  "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
+  CreateDirectory "$SMPROGRAMS\$StartMenuFolder"
+  CreateShortCut  "$SMPROGRAMS\$StartMenuFolder\PipeWalker.lnk" "$INSTDIR\PipeWalker.exe"
+  CreateShortCut  "$SMPROGRAMS\$StartMenuFolder\Read me.lnk" "$INSTDIR\ReadMe.txt"
+  CreateShortCut  "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
   !insertmacro MUI_STARTMENU_WRITE_END
 
 SectionEnd

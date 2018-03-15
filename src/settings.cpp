@@ -45,7 +45,7 @@ settings::settings()
 	_theme("Simple")
 {
 #ifndef NDEBUG
-	_rnd_lvl = true;
+	_debug_mode = true;
 #endif	//NDEBUG
 }
 
