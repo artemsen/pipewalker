@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2012 by Artem Senichev <artemsen@gmail.com>        *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -17,283 +17,279 @@
  **************************************************************************/
 
 #include "settings.h"
-#include "buffer.h"
 
-static const char* PW_SERIALIZE_MAPSIZE = "MapSize";			///< Map size field
-static const char* PW_SERIALIZE_WRAPMODE = "Wrapping";			///< Map wrapping mode field
-static const char* PW_SERIALIZE_THEME = "Theme";				///< Theme id field
-static const char* PW_SERIALIZE_SOUND = "Sound";				///< Sound mode field
+//Config file section and parameters names
+const char* PWS_SECT_COMMON =   "common";      ///< Common properties section name
+const char* PWS_SECT_LVLSM_P =  "level_sp";    ///< Small level map properties section name
+const char* PWS_SECT_LVLSM_W =  "level_sw";    ///< Small level map properties section name
+const char* PWS_SECT_LVLNL_P =  "level_np";    ///< Normal level map properties section name
+const char* PWS_SECT_LVLNL_W =  "level_nw";    ///< Normal level map properties section name
+const char* PWS_SECT_LVLBG_P =  "level_bp";    ///< Big level map properties section name
+const char* PWS_SECT_LVLBG_W =  "level_bw";    ///< Big level map properties section name
+const char* PWS_SECT_LVLEX_P =  "level_ep";    ///< Extra level map properties section name
+const char* PWS_SECT_LVLEX_W =  "level_ew";    ///< Extra level map properties section name
+const char* PWS_CPROP_THEME =   "theme";       ///< Theme file name field
+const char* PWS_CPROP_SOUND =   "sound";       ///< Sound mode field
+const char* PWS_CPROP_LASTMAP = "last_lvl";    ///< Last map size
+const char* PWS_LEVEL_ID =      "id";          ///< Last level Id
+const char* PWS_LEVEL_STATE =   "state";       ///< Last level state
 
-static const char* PW_SERIALIZE_MAPID_S = "MapIDSmall";			///< Map ID field
-static const char* PW_SERIALIZE_MAPST_S = "MapStateSmall";		///< Map state field
-static const char* PW_SERIALIZE_MAPID_N = "MapIDNormal";		///< Map ID field
-static const char* PW_SERIALIZE_MAPST_N = "MapStateNormal";		///< Map state field
-static const char* PW_SERIALIZE_MAPID_B = "MapIDBig";			///< Map ID field
-static const char* PW_SERIALIZE_MAPST_B = "MapStateBig";		///< Map state field
-static const char* PW_SERIALIZE_MAPID_E = "MapIDExtra";			///< Map ID field
-static const char* PW_SERIALIZE_MAPST_E = "MapStateExtra";		///< Map state field
-
-static const char* PW_USRSETTINGS_FILENAME = ".pipewalker";		///< Filename to load/save user settings
-static const char* PW_APPSETTINGS_FILENAME = "settings.ini";	///< Filename to load game application settings
+const char* PWS_FILENAME =      ".pipewalker"; ///< User settings file name
 
 
-map<string, string> CSettings::Load(const char* fileName) const
+settings::settings()
+:	_sound(true),
+	_theme("Simple")
 {
-	assert(fileName);
+}
 
-	map<string, string> result;
 
-	CBuffer buf;
-	buf.Load(fileName);
+settings& settings::instance()
+{
+	static settings i;
+	return i;
+}
 
-	while (!buf.EOB()) {
-		const string str = buf.GetString();
-		if (str.empty() || str[0] == ';' || str[0] == '#')
+
+void settings::load()
+{
+	settings& inst = instance();
+
+	serializer sett;
+	if (sett.load(inst._sett_file)) {
+		inst._sound = sett.get_value(PWS_SECT_COMMON, PWS_CPROP_SOUND, inst._sound);
+		inst._theme = sett.get_value(PWS_SECT_COMMON, PWS_CPROP_THEME, inst._theme);
+		inst._last_level = sett.get_value(PWS_SECT_COMMON, PWS_CPROP_LASTMAP, inst._last_level);
+
+		for (size_t i = 0; i < 8; ++i) {
+			const char* section_name = inst.level_section_name(static_cast<level::size>(i / 2), (i % 2) != 0);
+			assert(section_name && *section_name);
+			inst._states[i].id = sett.get_value(section_name, PWS_LEVEL_ID, 0);
+			inst._states[i].state = sett.get_value(section_name, PWS_LEVEL_STATE, string());
+		}
+	}
+}
+
+
+void settings::save()
+{
+	settings& inst = instance();
+
+	serializer sett;
+	sett.set_value(PWS_SECT_COMMON, PWS_CPROP_SOUND, inst._sound);
+	sett.set_value(PWS_SECT_COMMON, PWS_CPROP_THEME, inst._theme);
+	sett.set_value(PWS_SECT_COMMON, PWS_CPROP_LASTMAP, inst._last_level);
+	for (size_t i = 0; i < 8; ++i) {
+		if (inst._states[i].id) {
+			const char* section_name = inst.level_section_name(static_cast<level::size>(i / 2), (i % 2) != 0);
+			assert(section_name && *section_name);
+			sett.set_value(section_name, PWS_LEVEL_ID, static_cast<int>(inst._states[i].id));
+			sett.set_value(section_name, PWS_LEVEL_STATE, inst._states[i].state);
+		}
+	}
+	sett.save(inst._sett_file);
+}
+
+
+bool settings::get_state(const level::size sz, const bool wrap, unsigned long& id, string& state)
+{
+	const level_state& ls = instance()._states[static_cast<size_t>(sz) * 2 + (wrap ? 1 : 0)];
+	id = ls.id;
+	state = ls.state;
+	return (id > 0 && !state.empty());
+}
+
+
+void settings::set_state(const unsigned long id, const level::size sz, const bool wrap, const string& state)
+{
+	assert(id > 0);
+	assert(!state.empty());
+
+	settings& inst = instance();
+	level_state& ls = inst._states[static_cast<size_t>(sz) * 2 + (wrap ? 1 : 0)];
+	ls.id = id;
+	ls.state = state;
+	inst._last_level = inst.level_section_name(sz, wrap);
+}
+
+
+const char* settings::level_section_name(const level::size sz, const bool wrap) const
+{
+	switch (sz) {
+		case level::sz_small:
+			return wrap ? PWS_SECT_LVLSM_W : PWS_SECT_LVLSM_P;
+		case level::sz_normal:
+			return wrap ? PWS_SECT_LVLNL_W : PWS_SECT_LVLNL_P;
+		case level::sz_big:
+			return wrap ? PWS_SECT_LVLBG_W : PWS_SECT_LVLBG_P;
+		case level::sz_extra:
+			return wrap ? PWS_SECT_LVLEX_P : PWS_SECT_LVLEX_W;
+		default:
+			assert(false && "Unhadled size");
+	}
+	return "";
+}
+
+
+level::size settings::last_size()
+{
+	const string& ll = instance()._last_level;
+	if (ll.compare(PWS_SECT_LVLSM_P) == 0 || ll.compare(PWS_SECT_LVLSM_W) == 0)
+		return level::sz_small;
+	else if (ll.compare(PWS_SECT_LVLNL_P) == 0 || ll.compare(PWS_SECT_LVLNL_W) == 0)
+		return level::sz_normal;
+	else if (ll.compare(PWS_SECT_LVLBG_P) == 0 || ll.compare(PWS_SECT_LVLBG_W) == 0)
+		return level::sz_big;
+	else if (ll.compare(PWS_SECT_LVLEX_P) == 0 || ll.compare(PWS_SECT_LVLEX_W) == 0)
+		return level::sz_extra;
+	return level::sz_normal;
+}
+
+
+
+bool settings::last_wrap()
+{
+	const string& ll = instance()._last_level;
+	return !(
+		ll.compare(PWS_SECT_LVLSM_P) == 0 ||
+		ll.compare(PWS_SECT_LVLNL_P) == 0 ||
+		ll.compare(PWS_SECT_LVLBG_P) == 0 ||
+		ll.compare(PWS_SECT_LVLEX_P) == 0);
+}
+
+
+bool settings::serializer::load(string& settings_file)
+{
+	settings_file.clear();
+
+	//Try to open "portable" version settings file
+#ifdef WIN32
+	settings_file += ".\\";
+#else
+	settings_file += "./";
+#endif //WIN32
+	settings_file += PWS_FILENAME;
+
+	ifstream fstr;
+	fstr.open(settings_file.c_str(), ifstream::in);
+	if (fstr.fail()) {
+		//Try to open usual version settings file
+#ifdef WIN32
+		settings_file = getenv("USERPROFILE");
+		settings_file += '\\';
+#else
+		settings_file = getenv("HOME");
+		settings_file += '/';
+#endif //WIN32
+		settings_file += PWS_FILENAME;
+
+		fstr.open(settings_file.c_str(), ifstream::in);
+		if (fstr.fail())
+			return false;	//No settings file
+	}
+
+	//Read all settings
+	string cs_name;
+	sett_value cs_val;
+	string cfg_line;
+	while (!fstr.eof()) {
+		getline(fstr, cfg_line);
+		trim(cfg_line);
+		if (cfg_line.empty() || cfg_line[0] == '#')
 			continue;
-
-		const size_t delimPos = str.find('=');
-		if (delimPos != string::npos) {
-			pair<string, string> kv;
-			kv.first = str.substr(0, delimPos);
-			kv.second = str.substr(delimPos + 1);
-			Trim(kv.first);
-			Trim(kv.second);
-			result.insert(kv);
+		if (cfg_line[0] == '[' && cfg_line[cfg_line.length() - 1] == ']') {
+			if (!cs_val.empty() && !cs_name.empty())
+				_settings[cs_name].insert(cs_val.begin(), cs_val.end());
+			cs_val.clear();
+			cs_name = cfg_line.substr(1, cfg_line.length() - 2);
+		}
+		else {
+			const size_t delim = cfg_line.find('=');
+			if (delim != string::npos) {
+				pair<string, string> kv;
+				kv.first = cfg_line.substr(0, delim);
+				kv.second = cfg_line.substr(delim + 1);
+				trim(kv.first);
+				trim(kv.second);
+				cs_val.insert(kv);
+			}
 		}
 	}
+	if (!cs_val.empty())
+		_settings[cs_name].insert(cs_val.begin(), cs_val.end());
+	fstr.close();
 
-	return result;
+	return true;
 }
 
 
-void CSettings::Save(const char* fileName, const map<string, string>& settings, const char* firstComment /*= NULL*/) const
+void settings::serializer::save(const string& settings_file) const
 {
-	assert(fileName);
+	assert(!settings_file.empty());
 
-	CBuffer buf;
-	if (firstComment)
-		buf.Put(string(firstComment));
-
-	for (map<string, string>::const_iterator it = settings.begin(); it != settings.end(); ++it) {
-		buf.Put(it->first);
-		buf.PutData(" = ", 3);
-		buf.Put(it->second);
-		buf.PutData("\n", 1);
-	}
-
-	buf.Save(fileName);
-}
-
-
-void CSettings::Trim(string& val) const
-{
-	while (!val.empty() && (val[0] == ' ' || val[0] == '\t'))
-		val.erase(0, 1);
-	while (!val.empty() && (val[val.length() - 1] == ' ' || val[val.length() - 1] == '\t'))
-		val.erase(val.length() - 1);
-}
-
-
-void CGameSettings::Load()
-{
-	string fileName = DIR_GAMEDATA;
-	fileName += PW_APPSETTINGS_FILENAME;
-
-	const map<string, string> settings = CSettings::Load(fileName.c_str());
-	int i = 0;
-	while (++i) {	//Eternal
-		char themeName[32], themeFile[32], themeTxtColor[32], themeTtlColor[32];
-		sprintf(themeName, "Theme%iName", i);
-		sprintf(themeFile, "Theme%iTexture", i);
-		sprintf(themeTxtColor, "Theme%iTxtColor", i);
-		sprintf(themeTtlColor, "Theme%iTtlColor", i);
-		map<string, string>::const_iterator itName = settings.find(themeName);
-		map<string, string>::const_iterator itFile = settings.find(themeFile);
-		map<string, string>::const_iterator itTxtColor = settings.find(themeTxtColor);
-		map<string, string>::const_iterator itTtlColor = settings.find(themeTtlColor);
-		if (itName == settings.end() || itFile == settings.end() || itTxtColor == settings.end() || itTtlColor == settings.end())
-			break;
-
-		Theme theme;
-		theme.Name = itName->second;
-		theme.TextureFile = itFile->second;
-		ConvertToFloat(itTxtColor->second, theme.TextColor);
-		ConvertToFloat(itTtlColor->second, theme.TitleColor);
-		Themes.push_back(theme);
-	}
-}
-
-
-void CGameSettings::ConvertToFloat(const string& src, float val[3]) const
-{
-	val[0] = val[1] = val[2] = 0.0f;
-
-	if (src.length() != 11 /* "0.1 0.2 0.3" */)
-		return;
-	val[0] = static_cast<float>(atof(src.c_str() + 0));
-	val[1] = static_cast<float>(atof(src.c_str() + 4));
-	val[2] = static_cast<float>(atof(src.c_str() + 8));
-}
-
-
-CUserSettings::CUserSettings()
-:	Size(MapSizeNormal),
-	ThemeId(0),
-	Wrapping(true),
-	Sound(true),
-	_UsePortable(true)
-{
-}
-
-
-void CUserSettings::Load()
-{
-	map<string, string> settings;
-
-	//Try to open portable version settings file
-	bool usePortable = false;
-	try {
-		settings = CSettings::Load(GetFileName().c_str());
-		usePortable = true;
-	}
-	catch (CException& /*ex*/) {
-	}
-
-	//Try to open non-portable version settings file
-	if (!usePortable) {
-		_UsePortable = false;
-		try {
-			settings = CSettings::Load(GetFileName().c_str());
+	ofstream fstr;
+	fstr.open(settings_file.c_str(), ofstream::out);
+	if (!fstr.fail()) {
+		for (sett_section::const_iterator it_sect = _settings.begin(); it_sect != _settings.end(); ++it_sect) {
+			fstr << "[" << it_sect->first << "]" << endl;
+			for (sett_value::const_iterator it_val = it_sect->second.begin(); it_val != it_sect->second.end(); ++it_val)
+				fstr << it_val->first << "=" << it_val->second << endl;
+			fstr << endl;
 		}
-		catch (CException& /*ex*/) {
-		}
-	}
-
-	//Common settings
-	if (settings.find(PW_SERIALIZE_MAPSIZE) != settings.end())
-		Size = static_cast<MapSize>(atoi(settings[PW_SERIALIZE_MAPSIZE].c_str()));
-	if (settings.find(PW_SERIALIZE_THEME) != settings.end())
-		ThemeId = static_cast<size_t>(atoi(settings[PW_SERIALIZE_THEME].c_str()));
-	if (settings.find(PW_SERIALIZE_SOUND) != settings.end())
-		Sound = (atoi(settings[PW_SERIALIZE_SOUND].c_str()) != 0);
-	if (settings.find(PW_SERIALIZE_WRAPMODE) != settings.end())
-		Wrapping = (atoi(settings[PW_SERIALIZE_WRAPMODE].c_str()) != 0);
-	
-	//Maps properties
-	if (settings.find(PW_SERIALIZE_MAPID_S) != settings.end())
-		_MapSmall.Id = atoi(settings[PW_SERIALIZE_MAPID_S].c_str());
-	if (settings.find(PW_SERIALIZE_MAPST_S) != settings.end())
-		_MapSmall.State = settings[PW_SERIALIZE_MAPST_S];
-
-	if (settings.find(PW_SERIALIZE_MAPID_N) != settings.end())
-		_MapNormal.Id = atoi(settings[PW_SERIALIZE_MAPID_N].c_str());
-	if (settings.find(PW_SERIALIZE_MAPST_N) != settings.end())
-		_MapNormal.State = settings[PW_SERIALIZE_MAPST_N];
-
-	if (settings.find(PW_SERIALIZE_MAPID_B) != settings.end())
-		_MapBig.Id = atoi(settings[PW_SERIALIZE_MAPID_B].c_str());
-	if (settings.find(PW_SERIALIZE_MAPST_B) != settings.end())
-		_MapBig.State = settings[PW_SERIALIZE_MAPST_B];
-
-	if (settings.find(PW_SERIALIZE_MAPID_E) != settings.end())
-		_MapExtra.Id = atoi(settings[PW_SERIALIZE_MAPID_E].c_str());
-	if (settings.find(PW_SERIALIZE_MAPST_E) != settings.end())
-		_MapExtra.State = settings[PW_SERIALIZE_MAPST_E];
-}
-
-
-void CUserSettings::Save() const
-{
-	map<string, string> settings;
-
-	settings.insert(make_pair(PW_SERIALIZE_MAPSIZE, NumericToString(static_cast<int>(Size))));
-	settings.insert(make_pair(PW_SERIALIZE_THEME, NumericToString(static_cast<int>(ThemeId))));
-	settings.insert(make_pair(PW_SERIALIZE_SOUND, Sound ? "100" : "0"));
-	settings.insert(make_pair(PW_SERIALIZE_WRAPMODE, Wrapping ? "1" : "0"));
-
-	settings.insert(make_pair(PW_SERIALIZE_MAPID_S, NumericToString(static_cast<int>(_MapSmall.Id))));
-	settings.insert(make_pair(PW_SERIALIZE_MAPST_S, _MapSmall.State));
-	settings.insert(make_pair(PW_SERIALIZE_MAPID_N, NumericToString(static_cast<int>(_MapNormal.Id))));
-	settings.insert(make_pair(PW_SERIALIZE_MAPST_N, _MapNormal.State));
-	settings.insert(make_pair(PW_SERIALIZE_MAPID_B, NumericToString(static_cast<int>(_MapBig.Id))));
-	settings.insert(make_pair(PW_SERIALIZE_MAPST_B, _MapBig.State));
-	settings.insert(make_pair(PW_SERIALIZE_MAPID_E, NumericToString(static_cast<int>(_MapExtra.Id))));
-	settings.insert(make_pair(PW_SERIALIZE_MAPST_E, _MapExtra.State));
-
-	try {
-		CSettings::Save(GetFileName().c_str(), settings, "# This is the user settings file of the PipeWalker game\n# Please, do not edit it manually\n\n");
-	}
-	catch (CException& /*ex*/) {
+		fstr.close();
 	}
 }
 
 
-unsigned long CUserSettings::GetCurrentMapId() const
+string settings::serializer::get_value(const string& section, const string& key, const string& default_value) const
 {
-	switch (Size) {
-		case MapSizeSmall:	return _MapSmall.Id;
-		case MapSizeNormal:	return _MapNormal.Id;
-		case MapSizeBig:	return _MapBig.Id;
-		case MapSizeExtra:	return _MapExtra.Id;
-		default:			assert(false && "Unknown size");
-	}
-	return 0;
+	sett_section::const_iterator it_sec = _settings.find(section);
+	if (it_sec == _settings.end())
+		return default_value;
+	sett_value::const_iterator it_val = it_sec->second.find(key);
+	if (it_val == it_sec->second.end())
+		return default_value;
+	return it_val->second;
 }
 
 
-void CUserSettings::SetCurrentMapId(const unsigned long id)
+int settings::serializer::get_value(const string& section, const string& key, const int default_value) const
 {
-	switch (Size) {
-		case MapSizeSmall:	_MapSmall.Id = id;		break;
-		case MapSizeNormal:	_MapNormal.Id = id;	break;
-		case MapSizeBig:	_MapBig.Id = id;		break;
-		case MapSizeExtra:	_MapExtra.Id = id;		break;
-		default:			assert(false && "Unknown size");
-	}
+	const string val = get_value(section, key, string());
+	return val.empty() ? default_value : atoi(val.c_str());
 }
 
 
-string CUserSettings::GetCurrentMapState() const
+bool settings::serializer::get_value(const string& section, const string& key, const bool default_value) const
 {
-	switch (Size) {
-		case MapSizeSmall:	return _MapSmall.State;
-		case MapSizeNormal:	return _MapNormal.State;
-		case MapSizeBig:	return _MapBig.State;
-		case MapSizeExtra:	return _MapExtra.State;
-		default:			assert(false && "Unknown size");
-	}
-	return string();
+	return get_value(section, key, static_cast<int>(default_value ? 1 : 0)) != 0L;
 }
 
 
-void CUserSettings::SetCurrentMapState(const string& state)
+void settings::serializer::set_value(const string& section, const string& key, const string& val)
 {
-	switch (Size) {
-		case MapSizeSmall:	_MapSmall.State = state;	break;
-		case MapSizeNormal:	_MapNormal.State = state;	break;
-		case MapSizeBig:	_MapBig.State = state;		break;
-		case MapSizeExtra:	_MapExtra.State = state;	break;
-		default:			assert(false && "Unknown size");
-	}
+	_settings[section][key] = val;
 }
 
 
-string CUserSettings::GetFileName() const
+void settings::serializer::set_value(const string& section, const string& key, const int val)
 {
-	string loadFileName = _UsePortable ? "." : getenv(
-#ifdef WIN32
-		"USERPROFILE"
-#else
-		"HOME"
-#endif //WIN32
-		);
+	char buff[16];
+	sprintf(buff, "%i", val);
+	set_value(section, key, string(buff));
+}
 
-#ifdef WIN32
-	loadFileName += '\\';
-#else
-	loadFileName += '/';
-#endif //WIN32
 
-	loadFileName += PW_USRSETTINGS_FILENAME;
-	return loadFileName;
+void settings::serializer::set_value(const string& section, const string& key, const bool val)
+{
+	set_value(section, key, static_cast<int>(val ? 1 : 0));
+}
+
+
+void settings::serializer::trim(string& val)
+{
+	while (!val.empty() && isspace(*val.begin()))
+		val.erase(val.begin());
+	while (!val.empty() && isspace(*val.rbegin()))
+		val.erase(val.end() - 1);
 }

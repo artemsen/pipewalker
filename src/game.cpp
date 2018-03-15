@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2012 by Artem Senichev <artemsen@gmail.com>        *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -17,286 +17,244 @@
  **************************************************************************/
 
 #include "game.h"
-#include "texture.h"
-#include "synchro.h"
+#include "render.h"
 #include "settings.h"
+#include "sound.h"
+#include "mtrandom.h"
+#ifndef WIN32
+#include <dirent.h>
+#endif //WIN32
 
-//Button identifiers
-#define PW_BUTTONID_NEXT		1
-#define PW_BUTTONID_PREV		2
-#define PW_BUTTONID_RESET		3
-#define PW_BUTTONID_SETT		4
-#define PW_BUTTONID_OK			5
-#define PW_BUTTONID_CANCEL		6
-
-//Common button properties
-#define PW_BUTTON_TOP		-5.1f
-#define PW_BUTTON_WIDTH		 1.0f
-#define PW_BUTTON_HEIGHT	 1.0f
-#define PW_BUTTON_LEFT		-5.0f
-#define PW_BUTTON_RIGHT		 4.0f
-
-#ifdef _MSC_VER
-#pragma warning(disable: 4355)	//'this' : used in base member initializer list
-#endif // WIN32
+#define PW_SWAP_MODE_SPEED     500
 
 
-CGame::CGame()
-:	_WinManager(NULL),
-	_ActiveMode(Puzzle),
-	_NextMode(Undefined),
-	_TrnPhase(FirstPhase),
-	_TrnStartTime(0),
-	_NextMapId(0),
-	_RenewMap(false),
-	_LoadMap(false),
-	_ModePuzzle(*this),
-	_ModeSettings(*this)
+game::game()
+:	_need_redisplay(true),
+	_wnd_width(PW_SCREEN_WIDTH), _wnd_height(PW_SCREEN_HEIGHT),
+	_mouse_x(0.0f), _mouse_y(0.0f),
+	_curr_mode(NULL), _next_mode(NULL),
+	_trans_stime(0)
 {
 }
 
 
-void CGame::Initialize(CWinManager& winMgr)
+game& game::instance()
 {
-	_WinManager = &winMgr;
-
-	//Load settings
-	_UserSettings.Load();
-	_GameSettings.Load();
-
-	//Initialize texture/sound banks
-	ReloadTextures();
-	_SoundBank.Load();
-
-	//Configure buttons
-	_BtnPuzzle.push_back(CButton(*this, 2.2f, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT,CTextureBank::TexButtonNext, PW_BUTTONID_NEXT));
-	_BtnPuzzle.push_back(CButton(*this, -3.2f, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::TexButtonPrev, PW_BUTTONID_PREV));
-	_BtnPuzzle.push_back(CButton(*this, PW_BUTTON_LEFT, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::TexButtonReset, PW_BUTTONID_RESET));
-	_BtnPuzzle.push_back(CButton(*this, PW_BUTTON_RIGHT, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::TexButtonSett, PW_BUTTONID_SETT));
-
-	_BtnSettings.push_back(CButton(*this, PW_BUTTON_RIGHT, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::TexButtonOK, PW_BUTTONID_OK));
-	_BtnSettings.push_back(CButton(*this, PW_BUTTON_LEFT, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::TexButtonCancel, PW_BUTTONID_CANCEL));
-
-	_ModePuzzle.LoadMap();
-	_ModeSettings.Initialize();
-
-	//First launch - make first transition (to make a new map)
-	BeginTransition(Puzzle, SecondPhase);
+	static game i;
+	return i;
 }
 
 
-void CGame::Finalize()
+bool game::initialize()
 {
-	_ModePuzzle.SaveMap();
-	_UserSettings.Save();
+	settings::load();
+
+	//Initialize render subsystem
+	render& renderer = render::instance();
+	renderer.initialize();
+
+	//Load texture image
+	string file_name = PW_GAMEDATADIR;
+	file_name += settings::theme();
+	file_name += ".png";
+	if (!renderer.load(file_name.c_str())) {
+		//Try to load first avialable theme
+		if (!load_next_theme(true)) {
+			fprintf(stderr, "Critical error\nNo one avialable themes found\n");
+			return false;
+		}
+	}
+
+	//Initialize randowmizer
+	mtrandom::seed(0xabcdef);
+
+	//Initialize sound subsystem
+	sound::instance().initialize();
+
+	//Initialize modes
+	_mode_puzzle.initialize();
+	_mode_sett.initialize(_mode_puzzle.current_level_size(), _mode_puzzle.current_wrap_mode(), settings::sound_mode());
+	_curr_mode = &_mode_puzzle;
+
+	return true;
 }
 
 
-void CGame::ReloadTextures()
+void game::finalize()
 {
-	if (_UserSettings.ThemeId >= _GameSettings.Themes.size())
-		_UserSettings.ThemeId = 0;
-
-	string textFileName = DIR_GAMEDATA;
-	textFileName += _GameSettings.Themes[_UserSettings.ThemeId].TextureFile;
-	_TextureBank.Load(textFileName.c_str());
-	_RenderText.Load();
+	_mode_puzzle.save_current_level();
+	settings::save();
 }
 
 
-void CGame::RenderScene(const float mouseX, const float mouseY)
+void game::draw_scene()
 {
-	RenderEnvironment();
+	_need_redisplay = false;
+	render& renderer = render::instance();
 
-	//Transition calculate
-	float trnPhase = 1.0f;
-	if (TransitionInProgress()) {
-		if (CSynchro::GetPhase(_TrnStartTime, 500, trnPhase)) {
-			if (_TrnPhase == FirstPhase)
-				trnPhase = 1.0f - trnPhase;	//Invert phase
+	renderer.draw_begin();
+
+	float trn_step = 1.0f;
+	if (_trans_stime != 0) {
+		assert(_next_mode);
+		_need_redisplay = true;
+		const unsigned int diff_time = SDL_GetTicks() - _trans_stime;
+		if (diff_time < PW_SWAP_MODE_SPEED) {
+			//Transition in progress
+			trn_step = static_cast<float>(diff_time) / static_cast<float>(PW_SWAP_MODE_SPEED);
+			_next_mode->draw(trn_step);
+			trn_step = 1.0f - trn_step;	//Invert
 		}
 		else {
-			//Transition phase complete
-			if (_TrnPhase == FirstPhase) {
-				trnPhase = 0.0f;
-				_TrnPhase = SecondPhase;
-
-				assert((!_RenewMap && !_LoadMap) || (_RenewMap && !_LoadMap) || (!_RenewMap && _LoadMap));
-				if (_RenewMap) {
-					_UserSettings.SetCurrentMapId(_NextMapId);
-					_ModePuzzle.RenewMap();
-					_RenewMap = false;
-				}
-				else if (_LoadMap) {
-					_ModePuzzle.LoadMap();
-					_LoadMap = false;
-				}
-
-				_TrnStartTime = CSynchro::GetTick();	//second phase begin
-				_ActiveMode = _NextMode;
-				_NextMode = Undefined;
-			}
-			else {
-				//Second phase finished
-				_TrnStartTime = 0;
-			}
-
-		}
-		_WinManager->PostRedisplay();
-	}
-
-	const list<CButton>* activeBtns = NULL;
-
-	if (_ActiveMode == Puzzle) {
-		_ModePuzzle.Render(trnPhase);
-		activeBtns = &_BtnPuzzle;
-	}
- 	else if (_ActiveMode == Options) {
-		_ModeSettings.Render(mouseX, mouseY, trnPhase);
-		activeBtns = &_BtnSettings;
-	}
-
-	//Buttons
-	assert(activeBtns != NULL);
-	glColor4f(1.0f, 1.0, 1.0f, trnPhase);
-	for (list<CButton>::const_iterator itBtn = activeBtns->begin(); itBtn != activeBtns->end(); ++itBtn)
-		itBtn->Render(mouseX, mouseY);
-	glColor4f(1.0f, 1.0, 1.0f, 1.0f);
-}
-
-
-void CGame::RenderEnvironment()
-{
-	//Render environment background
-	glDisable(GL_DEPTH_TEST);
- 	GLint glViewport[4];
- 	glGetIntegerv(GL_VIEWPORT, glViewport);
- 	const float wndWidth = static_cast<float>(glViewport[2]);
- 	const float wndHeight = static_cast<float>(glViewport[3]);
- 	const float vertBkgr[] = { 0.0f, wndHeight, 0.0f, 0.0f, wndWidth, 0.0f, wndWidth, wndHeight };
- 	static const short texBkgr[] = { 0, 8, 0, 0, 6, 0, 6, 8 };
- 	static const unsigned short plainInd[] = { 0, 1, 2, 0, 2, 3 };
-
- 	glMatrixMode(GL_PROJECTION);
- 	glPushMatrix();
- 		glLoadIdentity();
- 		glOrtho(0, glViewport[2], 0, glViewport[3], -1, 1);
- 		glMatrixMode(GL_MODELVIEW);
- 		glPushMatrix();
- 			glLoadIdentity();
- 			glBindTexture(GL_TEXTURE_2D, _TextureBank.Get(CTextureBank::TexEnvBkgr));
- 			glVertexPointer(2, GL_FLOAT, 0, vertBkgr);
- 			glTexCoordPointer(2, GL_SHORT, 0, texBkgr);
- 			glDrawElements(GL_TRIANGLES, (sizeof(plainInd) / sizeof(plainInd[0])), GL_UNSIGNED_SHORT, plainInd);
-			glMatrixMode(GL_PROJECTION);
- 		glPopMatrix();
- 		glMatrixMode(GL_MODELVIEW);
- 	glPopMatrix();
- 	glEnable(GL_DEPTH_TEST);
-
-	//Draw title
-	static const float vertTitle[] = { -5.0f, 6.1f, -5.0f, 5.1f, 5.0f, 5.1f, 5.0f, 6.1f };
-	static const short texTitle[] =	 { 0, 1, 0, 0, 1, 0, 1, 1 };
-	glBindTexture(GL_TEXTURE_2D, _TextureBank.Get(CTextureBank::TexEnvTitle));
-	glVertexPointer(2, GL_FLOAT, 0, vertTitle);
-	glTexCoordPointer(2, GL_SHORT, 0, texTitle);
-	glDrawElements(GL_TRIANGLES, (sizeof(plainInd) / sizeof(plainInd[0])), GL_UNSIGNED_SHORT, plainInd);
-
-	//Draw cell's background
-	const unsigned short mapSize = static_cast<const unsigned short>(_ModePuzzle.GetMapSize());
-	static const float cellVertex[] = { -5.0f, 5.0f, -5.0f, -5.0f, 5.0f, -5.0f, 5.0f, 5.0f };
-	glBindTexture(GL_TEXTURE_2D, _TextureBank.Get(CTextureBank::TexCellBackground));
-	glVertexPointer(2, GL_FLOAT, 0, cellVertex);
-	const short cellTexture[] =	{ 0, mapSize, 0, 0, mapSize, 0, mapSize, mapSize };
-	glTexCoordPointer(2, GL_SHORT, 0, cellTexture);
-	glDrawElements(GL_TRIANGLES, (sizeof(plainInd) / sizeof(plainInd[0])), GL_UNSIGNED_SHORT, plainInd);
-}
-
-
-void CGame::OnMouseButtonDown(const float mouseX, const float mouseY, const MouseButton btn)
-{
-	if (TransitionInProgress())
-		return;
-
-	if (btn == MouseButton_Left) {
-		const list<CButton>& btns = (_ActiveMode == Puzzle ? _BtnPuzzle : _BtnSettings);
-		for (list<CButton>::const_iterator itBtn = btns.begin(); itBtn != btns.end(); ++itBtn) {
-			if (itBtn->IsMouseOver(mouseX, mouseY)) {
-				switch (itBtn->GetId()) {
-					case PW_BUTTONID_NEXT:
-					case PW_BUTTONID_PREV:
-						RenewMap(_UserSettings.GetCurrentMapId() + (itBtn->GetId() == PW_BUTTONID_NEXT ? 1 : -1));
-						break;
-					case PW_BUTTONID_RESET:
-						_ModePuzzle.ResetByRotate();
-						_WinManager->PostRedisplay();
-						break;
-					case PW_BUTTONID_SETT:
-						_ModeSettings.Reset();
-						BeginTransition(Options);
-						break;
-					case PW_BUTTONID_OK:
-						_ModePuzzle.SaveMap();	//Save current map
-						
-						if (_UserSettings.Size != _ModeSettings.GetMapSize()) {
-							_UserSettings.Size = _ModeSettings.GetMapSize();
-							_LoadMap = true;
-							BeginTransition(Puzzle);
-						}
-						else if (_UserSettings.Wrapping != _ModeSettings.GetWrapMode()) {
-							_UserSettings.Wrapping = _ModeSettings.GetWrapMode();
-							RenewMap(_UserSettings.GetCurrentMapId());
-						}
-						else
-							BeginTransition(Puzzle);
-						_UserSettings.Sound = _ModeSettings.GetSoundMode();
-						break;
-					case PW_BUTTONID_CANCEL:
-						BeginTransition(Puzzle);
-						break;
-					default:
-						assert(false && "Unregistered button id");
-				}
-			}
+			//Transition complete
+			_trans_stime = 0;
+			_curr_mode = _next_mode;
+			_next_mode = NULL;
 		}
 	}
 
-	if (_ActiveMode == Puzzle)
-		_ModePuzzle.OnMouseButtonDown(mouseX, mouseY, btn);
-	else if (_ActiveMode == Options)
-		_ModeSettings.OnMouseButtonDown(mouseX, mouseY, btn);
+	_need_redisplay |= _curr_mode->draw(trn_step);
+
+	renderer.draw_end();
 }
 
 
-void CGame::BeginTransition(const GameMode nextMode, const TransitionPhase startPhase /*= FirstPhase*/)
+void game::on_mouse_move(const int x, const int y)
 {
-	_NextMode = nextMode;
-	_TrnPhase = startPhase;
-	_TrnStartTime = CSynchro::GetTick();
-	_WinManager->PostRedisplay();
+	//Calculate new mouse world coordinates
+	assert(x >= 0 && x <= _wnd_width && y >= 0 && y <= _wnd_height);
+	_mouse_x = static_cast<float>(x) * (PW_BASE_WIDTH / static_cast<float>(_wnd_width)) - PW_BASE_WIDTH / 2.0f;
+	_mouse_y = PW_ASPECT_RATIO * (PW_BASE_WIDTH / 2.0f - static_cast<float>(y) * (PW_BASE_WIDTH / static_cast<float>(_wnd_height)));
+
+	_need_redisplay |= _curr_mode->on_mouse_move(_mouse_x, _mouse_y);
 }
 
 
-void CGame::OnKeyboardKeyDown(const char key)
+void game::on_mouse_click(const Uint8 btn)
 {
-	if (!TransitionInProgress() && key == 27) { //Esc
-		if (_ActiveMode == Puzzle)
-			_WinManager->PostExit();
-		else if (_ActiveMode == Options)
-			BeginTransition(Puzzle);
+#ifndef NDEBUG
+	printf("Mouse button click: %i on %.02f %.02f\n", btn, _mouse_x, _mouse_y);
+#endif //NDEBUG
+
+	if (_trans_stime != 0)
+		return;	//No action in time of transition between modes
+
+	_need_redisplay = true;
+	if (_curr_mode->on_mouse_click(_mouse_x, _mouse_y, btn))
+		swap_mode();
+}
+
+
+bool game::on_key_press(const SDLKey key)
+{
+#ifndef NDEBUG
+	printf("Pressed key: %02i (%s)\n", key, SDL_GetKeyName(key));
+#endif //NDEBUG
+
+	if (_trans_stime != 0)
+		return false;	//No action in time of transition between modes
+	if (key == SDLK_ESCAPE) {
+		if (_curr_mode == &_mode_sett)
+			swap_mode();
+		else
+			return true;
 	}
+	return false;
 }
 
 
-void CGame::OnMouseMove(const float /*mouseX*/, const float /*mouseY*/)
+void game::on_window_resize(const int width, const int height)
 {
-	_WinManager->PostRedisplay();
+	_wnd_width = width;
+	_wnd_height = height;
+	render::instance().on_window_resize(_wnd_width, _wnd_height);
 }
 
 
-void CGame::RenewMap(const unsigned long nextMapNum)
+bool game::load_next_theme(const bool direction)
 {
-	_NextMapId = (nextMapNum == 0 || nextMapNum > 99999999) ? 1 : nextMapNum;
-	_RenewMap = true;
-	BeginTransition(Puzzle);
+	vector<string> themes;
+
+#ifdef WIN32
+	string find_path = PW_GAMEDATADIR;
+	find_path += "*.png";
+	WIN32_FIND_DATAA find_data;
+	HANDLE find_handle = FindFirstFileA(find_path.c_str(), &find_data);
+	if (find_handle != INVALID_HANDLE_VALUE) {
+		do {
+			if (!(find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+				themes.push_back(find_data.cFileName);
+		}
+		while (FindNextFileA(find_handle, &find_data));
+		FindClose(find_handle);
+	}
+
+#else
+	DIR* dir = opendir(PW_GAMEDATADIR);
+	if (dir) {
+		dirent* ent = NULL;
+		while ((ent = readdir(dir))) {
+			if (strstr(ent->d_name, ".png"))
+				themes.push_back(ent->d_name);
+		}
+		closedir(dir);
+	}
+#endif //WIN32
+
+	const size_t themes_sz = themes.size();
+	if (themes_sz == 0)
+		return false;	//Not themes found?
+
+	//Find current position
+	const string curr_theme_file = string(settings::theme()) +  + ".png";
+	int curr_theme_id = -1;
+	for (size_t i = 0; curr_theme_id  < 0 && i < themes_sz; ++i) {
+		if (themes[i].compare(curr_theme_file) == 0)
+			curr_theme_id = static_cast<int>(i);
+	}
+
+	//Try to load next avialable theme
+	int try_count = static_cast<int>(themes_sz);
+	while (--try_count >= 0) {
+		string new_theme_file = PW_GAMEDATADIR;
+		if (curr_theme_id < 0)
+			new_theme_file += themes.front();	//Current theme not found
+		else {
+			curr_theme_id += (direction ? 1 : -1);
+			if (curr_theme_id < 0)
+				curr_theme_id = static_cast<int>(themes_sz - 1);
+			else if (curr_theme_id >= static_cast<int>(themes_sz))
+				curr_theme_id = 0;
+			new_theme_file += themes[curr_theme_id];
+		}
+		if (render::instance().load(new_theme_file.c_str())) {
+			string theme_name = new_theme_file;
+			theme_name.erase(0, theme_name.find_last_of("\\/") + 1); //Erase path
+			theme_name.erase(theme_name.length() - 4);               //Erase file extension
+			settings::theme(theme_name.c_str());
+			break;
+		}
+	}
+
+	return try_count >= 0;
+}
+
+
+void game::swap_mode()
+{
+	assert(!_next_mode);
+
+	if (_curr_mode == &_mode_sett) {
+		//May be we need change size/mode
+		_mode_puzzle.on_settings_changed(_mode_sett.level_size(), _mode_sett.wrap_mode());
+		settings::sound_mode(_mode_sett.sound_mode());
+		_next_mode = &_mode_puzzle;
+	}
+	else {
+		_mode_sett.reset();
+		_next_mode = &_mode_sett;
+	}
+
+	_need_redisplay = true;
+	_trans_stime = SDL_GetTicks();
 }

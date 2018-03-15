@@ -1,94 +1,78 @@
 ; PipeWalker game (http://pipewalker.sourceforge.net)
-; Installer script
+; MS Windows NSIS Installer script
+;
+; Use
+;   makensis.exe /DVERSION=0.9.2 PipeWalker.nsi
+;
 ;----------------------------------------------------
 
 ;--------------------------------
 ;Include Modern UI
   !include "MUI2.nsh"
 
-
 ;--------------------------------
 ;General
   Name       "PipeWalker ${VERSION}"
-  OutFile    "pipewalker-${VERSION}-install.exe"
+  OutFile    "pipewalker-${VERSION}-win32-install.exe"
   InstallDir $PROGRAMFILES\PipeWalker
-
   !define MUI_STARTMENUPAGE_DEFAULTFOLDER PipeWalker
-
   RequestExecutionLevel admin
-
 
 ;--------------------------------
 ;Version Information
-
   VIProductVersion ${VERSION}.0
-  VIAddVersionKey /LANG=${LANG_ENGLISH} "ProductName" "PipeWalker"
-  VIAddVersionKey /LANG=${LANG_ENGLISH} "FileDescription" "PipeWalker game installer"
-  VIAddVersionKey /LANG=${LANG_ENGLISH} "LegalCopyright" "Copyright (C) 2007-2010 Artem A. Senichev"
-  VIAddVersionKey /LANG=${LANG_ENGLISH} "FileVersion" ${VERSION}
-  VIAddVersionKey /LANG=${LANG_ENGLISH} "ProductVersion" ${VERSION}
-
+  VIAddVersionKey "ProductName" "PipeWalker"
+  VIAddVersionKey "FileDescription" "PipeWalker game installer"
+  VIAddVersionKey "LegalCopyright" "Copyright (C) 2007-2012 Artem Senichev"
+  VIAddVersionKey "FileVersion" ${VERSION}
+  VIAddVersionKey "ProductVersion" ${VERSION}
 
 ;--------------------------------
 ;Variables
-
   Var StartMenuFolder
-
 
 ;--------------------------------
 ;Interface Settings
-
   !define MUI_ABORTWARNING
   !define MUI_ICON extra\pipewalker.ico
 
-
 ;--------------------------------
 ;Pages
-
   !insertmacro MUI_PAGE_WELCOME
   !insertmacro MUI_PAGE_DIRECTORY
   !insertmacro MUI_PAGE_STARTMENU Application $StartMenuFolder
   !insertmacro MUI_PAGE_INSTFILES
   !insertmacro MUI_PAGE_FINISH
-  
   !insertmacro MUI_UNPAGE_CONFIRM
   !insertmacro MUI_UNPAGE_INSTFILES
   !insertmacro MUI_UNPAGE_FINISH
 
-
 ;--------------------------------
 ;Languages
-
   !insertmacro MUI_LANGUAGE "English" ;first language is the default language
   !insertmacro MUI_LANGUAGE "Russian"
-  !insertmacro MUI_LANGUAGE "Portuguese"
+  !insertmacro MUI_LANGUAGE "Spanish"
+  !insertmacro MUI_LANGUAGE "German"
   !insertmacro MUI_LANGUAGE "Italian"
   !insertmacro MUI_LANGUAGE "French"
-  !insertmacro MUI_LANGUAGE "German"
-  !insertmacro MUI_LANGUAGE "Czech"
-
 
 ;--------------------------------
 ;Installer Sections
-
 Section "Dummy Section" SecDummy
-
   SetOutPath "$INSTDIR"
   File PipeWalker.exe
+  File SDL.dll
   File ChangeLog
   File README
-  SetOutPath "$INSTDIR\Data"
-  File data\settings.ini
+  SetOutPath "$INSTDIR\data"
   File data\clatz.wav
   File data\complete.wav
-  File data\font.tga
-  File data\network1.tga
-  File data\network2.tga
-  File data\plumbing.tga
-  File data\hellsfire.tga
-  File data\newyear.tga
-  File data\simple.tga
-  
+  File data\Hellsfire.png
+  File data\Linux.png
+  File data\Network.png
+  File data\Plumbing.png
+  File data\Simple.png
+
   ;Create uninstaller
   WriteUninstaller "$INSTDIR\Uninstall.exe"
 
@@ -104,14 +88,10 @@ SectionEnd
 
 ;--------------------------------
 ;Uninstaller Section
-
 Section "Uninstall"
-
   RMDir /r "$INSTDIR"
-
   !insertmacro MUI_STARTMENU_GETFOLDER Application $StartMenuFolder
   Delete "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk"
   Delete "$SMPROGRAMS\$StartMenuFolder\PipeWalker.lnk"
   RMDir "$SMPROGRAMS\$StartMenuFolder"
-
 SectionEnd

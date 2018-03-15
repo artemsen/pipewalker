@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2012 by Artem Senichev <artemsen@gmail.com>        *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -17,81 +17,60 @@
  **************************************************************************/
 
 #include "explosion.h"
-#include "texture.h"
 #include "mtrandom.h"
-#include "game.h"
+#include "render.h"
+#include "level.h"
 
 
-CExplosion::CExplosion(CGame& game, const float x, const float y)
-	: _X(x), _Y(y), _Force(0.0f), _Game(game)
+void explosion::create(const level& lvl)
 {
-	Renew();
-}
+	free();
 
-
-void CExplosion::Render()
-{
-	glDisable(GL_DEPTH_TEST);
-
-	bool explosionActive = false;
-
-	static const float vertex[] =			{ -0.2f, 0.2f, -0.2f, -0.2f, 0.2f, -0.2f, 0.2f, 0.2f };
-	static const short texture[] =			{ 0, 1, 0, 0, 1, 0, 1, 1 };
-	static const unsigned short indices[] =	{ 0, 1, 2, 0, 2, 3 };
-	
-	glBindTexture(GL_TEXTURE_2D, _Game.TextureBank().Get(CTextureBank::TexExplosionPart));
-	glVertexPointer(2, GL_FLOAT, 0, vertex);
-	glTexCoordPointer(2, GL_SHORT, 0, texture);
-
-	const size_t sz = _Particles.size();
-	for (size_t i = 0; i < sz; ++i) {
-		if (_Particles[i].Life > 0.0f) {
-
-			explosionActive = true;
-
-			const float radius = 3.0f - _Particles[i].Life * 3.0f;
-
-			const float rotateAngle = _Particles[i].Life * 180.0f;
-
-			glColor4f(1.0f, 1.0f, 1.0f, _Particles[i].Life > 0.1f ? _Particles[i].Life : 0.1f);
-			glPushMatrix();
-				glTranslatef(_Particles[i].PosX, _Particles[i].PosY, 0.0f);
-				glRotatef(rotateAngle, 0.0f, 0.0f, 1.0f);
-				glScalef(radius, radius, 0.0f);
-				glDrawElements(GL_TRIANGLES, (sizeof(indices) / sizeof(indices[0])), GL_UNSIGNED_SHORT, indices);
-			glPopMatrix();
-
-			_Particles[i].SpeedX -= _Particles[i].FadeSpeed / 100.0f;
-			_Particles[i].SpeedY -= _Particles[i].FadeSpeed / 100.0f;
-
-			_Particles[i].PosX += _Particles[i].SpeedX;
-			_Particles[i].PosY += _Particles[i].SpeedY;
-			_Particles[i].Life -= _Particles[i].FadeSpeed;
+	const unsigned short lvl_size = lvl.get_csize();
+	const float scale = 10.0f / lvl_size;
+	for (unsigned short y = 0; y < lvl_size; ++y) {
+		const float poz_y = (-(lvl_size / 2) + 0.5f + y) * (-scale);
+		for (unsigned short x = 0; x < lvl_size; ++x) {
+			const float pos_x = (-(lvl_size / 2) + 0.5f + x) * scale;
+			const cell& c = lvl.get_cell(x, y);
+			if (c.cell_type() == cell::ct_receiver) {
+				const size_t num = static_cast<size_t>(mtrandom::random(2, 5));
+				for (size_t i = 0; i < num; ++i)
+					_particles.push_back(create(pos_x, poz_y));
+			}
 		}
 	}
-
-	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-	glEnable(GL_DEPTH_TEST);
-
-	if (!explosionActive)
-		Renew();
 }
 
 
-void CExplosion::Renew()
+explosion::particle explosion::create(const float x, const float y) const
 {
-	_Force = 0.5f + static_cast<float>(CMTRandom::Rand() % 50) / 100.0f;
+	particle p;
+	p.x = p.init_x = x;
+	p.y = p.init_y = y;
+	p.speed = mtrandom::random(-0.05f, 0.05f);
+	p.life = static_cast<unsigned long>(mtrandom::random(500, 3000));
+	p.stime = SDL_GetTicks();
+	return p;
+}
 
-	const size_t num = static_cast<size_t>(_Force * 10.0f);
-	_Particles.resize(num);
 
-	for (size_t i = 0; i < num; ++i) {
-		//Initialize particle
-		_Particles[i].Life = _Force;
-		_Particles[i].FadeSpeed = static_cast<float>(CMTRandom::Rand() % 100) / 1000.0f + 0.005f;
-		_Particles[i].PosX = _X;
-		_Particles[i].PosY = _Y;
-		_Particles[i].SpeedX = 0.05f - static_cast<float>(CMTRandom::Rand() % 100) / 1000.0f;
-		_Particles[i].SpeedY = 0.05f - static_cast<float>(CMTRandom::Rand() % 100) / 1000.0f;
+void explosion::draw(const float alpha)
+{
+	render& renderer = render::instance();
+	for (particles::iterator it = _particles.begin(); it != _particles.end(); ++it) {
+		const unsigned int diff_time = SDL_GetTicks() - it->stime;
+		if (diff_time > it->life) {
+			*it = create(it->init_x, it->init_y);
+			continue;
+		}
+		const float phase = static_cast<float>(diff_time) / static_cast<float>(it->life);
+		const float iphase = 1.0f - phase;
+		it->y += (0.5f - phase) / 10.0f;
+		it->x += it->speed * phase;
+		const float scale = phase;
+		const float rotate = (0.5f - phase) * 90.0f;
+		const float alpha_min = iphase < alpha ? iphase : alpha;
+		renderer.draw(render::exlposion, it->x, it->y, scale, alpha_min, rotate);
 	}
 }

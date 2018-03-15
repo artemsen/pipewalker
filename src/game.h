@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2012 by Artem Senichev <artemsen@gmail.com>        *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -16,114 +16,98 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>. *
  **************************************************************************/
 
-#pragma once
-
 #include "common.h"
-#include "map.h"
-#include "button.h"
-#include "modepuzzle.h"
-#include "modesettings.h"
-#include "settings.h"
-#include "texture.h"
-#include "rendertext.h"
-#include "sound.h"
-#include "winmgr.h"
+#include "mode_puzzle.h"
+#include "mode_settings.h"
 
 
-class CGame : public CEventHandler
+/**
+ * Game class
+ */
+class game
 {
-public:
-	//! Default constructor
-	CGame();
+private:
+	game();
 
-	//! Destructor
-	virtual ~CGame() {}
+public:
+	/**
+	 * Get class instance
+	 * \return class instance
+	 */
+	static game& instance();
 
 	/**
 	 * Initialization
+	 * \return false on error
 	 */
-	void Initialize(CWinManager& winMgr);
+	bool initialize();
 
 	/**
-	 * Finalize handler
+	 * Finalization
 	 */
-	void Finalize();
+	void finalize();
 
-public:
-	//From CEventHandler
-	void RenderScene(const float mouseX, const float mouseY);
-	void OnKeyboardKeyDown(const char key);
-	void OnMouseButtonDown(const float mouseX, const float mouseY, const MouseButton btn);
-	void OnMouseMove(const float mouseX, const float mouseY);
-	void ReloadTextures();
+	/**
+	 * Get redisplay flag
+	 * \return redisplay flag (true if we need to redraw window)
+	 */
+	bool need_redisplay() const { return _need_redisplay; }
+
+	/**
+	 * Render scene
+	 */
+	void draw_scene();
+
+	/**
+	 * Mouse move handler
+	 * \param x new mouse X window coordinate
+	 * \param y new mouse Y window coordinate
+	 */
+	void on_mouse_move(const int x, const int y);
+
+	/**
+	 * Mouse click handler
+	 * \param btn mouse button identifier
+	 */
+	void on_mouse_click(const Uint8 btn);
+
+	/**
+	 * Keyboard key press handler
+	 * \param key key identifier
+	 * \return true if application finished (exit)
+	 */
+	bool on_key_press(const SDLKey key);
+
+	/**
+	 * Window resize handler
+	 * \param width new window width size
+	 * \param height new window height size
+	 */
+	void on_window_resize(const int width, const int height);
+
+	/**
+	 * Load next theme
+	 * \param direction true to next, false to previous theme file
+	 * \return false if no one theme avialable
+	 */
+	static bool load_next_theme(const bool direction);
 
 private:
-	//! Game render modes
-	enum GameMode {
-		Undefined,		///< Undefined mode
-		Puzzle,			///< Puzzle (Play) mode
-		Options,		///< Options mode
-	};
-
-	//! Transition phase
-	enum TransitionPhase {
-		FirstPhase,		///< First transition phase
-		SecondPhase		///< Second transition phase
-	};
-
 	/**
-	 * Renew map
-	 * \param nextMapNum next map number
+	 * Swap modes
 	 */
-	void RenewMap(const unsigned long nextMapNum);
+	void swap_mode();
 
-	/**
-	 * Render environment
-	 */
-	void RenderEnvironment();
+private:
+	bool  _need_redisplay;      ///< Redisplay flag
+	int   _wnd_width;           ///< Game window width
+	int   _wnd_height;          ///< Game window height
+	float _mouse_x;             ///< Last mouse X world coordinate
+	float _mouse_y;             ///< Last mouse Y world coordinate
 
-	/**
-	 * Begin new transition
-	 * \param nextMode next game render mode
-	 * \param startPhase starting phase
-	 */
-	void BeginTransition(const GameMode nextMode, const TransitionPhase startPhase = FirstPhase);
-
-	/**
-	 * Check for transition in progress
-	 * \return true if transition in progress
-	 */
-	inline bool TransitionInProgress() const	{ return (_TrnStartTime != 0); }
-
-public:
-	//Accessors
-	inline CWinManager& WinManager()			{ return *_WinManager; }
-	inline CUserSettings& UserSettings()		{ return _UserSettings; }
-	inline const CGameSettings& GameSettings() const { return _GameSettings; }
-	inline CTextureBank& TextureBank()				{ return _TextureBank; }
-	inline const CRenderText& RenderText() const	{ return _RenderText; }
-	inline CSoundBank& SoundBank()					{ return _SoundBank; }
-
-private:	//Class variables
-	CWinManager*	_WinManager;		///< Window manager
-	CUserSettings	_UserSettings;		///< Game settings
-	CGameSettings	_GameSettings;		///< Game settings
-	CTextureBank	_TextureBank;		///< Texture bank
-	CRenderText		_RenderText;		///< Text renderer
-	CSoundBank		_SoundBank;			///< Sound bank
-
-	GameMode		_ActiveMode;		///< Currently active mode
-	GameMode		_NextMode;			///< Next mode
-	TransitionPhase	_TrnPhase;			///< Transition phase (first=true, second=false)
-	unsigned int	_TrnStartTime;		///< Transition (mode changing) start time (zero if transition is not active)
-	
-	unsigned long	_NextMapId;			///< Next map id (for next new game level)
-	bool			_RenewMap;			///< Map renew flag
-	bool			_LoadMap;			///< Map load flag
-
-	CModePuzzle		_ModePuzzle;		///< Renderer/handler (game mode)
-	list<CButton>	_BtnPuzzle;			///< Buttons array (game mode)
-
-	CModeSettings	_ModeSettings;		///< Renderer/handler (settings mode)
-	list<CButton>	_BtnSettings;		///< Buttons array (settings mode)
+	mode_puzzle   _mode_puzzle; ///< Puzzle (game) mode handler
+	mode_settings _mode_sett;   ///< Settings mode handler
+	mode*         _curr_mode;   ///< Currently active mode
+	mode*         _next_mode;   ///< Next mode
+	unsigned int  _trans_stime; ///< Transition start time (zero if transition is not active)
 };

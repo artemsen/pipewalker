@@ -19,45 +19,50 @@
 #pragma once
 
 #include "common.h"
+#include "button.h"
+#include "mode.h"
+#include "level.h"
 
-class level;
 
-
-class explosion
+class mode_settings : public mode
 {
 public:
-	/**
-	 * Create winner animation
-	 * \param lvl curren level
-	 */
-	void create(const level& lvl);
+	mode_settings();
+
+	//From mode class
+	bool draw(const float alpha);
+	bool on_mouse_move(const float x, const float y);
+	bool on_mouse_click(const float x, const float y, const Uint8 btn);
 
 	/**
-	 * Free winner animation
+	 * Initialize mode
+	 * \param sz showed level size
+	 * \param wrap wrap mode in/off
+	 * \param sound sound mode in/off
 	 */
-	inline void free() { _particles.clear(); }
+	void initialize(const level::size sz, const bool wrap, const bool sound);
 
 	/**
-	 * Render explosion
+	 * Reset state before show
 	 */
-	void draw(const float alpha);
+	void reset();
+
+	//Settings accessors
+	level::size level_size() const { return _sett_size; }
+	bool wrap_mode() const         { return _sett_wrap; }
+	bool sound_mode() const        { return _sett_sound; }
 
 private:
-	//! Particles description
-	struct particle {
-		unsigned long life;   ///< Life time in ms
-		unsigned long stime;  ///< Creation (start) time in ms
-		float         x;      ///< Position by X axis
-		float         y;      ///< Position by Y axis
-		float         speed;  ///< Speed
-		float         init_x; ///< Initial position by X axis
-		float         init_y; ///< Initial position by Y axis
-	};
+	button          _btn_ok;     ///< OK button
+	button          _btn_cancel; ///< Cancel button
+	button_radio<4> _map_size;   ///< Map size radio buttons group
+	button_chbox    _wrap_mode;  ///< Wrapping mode on/off radio buttons group
+	button_chbox    _sound_mode; ///< Sound on/off radio buttons group
+	button          _prev_theme; ///< Previous theme button
+	button          _next_theme; ///< Next theme button
+	string          _theme_name; ///< Current theme name
 
-private:
-	particle create(const float x, const float y) const;
-
-private:
-	typedef vector<particle> particles;
-	particles _particles; ///< Particle Array
+	level::size     _sett_size;  ///< Current settings: level size
+	bool            _sett_wrap;  ///< Current settings: wrap mode
+	bool            _sett_sound; ///< Current settings: sound mode
 };

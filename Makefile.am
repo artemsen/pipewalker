@@ -4,6 +4,5 @@ pkgdocdatadir = $(datadir)/doc/$(PACKAGE)
 pkgdocdata_DATA = README
 
 EXTRA_DIST = $(pkgdocdata_DATA) \
-	Makefile.win32 \
-	PipeWalker.nsi \
+	make_dist_win32.cmd PipeWalker.nsi \
 	PipeWalker.sln PipeWalker.vcxproj

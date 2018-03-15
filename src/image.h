@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2012 by Artem Senichev <artemsen@gmail.com>        *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -21,93 +21,128 @@
 #include "common.h"
 
 
-class CBuffer;
-
-class CImage
+class image
 {
 public:
 	//! Default constructor
-	CImage();
+	image();
+	~image();
 
 	/**
-	 * Load image from file
-	 * \param fileName a file name
+	 * Load PNG image from file
+	 * \param file_name a file name
+	 * \return false if error
 	 */
-	void Load(const char* fileName);
+	bool load_PNG(const char* file_name);
 
 	/**
-	 * Load XPM image
+	 * Load XPM image from data buffer
 	 * \param data image data
-	 * \param strNum string number in image data
+	 * \param str_num string number in image data
+	 * \return false if error
 	 */
-	void LoadXPM(const char* data[], const size_t strNum);
+	bool load_XPM(const char* data[], const size_t str_num);
 
 	/**
 	 * Image properties: Get image width
 	 * \return image width
 	 */
-	inline size_t GetWidth() const				{ return _ImgWidth; }
+	inline size_t width() const       { return _width; }
 
 	/**
 	 * Image properties: Get image height
 	 * \return image height
 	 */
-	inline size_t GetHeight() const				{ return _ImgHeight; }
-
-	/**
-	 * Image properties: Get image mode (GL_RGB / GL_RGBA / ...)
-	 * \return image mode
-	 */
-	inline GLint GetMode() const				{ return _ImgMode; }
-
-	/**
-	 * Image properties: Get image size in bytes
-	 * \return image format
-	 */
-	inline size_t SizeInBytes() const			{ return _ImgWidth * _ImgHeight * BytesPerPixel(); }
-
-	/**
-	 * Image properties: Get number of bytes per pixel
-	 * \return number byte per pixel
-	 */
-	inline unsigned char BytesPerPixel() const	{ return _ImgMode == GL_RGB ? 3 : _ImgMode == GL_RGBA ? 4 : 1; }
+	inline size_t height() const      { return _height; }
 
 	/**
 	 * Image properties: Get image data
 	 * \return image data (bitmap)
 	 */
-	inline const unsigned char* GetData() const	{ return _Data.empty() ? NULL : &_Data[0]; }
+	inline const void* data() const   { return _data.empty() ? NULL : &_data[0]; }
 
 	/**
-	 * Image properties: Get image data
-	 * \return image data (bitmap)
+	 * Get SDL surface for current image
+	 * \return SDL surface pointer
 	 */
-	inline unsigned char* GetData()				{ return _Data.empty() ? NULL : &_Data[0]; }
+	SDL_Surface* get_surface();
+
+	/**
+	 * Increase canvas by height
+	 * \param h new height value
+	 */
+	void increase_canvas(const size_t h);
+
+	/**
+	 * Increase canvas
+	 * \param w new width value
+	 * \param h new height value
+	 */
+	void increase_canvas(const size_t w, const size_t h);
 
 	/**
 	 * Get sub image
 	 * \param x left corner coordinates
 	 * \param y top coordinates
-	 * \param width sub image width
-	 * \param height sub image height
-	 * \param data sub image array data
+	 * \param w sub image width
+	 * \param h sub image height
+	 * \return sub image
 	 */
-	void GetSubImage(const size_t x, const size_t y, const size_t width, const size_t height, vector<unsigned char>& data) const;
+	image sub_image(const size_t x, const size_t y, const size_t w, const size_t h) const;
 
-private:
 	/**
-	 * Convert BGR to RGB mode
+	 * Resize image
+	 * \param w new width value
+	 * \param h new height value
 	 */
-	void ConvertBGRtoRGB();
+	void resize(const size_t w, const size_t h);
+
+	/**
+	 * Rotate image
+	 * \param angle rotate angle
+	 * \return rotated image
+	 */
+	image rotate(const short angle) const;
 
 	/**
 	 * Flip image by vertical
+	 * \return flipped image
 	 */
-	void FlipVertical();
+	void flip_vertical();
 
-private:	//Class variables
-	size_t					_ImgWidth;	///< Image width
-	size_t					_ImgHeight;	///< Image height
-	GLint					_ImgMode;	///< Image mode
-	vector<unsigned char>	_Data;		///< Image data
+	/**
+	 * Blur image by Gaussian algorithm
+	 * \param radius blur radius
+	 */
+	void gaussian_blur(const float radius);
+
+	/**
+	 * Add transparency
+	 * \param val added alpha valie in range [0.0f...1.0f]
+	 */
+	void add_transparency(const float val);
+
+	/**
+	 * Fill image by specified color
+	 * \param r red color component in range [0...255]
+	 * \param g green color component in range [0...255]
+	 * \param b blue color component in range [0...255]
+	 */
+	void fill_color(const unsigned char r, const unsigned char g, const unsigned char b);
+
+	/**
+	 * Get average color of the image
+	 * \param r red color component in range [0...255]
+	 * \param g green color component in range [0...255]
+	 * \param b blue color component in range [0...255]
+	 */
+	void average_color(unsigned char& r, unsigned char& g, unsigned char& b) const;
+
+private:
+	size_t       _width;     ///< Image width
+	size_t       _height;    ///< Image height
+	SDL_Surface* _sdl_surf;  ///< SDL surface
+
+	typedef vector<unsigned char> img_data;
+	img_data _data;          ///< Image data
 };

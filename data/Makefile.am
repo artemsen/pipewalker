@@ -1,9 +1,11 @@
-pkgdatadir = $(datadir)/games/$(PACKAGE)
+pkgdatadir = $(datadir)/$(PACKAGE)
 pkgdata_DATA = \
-	clatz.wav complete.wav \
-	font.tga \
-	settings.ini \
-	network1.tga network2.tga plumbing.tga \
-	hellsfire.tga newyear.tga simple.tga
+	clatz.wav \
+	complete.wav \
+	Hellsfire.png \
+	Linux.png \
+	Network.png \
+	Plumbing.png \
+	Simple.png
 
 EXTRA_DIST = $(pkgdata_DATA)

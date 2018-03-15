@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2012 by Artem Senichev <artemsen@gmail.com>        *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -17,124 +17,124 @@
  **************************************************************************/
 
 #include "button.h"
-#include "game.h"
+
+#define PW_BTN_CB_STATE_SPEED      250
+#define PW_BTN_SHADOW_STATE_SPEED  500
 
 
-CButton::CButton(CGame& game)
-:	_Game(game),
-	_X(0.0f),
-	_Y(0.0f),
-	_Width(0.0f),
-	_Height(0.0f),
-	_BtnId(0),
-	_TexId(CTextureBank::TexCounter)
+button::button(const render::img_type img_n, const render::img_type img_s, const float x, const float y, const float scale /*= 1.0f*/, const int id /* = 0*/)
+:	_img_n(img_n), _img_s(img_s),
+	_coord_x(x), _coord_y(y),
+	_scale(scale),
+	_id(id),
+	_shadow_tr(0),
+	_mouse_over(false)
 {
 }
 
 
-CButton::CButton(CGame& game, const float x, const float y, const float width, const float height, const CTextureBank::TextureType tex, const int id)
-:	_Game(game)
+void button::setup(const render::img_type img_n, const render::img_type img_s, const float x, const float y, const float scale /*= 1.0f*/, const int id /*= 0*/)
 {
-	Init(x, y, width, height, tex, id);
+	_img_n = img_n;
+	_img_s = img_s;
+	_coord_x = x;
+	_coord_y = y;
+	_scale = scale;
+	_id = id;
 }
 
 
-void CButton::Init(const float x, const float y, const float width, const float height, const CTextureBank::TextureType tex, const int id)
+bool button::on_mouse_move(const float x, const float y)
 {
-	_X = x;
-	_Y = y;
-	_Width = width;
-	_Height = height;
-	_TexId = tex;
-	_BtnId = id;
-}
-
-
-bool CButton::IsMouseOver(const float x, const float y) const
-{
-	return  x >= _X && x <= _X + _Width &&
-			y <= _Y && y >= _Y - _Height;
-}
-
-
-void CButton::Render(const float x, const float y) const
-{
-	RenderButton(x, y, _TexId);
-}
-
-
-void CButton::RenderButton(const float x, const float y, const CTextureBank::TextureType texture) const
-{
-	const float coeff = IsMouseOver(x, y) ? 0.05f : 0.0f;
-
-	//Button vertex coordinates
-	const float Vertex[] = {
-		_X - coeff, _Y + coeff,
-		_X - coeff, _Y - _Height - coeff,
-		_X + _Width + coeff, _Y - _Height - coeff,
-		_X + _Width + coeff, _Y + coeff };
-
-	static const short Tex[] =			{ 0, 1, 0, 0, 1, 0, 1, 1 };	//Texture coordinates
-	static const unsigned short Ind[] =	{ 0, 1, 2, 0, 2, 3 };		//Indices
-
-	glBindTexture(GL_TEXTURE_2D, _Game.TextureBank().Get(texture));
-	glVertexPointer(2, GL_FLOAT, 0, Vertex);
-	glTexCoordPointer(2, GL_SHORT, 0, Tex);
-	glDrawElements(GL_TRIANGLES, (sizeof(Ind) / sizeof(Ind[0])), GL_UNSIGNED_SHORT, Ind);
-}
-
-
-CCheckBoxButton::CCheckBoxButton(CGame& game, const bool state, const float x, const float y, const float width, const float height, const CTextureBank::TextureType texOn, const CTextureBank::TextureType texOff, const int id)
-: CButton(game, x, y, width, height, texOn, id), _State(state), _TexOff(texOff)
-{
-}
-
-
-void CCheckBoxButton::Render(const float x, const float y) const
-{
-	RenderButton(x, y, _State ? _TexId : _TexOff);
-}
-
-
-void CRadioButtons::AddButton(const CCheckBoxButton& btn)
-{
-	_Buttons.push_back(btn);
-}
-
-
-void CRadioButtons::Render(const float mouseX, const float mouseY) const
-{
-	for (list<CCheckBoxButton>::const_iterator itBtn = _Buttons.begin(); itBtn != _Buttons.end(); ++itBtn)
-		itBtn->Render(mouseX, mouseY);
-}
-
-
-bool CRadioButtons::OnClick(const float mouseX, const float mouseY)
-{
-	bool stateChanged = false;
-	for (list<CCheckBoxButton>::const_iterator itBtn = _Buttons.begin(); itBtn != _Buttons.end() && !stateChanged; ++itBtn)
-		stateChanged = itBtn->IsMouseOver(mouseX, mouseY) && !itBtn->GetState();
-
-	if (stateChanged) {
-		for (list<CCheckBoxButton>::iterator itBtn = _Buttons.begin(); itBtn != _Buttons.end(); ++itBtn)
-			itBtn->SetState(itBtn->IsMouseOver(mouseX, mouseY));
+	const bool new_over_state = cross(x, y);
+	if (_mouse_over != new_over_state) {
+		_mouse_over = new_over_state;
+		_shadow_tr = SDL_GetTicks();
+		return true;
 	}
-	return stateChanged;
+	return false;
 }
 
 
-int CRadioButtons::GetChoice() const
+bool button::draw(const float alpha /*= 1.0f*/)
 {
-	int id = -1;
-	for (list<CCheckBoxButton>::const_iterator itBtn = _Buttons.begin(); itBtn != _Buttons.end() && id < 0; ++itBtn)
-		if (itBtn->GetState())
-			id = itBtn->GetId();
-	return id;
+	render& renderer = render::instance();
+	bool shadow_trans = (_shadow_tr != 0);
+	float alpha_shadow = _mouse_over ? alpha : 0.0f;
+
+	if (shadow_trans) {
+		const unsigned int diff_time = SDL_GetTicks() - _shadow_tr;
+		if (diff_time > PW_BTN_SHADOW_STATE_SPEED)
+			_shadow_tr = 0;
+		else {
+			alpha_shadow = static_cast<float>(diff_time) / static_cast<float>(PW_BTN_SHADOW_STATE_SPEED);
+			if (!_mouse_over)
+				alpha_shadow = 1.0f - alpha_shadow;
+			alpha_shadow = min(alpha, alpha_shadow);
+		}
+	}
+
+	renderer.draw(_img_s, _coord_x, _coord_y, _scale + _scale / 2.5f, alpha_shadow);
+	renderer.draw(_img_n, _coord_x, _coord_y, _scale, alpha);
+
+	return shadow_trans;
 }
 
 
-void CRadioButtons::SetChoice(const int choiceId)
+button_chbox::button_chbox(const bool state, const float x, const float y, const float scale, const int id /* = 0 */)
+:	button(_state ? render::btn_cb_on : render::btn_cb_off, _state ? render::btn_cb_on_s : render::btn_cb_off_s, x, y, scale, id),
+	_state(state), _state_trans(0)
 {
-	for (list<CCheckBoxButton>::iterator itBtn = _Buttons.begin(); itBtn != _Buttons.end(); ++itBtn)
-		itBtn->SetState(itBtn->GetId() == choiceId);
+}
+
+
+void button_chbox::setup(const bool state, const float x, const float y, const float scale, const int id)
+{
+	_img_n = _state ? render::btn_cb_on : render::btn_cb_off;
+	_img_s = _state ? render::btn_cb_on_s : render::btn_cb_off_s;
+	_coord_x = x;
+	_coord_y = y;
+	_scale = scale;
+	_id = id;
+	_state = state;
+}
+
+
+void button_chbox::set_state(const bool state)
+{
+	_state = state;
+	_img_n = _state ? render::btn_cb_on : render::btn_cb_off;
+	_img_s = _state ? render::btn_cb_on_s : render::btn_cb_off_s;
+}
+
+
+void button_chbox::invert_state()
+{
+	set_state(!_state);
+	_state_trans = SDL_GetTicks();
+}
+
+
+bool button_chbox::draw(const float alpha /*= 1.0f*/)
+{
+	float alpha_tr = alpha;
+	bool redisplay = (_state_trans != 0);
+
+	if (redisplay) {
+		const unsigned int diff_time = SDL_GetTicks() - _state_trans;
+		if (diff_time > PW_BTN_CB_STATE_SPEED)
+			_state_trans = 0;
+		else {
+			alpha_tr = static_cast<float>(diff_time) / static_cast<float>(PW_BTN_CB_STATE_SPEED);
+			_img_n = _state ? render::btn_cb_off : render::btn_cb_on;
+			_img_s = _state ? render::btn_cb_off_s : render::btn_cb_on_s;
+			button::draw(1.0f - alpha_tr);
+			_img_n = _state ? render::btn_cb_on : render::btn_cb_off;
+			_img_s = _state ? render::btn_cb_on_s : render::btn_cb_off_s;
+		}
+	}
+
+	redisplay |= button::draw(alpha_tr);
+
+	return redisplay;
 }

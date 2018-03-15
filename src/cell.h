@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2012 by Artem Senichev <artemsen@gmail.com>        *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -21,199 +21,217 @@
 #include "common.h"
 
 
-class CCell
+class cell
 {
 public:
-	//! Default constructor
-	CCell();
+	cell();
 
 	//! Tube type
-	enum TubeType {
-		TTNone,			///< Free cell
-		TTHalf,			///< Half tube (sender or received installed)
-		TTStraight,		///< Straight tube
-		TTCurved,		///< Curved tube
-		TTJoiner		///< Joiner (T)
+	enum ttype {
+		tt_none,      ///< Free cell
+		tt_half,      ///< Half tube (sender or received installed)
+		tt_straight,  ///< Straight tube
+		tt_curved,    ///< Curved tube
+		tt_joiner     ///< Joiner (T)
 	};
 
 	//! Cell type
-	enum CellType {
-		CTFree,			///< Free cell
-		CTTube,			///< Tube
-		CTSender,		///< Sender
-		CTReceiver		///< Receiver
+	enum ctype {
+		ct_free,      ///< Free cell
+		ct_tube,      ///< Tube
+		ct_sender,    ///< Sender
+		ct_receiver   ///< Receiver
 	};
 
 	//! Connection sides
-	enum ConnectionSide {
-		CSTop,			///< Top
-		CSBottom,		///< Bottom
-		CSLeft,			///< Left
-		CSRight			///< Right
+	enum cside {
+		cs_top,       ///< Top
+		cs_bottom,    ///< Bottom
+		cs_left,      ///< Left
+		cs_right      ///< Right
 	};
 
-public:	//Helper functions
+	//! Rotate state
+	enum state {
+		st_unchanged, ///< Cell state unchanged
+		st_rcomplete, ///< Rotation complete
+		st_updated    ///< Updating in progress
+	};
+
+public:
 	/**
 	 * Reset cell state
 	 */
-	void Reset();
+	void reset();
 
 	/**
-	 * Save cell state as text
-	 * \return cell description
+	 * Save cell state
+	 * \return cell description for serialization
 	 */
-	string Save() const;
+	unsigned char save() const;
 
 	/**
 	 * Load cell state from text
 	 * \param state cell description
-	 * \return false if load failed
+	 * \return false if state is incorrect
 	 */
-	bool Load(const string& state);
+	bool load(const unsigned char state);
 
 	/**
 	 * Reverse lock state of the cell
 	 */
-	inline void ReverseLock()					{ _Lock = !_Lock; }
+	inline void reverse_lock()			{ _lock = !_lock; }
 
 	/**
 	 * Get current lock state of the cell
 	 * \return true if cell is locked
 	 */
-	inline bool IsLocked() const				{ return _Lock; }
+	inline bool locked() const			{ return _lock; }
 
 	/**
 	 * Get tube type of the cell
 	 * \return tube type
 	 */
-	inline TubeType GetTubeType() const			{ assert(_CellType != CTFree); return _TubeType; }
+	inline ttype tube_type() const		{ assert(_cell_type != ct_free); return _tube_type; }
 
 	/**
 	 * Get cell type of the cell
 	 * \return cell type
 	 */
-	inline CellType GetCellType() const			{ return _CellType; }
+	inline ctype cell_type() const		{ return _cell_type; }
 
 	/**
 	 * Get direction connection properties
 	 * \return true if connected
 	 */
-	inline bool IsTopConnected() const			{ return _ConnTop; }
+	inline bool top_connected() const	{ return _top_conn; }
 
 	/**
 	 * Get direction connection properties
 	 * \return true if connected
 	 */
-	inline bool IsBottomConnected() const		{ return _ConnBottom; }
+	inline bool bottom_connected() const	{ return _bottom_conn; }
 
 	/**
 	 * Get direction connection properties
 	 * \return true if connected
 	 */
-	inline bool IsLeftConnected() const			{ return _ConnLeft; }
+	inline bool left_connected() const	{ return _left_conn; }
 
 	/**
 	 * Get direction connection properties
 	 * \return true if connected
 	 */
-	inline bool IsRightConnected() const		{ return _ConnRight; }
+	inline bool right_connected() const	{ return _right_conn; }
 
 	/**
 	 * Set Sender cell type of the cell
 	 */
-	inline void SetAsSender()					{ assert(_CellType == CTFree); _CellType = CTSender; }
+	inline void set_type_sender()		{ assert(_cell_type == ct_free); _cell_type = ct_sender; }
 
 	/**
 	 * Set Receiver cell type of the cell
 	 */
-	inline void SetAsReceiver()					{ assert(_CellType == CTFree); _CellType = CTReceiver; }
+	inline void set_type_receiver()		{ assert(_cell_type == ct_free); _cell_type = ct_receiver; }
 
 	/**
 	 * Get status of the cell
 	 * \return cell status (true if connected/active)
 	 */
-	inline bool IsActive() const				{ return _State; }
+	inline bool active() const			{ return _state; }
 
 	/**
 	 * Set status of the cell
 	 * \param type cell status (true if connected/active)
 	 */
-	inline void SetActive(const bool type)		{ _State = type; }
+	inline void set_active(const bool type)	{ _state = type; }
 
 	/**
 	 * Get current angle of the cell
 	 * \return current angle of the cell in degrees
 	 */
-	inline float GetAngle() const				{ return _Angle; }
+	inline float angle() const			{ return _angle; }
 
 	/**
 	 * Add tube to cell
 	 * \param side side of the added tube
 	 */
-	void AddTube(const ConnectionSide side);
+	void add_tube(const cside side);
 
 	/**
 	 * Check for add tube possibility
 	 * \return true if tube can be added
 	 */
-	bool CanAddTube() const;
+	bool can_add_tube() const;
 
 	/**
 	 * Get current use flag of the cell
 	 * \return current use flag of the cell
 	 */
-	bool GetUsed() const						{ return _Used; }
+	inline bool is_used() const				{ return _used; }
 
 	/**
 	 * Set current use flag of the cell
 	 * \param weight a new use flag of the cell
 	 */
-	void SetUsed(const bool used)				{ _Used = used; }
+	inline void set_used(const bool used)	{ _used = used; }
 
 	/**
 	 * Start rotation
 	 * \param dir rotation direction (true = clockwise)
 	 */
-	void Rotate(const bool dir);
+	void rotate(const bool dir);
+
+	/**
+	 * Start still rotation (without animation)
+	 * \param dir rotation direction (true = clockwise)
+	 * \param twice rotation mode (true = 180, false = 90 degree)
+	 */
+	void rotate_still(const bool dir, const bool twice);
 
 	/**
 	 * Check if rotation in progress
 	 * \return true if rotation in progress
 	 */
-	inline bool IsRotationInProgress() const	{ return _Rotate.StartTime != 0; }
+	inline bool rotation_in_progress() const	{ return _rotate.start_time != 0; }
 
 	/**
 	 * Calculate rotation angle
 	 * \return true if rotation has been finished
 	 */
-	bool ProcessRotation();
+	state calculate_state();
 
 private:
+	/**
+	 * Calculate state on rotation complete
+	 */
+	void update_rotate_state();
+
 	/**
 	 * Get connected side count
 	 * \return connected side count
 	 */
-	unsigned char GetTubeSideCount() const;
+	unsigned char tube_side_count() const;
 
-private:	//Class variables
-	TubeType		_TubeType;			///< Tube type
-	CellType		_CellType;			///< Cell type
-	float			_Angle;				///< Angle
-	bool			_State;				///< Cell connection state (true = active, false = passive)
-	bool			_Lock;				///< Cell lock status
-	bool			_ConnTop;			///< Top connection state
-	bool			_ConnBottom;		///< Bottom connection state
-	bool			_ConnLeft;			///< Left connection state
-	bool			_ConnRight;			///< Right connection state
-	bool			_Used;				///< Cell route use flag
+private:
+	ttype _tube_type;   ///< Tube type
+	ctype _cell_type;   ///< Cell type
+	float _angle;       ///< Angle
+	bool  _state;       ///< Cell connection state (true = active, false = passive)
+	bool  _lock;        ///< Cell lock status
+	bool  _top_conn;    ///< Top connection state
+	bool  _bottom_conn; ///< Bottom connection state
+	bool  _left_conn;   ///< Left connection state
+	bool  _right_conn;  ///< Right connection state
+	bool  _used;        ///< Cell route use flag
 
-	//Rotate description
-	struct TUBE_ROTATION {
-		TUBE_ROTATION() : StartTime(0) {}
-		bool			Direction;		///< Rotate direction
-		unsigned int	StartTime;		///< Rotate start time
-		bool			Twice;			///< Rotate twice flag (180 degree)
-		float			InitAngle;		///< Init rotate angle
-		float			NeedAngle;		///< Needed rotate angle
-	} _Rotate;
+	//Rotation description
+	struct rotation {
+		rotation() : start_time(0) {}
+		bool         direction;  ///< Rotate direction
+		unsigned int start_time; ///< Rotate start time
+		bool         twice;      ///< Rotate twice flag (180 degree)
+		float        init_angle; ///< Init rotate angle
+		float        need_angle; ///< Needed rotate angle
+	} _rotate;
 };

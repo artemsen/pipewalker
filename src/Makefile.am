@@ -1,30 +1,56 @@
-DEFS = @DEFS@ -DNDEBUG=1 -DDIR_GAMEDATA=\""$(datadir)/games/$(PACKAGE)/"\"
 bin_PROGRAMS = pipewalker
 pipewalker_SOURCES = \
-	buffer.h buffer.cpp \
-	button.h button.cpp \
-	cell.h cell.cpp \
+	button.cpp button.h \
+	cell.cpp cell.h \
 	common.h \
-	exception.h \
-	explosion.h explosion.cpp \
-	game.h game.cpp \
-	image.h image.cpp \
+	explosion.cpp explosion.h \
+	game.cpp game.h \
+	image.cpp image.h \
+	level.cpp level.h \
+	loading_xpm.h \
 	main.cpp \
-	map.h map.cpp \
-	modepuzzle.h modepuzzle.cpp \
-	modesettings.h modesettings.cpp \
-	mtrandom.h mtrandom.cpp \
-	rendertext.h rendertext.cpp \
-	settings.h settings.cpp \
-	sound.h sound.cpp \
-	synchro.h synchro.cpp \
-	texture.h texture.cpp \
-	winmgr.h winmgr.cpp \
-	winmgr_sdl.h winmgr_sdl.cpp \
-	winmgr_xsrv.h winmgr_xsrv.cpp
+	mode.h \
+	mode_puzzle.cpp mode_puzzle.h \
+	mode_settings.cpp mode_settings.h \
+	mtrandom.cpp mtrandom.h \
+	render.cpp render.h \
+	settings.cpp settings.h \
+	sound.cpp sound.h
 
-#MS Windows specific files
-EXTRA_DIST = \
-	winmgr_win.h winmgr_win.cpp \
-	winmgr_wince.h winmgr_wince.cpp \
-	PipeWalkerRes.h PipeWalker.rc
+if WIN32
+pipewalker_DEPENDENCIES = pipewalker_win32_res.o
+pipewalker_LDADD = pipewalker_win32_res.o
+endif
+
+pipewalker_win32_res.rc:
+	@echo "#include <windows.h>" > pipewalker_win32_res.rc
+	@echo "0 ICON \"..\\\\extra\\\\pipewalker.ico\"" >> pipewalker_win32_res.rc
+	@echo "LANGUAGE 0, SUBLANG_NEUTRAL" >> pipewalker_win32_res.rc
+	@echo "1 VERSIONINFO" >> pipewalker_win32_res.rc
+	@echo "  FILEVERSION    `echo $(VERSION) | $(AWK) 'ORS=""; { subs = gsub(/\./,","); print $0; for (ndx=subs; ndx < 3; ndx++) print ",0"; }'`" >> pipewalker_win32_res.rc
+	@echo "  PRODUCTVERSION `echo $(VERSION) | $(AWK) 'ORS=""; { subs = gsub(/\./,","); print $0; for (ndx=subs; ndx < 3; ndx++) print ",0"; }'`" >> pipewalker_win32_res.rc
+	@echo "  FILEOS         VOS__WINDOWS32" >> pipewalker_win32_res.rc
+	@echo "  FILEFLAGSMASK  VFT2_UNKNOWN" >> pipewalker_win32_res.rc
+	@echo "  FILETYPE       VFT_UNKNOWN" >> pipewalker_win32_res.rc
+	@echo "BEGIN" >> pipewalker_win32_res.rc
+	@echo "  BLOCK \"StringFileInfo\"" >> pipewalker_win32_res.rc
+	@echo "  BEGIN" >> pipewalker_win32_res.rc
+	@echo "    BLOCK \"000004b0\"" >> pipewalker_win32_res.rc
+	@echo "    BEGIN" >> pipewalker_win32_res.rc
+	@echo "      VALUE \"FileDescription\", \"PipeWalker game\"" >> pipewalker_win32_res.rc
+	@echo "      VALUE \"FileVersion\", \"$(VERSION)\"" >> pipewalker_win32_res.rc
+	@echo "      VALUE \"InternalName\", \"PipeWalker\"" >> pipewalker_win32_res.rc
+	@echo "      VALUE \"LegalCopyright\", \"Copyright (C) 2007-2012 Artem Senichev\"" >> pipewalker_win32_res.rc
+	@echo "      VALUE \"OriginalFilename\", \"PipeWalker.exe\"" >> pipewalker_win32_res.rc
+	@echo "      VALUE \"ProductName\", \"PipeWalker game\"" >> pipewalker_win32_res.rc
+	@echo "      VALUE \"ProductVersion\", \"$(VERSION)\"" >> pipewalker_win32_res.rc
+	@echo "    END" >> pipewalker_win32_res.rc
+	@echo "  END" >> pipewalker_win32_res.rc
+	@echo "  BLOCK \"VarFileInfo\"" >> pipewalker_win32_res.rc
+	@echo "  BEGIN" >> pipewalker_win32_res.rc
+	@echo "    VALUE \"Translation\", 0x0, 1200" >> pipewalker_win32_res.rc
+	@echo "  END" >> pipewalker_win32_res.rc
+	@echo "END" >> pipewalker_win32_res.rc
+
+pipewalker_win32_res.o: pipewalker_win32_res.rc
+	@windres $^ -o $@

@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2012 by Artem Senichev <artemsen@gmail.com>        *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -17,218 +17,508 @@
  **************************************************************************/
 
 #include "image.h"
-#include "buffer.h"
+#ifdef WIN32
+#include <GdiPlus.h>
+#else
+#include <png.h>
+#endif // WIN32
 
-#pragma pack (push, 1)
-//! Targa header
-struct IMAGE_TGA_HEADER {
-	unsigned char	Length;
-	unsigned char	ColormapType;
-	unsigned char	ImageType;
-	unsigned short	ColormapIndex;
-	unsigned short	ColormapLength;
-	unsigned char	ColormapEntrySize;
-	unsigned short	OriginX;
-	unsigned short	OriginY;
-	unsigned short	Width;
-	unsigned short	Height;
-	unsigned char	PixelSize;
-	unsigned char	ImageDesc;
-};
-#define IMAGE_TGA_RLE		0x0A	//RLE compressed TGA
-#define IMAGE_TGA_RGB		0x02	//Uncompressed TGA
-#pragma pack (pop)
+#define BPP	4	//Byte per pixel
 
 
-CImage::CImage()
-:	_ImgWidth(0),
-	_ImgHeight(0),
-	_ImgMode(GL_RGB)
+image::image()
+:	_width(0), _height(0),
+	_sdl_surf(NULL)
 {
 }
 
 
-void CImage::Load(const char* fileName)
+image::~image()
 {
-	assert(fileName);
+	if (_sdl_surf)
+		SDL_FreeSurface(_sdl_surf);
+}
 
-	CBuffer buf;
-	buf.Load(fileName);
 
-	const IMAGE_TGA_HEADER* header = reinterpret_cast<const IMAGE_TGA_HEADER*>(buf.GetData(sizeof(IMAGE_TGA_HEADER)));
-	if (!header)
-		throw CException("TGA: Incorrect format");
+bool image::load_PNG(const char* file_name)
+{
+	assert(file_name && *file_name);
 
-	if (header->ColormapType != 0)
-		throw CException("TGA: Colormap not supported");
+	bool loaded = false;
 
-	if (header->ImageType != IMAGE_TGA_RLE && header->ImageType != IMAGE_TGA_RGB)
-		throw CException("TGA: Only RLE or RGB mode supported");
+	_data.clear();
 
-	//Read the width and height
-	_ImgWidth  = header->Width;
-	_ImgHeight = header->Height;
- 	if (_ImgWidth == 0 || _ImgHeight == 0 || _ImgWidth > 4096 || _ImgHeight > 4096)
-		throw CException("TGA: Undefined image size");
+#ifdef WIN32
+	ULONG_PTR gdiplus_token;
+	Gdiplus::GdiplusStartupInput gdiplus_si;
+	Gdiplus::GdiplusStartup(&gdiplus_token, &gdiplus_si, NULL);
+	Gdiplus::Bitmap* img = NULL;
 
-	//Define format
-	if (header->PixelSize == 24)
-		_ImgMode = GL_RGB;
-	else if (header->PixelSize == 32)
-		_ImgMode = GL_RGBA;
-	else
-		throw CException("TGA: Pixel size unsupported");
+	try {
+		//Convert file name from ansi to wide
+		wstring wide_file_name(strlen(file_name) + 1, 0);
+		MultiByteToWideChar(CP_ACP, 0, file_name, -1, &wide_file_name[0], static_cast<int>(wide_file_name.size()));
 
-	//Calculate the number of bytes per pixel
-	const size_t bpp = header->PixelSize / 8;
+		//Open image
+		img = Gdiplus::Bitmap::FromFile(wide_file_name.c_str());
+		if (!img) {
+			fprintf(stderr, "Failed to load file %s\n", file_name);
+			throw 0;
+		}
+		if (img->GetPixelFormat() != PixelFormat32bppARGB) {
+			fprintf(stderr, "File %s has no alpha channel\n", file_name);
+			throw 0;	//Unsupported color
+		}
 
-	//Calculate the size
-	const size_t sizeInBytes = _ImgWidth * _ImgHeight * bpp;
+		_width = img->GetWidth();
+		_height = img->GetHeight();
 
-	//Read the data
-	_Data.resize(sizeInBytes);
-	if (header->ImageType == IMAGE_TGA_RGB)
-		memcpy(&_Data[0], buf.GetData(sizeInBytes), sizeInBytes);
-	else {
-		//Create new own buffer to store image data
-		size_t bufPos = 0;
+		Gdiplus::BitmapData bmp_data;
+		Gdiplus::Rect rect(0, 0, static_cast<INT>(_width), static_cast<INT>(_height));
+		if (img->LockBits(&rect, Gdiplus::ImageLockModeRead, PixelFormat32bppARGB, &bmp_data) != Gdiplus::Ok) {
+			fprintf(stderr, "Error reading data from image file %s\n", file_name);
+			throw 0;
+		}
 
-		while (bufPos < sizeInBytes) {
-			unsigned char packetHeader;
-			if (!buf.Get(packetHeader))
-				throw CException("TGA: Incorrect format (not enough data)");
-			const unsigned char packetLength = (packetHeader & 0x7F) + 1;
-			if ((packetHeader & 0x80) != 0) {	// Run-length encoding packet (RLE)
-				const unsigned char* packet = reinterpret_cast<const unsigned char*>(buf.GetData(bpp));
-				for (unsigned int j = 0; j < packetLength * bpp; ++j) {
-					if (bufPos >= sizeInBytes)
-						throw CException("TGA: Incorrect format");
-					_Data[bufPos++] = packet[j % bpp];
-				}
-			}
-			else {								//Raw packet
-				for (size_t j = 0; j < packetLength * bpp; ++j) {
-					if (bufPos >= sizeInBytes || !buf.Get(_Data[bufPos++]))
-						throw CException("TGA: Incorrect format");
-				}
+		//Copy source data
+		_data.resize(_width * _height * BPP);
+		for (size_t y = 0; y < _height; ++y) {
+			const size_t dts_row = y * _width * BPP;
+			const unsigned char* src_row = static_cast<const unsigned char*>(bmp_data.Scan0) + dts_row;
+			for (size_t x = 0; x < _width; ++x) {
+				_data[dts_row + x * BPP + 0] = src_row[x * BPP + 2];
+				_data[dts_row + x * BPP + 1] = src_row[x * BPP + 1];
+				_data[dts_row + x * BPP + 2] = src_row[x * BPP + 0];
+				_data[dts_row + x * BPP + 3] = src_row[x * BPP + 3];
 			}
 		}
+
+		img->UnlockBits(&bmp_data);
+		loaded = true;
+	}
+	catch (...) {
 	}
 
-	ConvertBGRtoRGB();
+	delete img;
+	Gdiplus::GdiplusShutdown(gdiplus_token);
+#else
 
-	// Check flip bit
-	if ((header->ImageDesc & 0x20) != 0)
-		FlipVertical();
+	FILE* img_file = NULL;
+	png_structp png_str = NULL;
+	png_infop png_info = NULL;
+
+	try {
+		img_file = fopen(file_name, "rb");
+		if (!img_file) {
+			fprintf(stderr, "Failed to load file %s\n", file_name);
+			throw 0;
+		}
+		png_byte img_header[8];
+		if (fread(img_header, 1, sizeof(img_header), img_file) != sizeof(img_header) || png_sig_cmp(img_header, 0, sizeof(img_header))) {
+			fprintf(stderr, "File %s is not PNG format\n", file_name);
+			throw 0;	//Not PNG format
+		}
+		png_str = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+		if (!png_str)
+			throw 0;
+		png_info = png_create_info_struct(png_str);
+		if (!png_info)
+			throw 0;
+		if (setjmp(png_jmpbuf(png_str)))
+			throw 0;	//Error during init_io
+		png_init_io(png_str, img_file);
+		png_set_sig_bytes(png_str, sizeof(img_header));
+		png_read_info(png_str, png_info);
+
+		_width = png_get_image_width(png_str, png_info);
+		_height = png_get_image_height(png_str, png_info);
+
+		const png_byte color_type = png_get_color_type(png_str, png_info);
+		if (color_type != PNG_COLOR_TYPE_RGBA) {
+			fprintf(stderr, "File %s has no alpha channel\n", file_name);
+			throw 0;	//Unsupported color
+		}
+
+		png_set_interlace_handling(png_str);
+		png_read_update_info(png_str, png_info);
+
+		if (setjmp(png_jmpbuf(png_str)))
+			throw 0;	//Error during read_image
+
+		vector<png_bytep> rows_ptr(_height);
+		vector< vector<png_byte> > rows_dat(_height);
+		const size_t row_sz = png_get_rowbytes(png_str, png_info);
+		for (size_t i = 0; i < _height; ++i) {
+			rows_dat[i].resize(row_sz);
+			rows_ptr[i] = &rows_dat[i].front();
+		}
+		png_read_image(png_str, &rows_ptr.front());
+
+		_data.reserve(_height * row_sz);
+		for (size_t i = 0; i < _height; ++i)
+			copy(rows_ptr[i], rows_ptr[i] + row_sz, back_inserter(_data));
+
+		loaded = true;
+	}
+	catch (...) {
+	}
+
+	png_destroy_read_struct(png_str ? &png_str : NULL, png_info ? &png_info : NULL, NULL);
+	if (img_file)
+		fclose(img_file);
+
+#endif // WIN32
+
+	assert(_data.size() == _width * _height * BPP);
+
+	return loaded;
 }
 
 
-void CImage::LoadXPM(const char* data[], const size_t strNum)
+bool image::load_XPM(const char* data[], const size_t str_num)
 {
 	assert(data);
 
-	_ImgMode = GL_RGBA;
+	_data.clear();
 
 	//Read image properties
-	int colorMapSize = 0, bytePerPixel = 0, imgWidth = 0, imgHeight = 0;
-	sscanf(data[0], "%i %i %i %i", &imgWidth, &imgHeight, &colorMapSize, &bytePerPixel);
-	_ImgWidth = static_cast<size_t>(imgWidth);
-	_ImgHeight = static_cast<size_t>(imgHeight);
+	int color_map_size = 0, xpm_bpp = 0, xmp_width = 0, xpm_height = 0;
+	if (sscanf(data[0], "%i %i %i %i", &xmp_width, &xpm_height, &color_map_size, &xpm_bpp) != 4)
+		return false;
+	_width = static_cast<size_t>(xmp_width);
+	_height = static_cast<size_t>(xpm_height);
 
 	//Read the color map
-	map< string, vector<unsigned char> > colorMap;
-	for (int i = 1; i <= colorMapSize; ++i) {
-		if (i >= static_cast<int>(strNum))
-			throw CException("XPM: Incorrect format");
-
-		const string index(data[i], data[i] + bytePerPixel);
-		vector<unsigned char> color;
-		color.resize(4, 0);
-		if (strcmp(data[i] + bytePerPixel + 3, "None") != 0) {
-			unsigned int colorRef = 0;
-			sscanf(data[i] + bytePerPixel + 4, "%x", &colorRef);
-#ifdef PW_BYTEORDER_LITTLE_ENDIAN
-			color[0] = static_cast<unsigned char>((colorRef & 0x00ff0000) >> 16);
-			color[1] = static_cast<unsigned char>((colorRef & 0x0000ff00) >> 8);
-			color[2] = static_cast<unsigned char>((colorRef & 0x000000ff) >> 0);
+	map< string, vector<unsigned char> > color_map;
+	for (int i = 1; i <= color_map_size; ++i) {
+		if (i >= static_cast<int>(str_num))
+			return false;
+		const string index(data[i], data[i] + xpm_bpp);
+		vector<unsigned char> color(4);
+		if (strcmp(data[i] + xpm_bpp + 3, "None") != 0) {
+			unsigned int color_ref = 0;
+			sscanf(data[i] + xpm_bpp + 4, "%x", &color_ref);
+#if SDL_BYTEORDER == SDL_LIL_ENDIAN
+			color[0] = static_cast<unsigned char>((color_ref & 0x00ff0000) >> 16);
+			color[1] = static_cast<unsigned char>((color_ref & 0x0000ff00) >> 8);
+			color[2] = static_cast<unsigned char>((color_ref & 0x000000ff) >> 0);
 #else
-			color[0] = static_cast<unsigned char>((colorRef & 0xff000000) << 0);
-			color[1] = static_cast<unsigned char>((colorRef & 0x00ff0000) << 8);
-			color[2] = static_cast<unsigned char>((colorRef & 0x0000ff00) << 16);
-#endif	//PW_BYTEORDER_LITTLE_ENDIAN
+			color[0] = static_cast<unsigned char>((color_ref & 0xff000000) << 0);
+			color[1] = static_cast<unsigned char>((color_ref & 0x00ff0000) << 8);
+			color[2] = static_cast<unsigned char>((color_ref & 0x0000ff00) << 16);
+#endif	//SDL_BYTEORDER == SDL_BIG_ENDIAN
 			color[3] = 0xff;	//Non transparent
 		}
-		colorMap.insert(make_pair(index, color));
+		color_map.insert(make_pair(index, color));
 	}
 
 	//Read image data
-	_Data.reserve(SizeInBytes());
-	for (size_t i = 0; i < _ImgHeight; ++i) {
-		if (i + colorMapSize + 1 >= strNum)
-			throw CException("XPM: Incorrect format");
-		const char* imgData = data[i + colorMapSize + 1];
-		for (size_t j = 0; j < _ImgWidth; ++j) {
-			const string colorIndex(imgData + j * bytePerPixel, imgData + j * bytePerPixel + bytePerPixel);
-			const vector<unsigned char> colorValue = colorMap[colorIndex];
-			assert(colorValue.size() == 4);
-			copy(colorValue.begin(), colorValue.end(), back_inserter(_Data));
+	_data.reserve(_width * _height * BPP);
+	for (size_t i = 0; i < _height; ++i) {
+		if (i + color_map_size + 1 >= str_num)
+			return false;
+		const char* img_data = data[i + color_map_size + 1];
+		for (size_t j = 0; j < _width; ++j) {
+			const string color_index(img_data + j * xpm_bpp, img_data + j * xpm_bpp + xpm_bpp);
+			map< string, vector<unsigned char> >::const_iterator it = color_map.find(color_index);
+			if (it == color_map.end())
+				return false;
+			copy(it->second.begin(), it->second.end(), back_inserter(_data));
 		}
 	}
-	assert(_Data.size() == SizeInBytes());
+
+	return (_data.size() == _width * _height * BPP);
 }
 
 
-void CImage::GetSubImage(const size_t x, const size_t y, const size_t width, const size_t height, vector<unsigned char>& data) const
+SDL_Surface* image::get_surface()
 {
-	assert(!_Data.empty());
-	assert(_ImgMode == GL_RGB || _ImgMode == GL_RGBA);
+	if (_sdl_surf)
+		return _sdl_surf;
 
-	if (x > _ImgWidth || x + width > _ImgWidth || y > _ImgHeight || y + height > _ImgHeight)
-		throw CException("Sub image coordinates out of range");
+	Uint32 rmask, gmask, bmask, amask;
 
-	const unsigned char bpp = BytesPerPixel();
+#if SDL_BYTEORDER == SDL_BIG_ENDIAN
+	rmask = 0xff000000;
+	gmask = 0x00ff0000;
+	bmask = 0x0000ff00;
+	amask = 0x000000ff;
+#else
+	rmask = 0x000000ff;
+	gmask = 0x0000ff00;
+	bmask = 0x00ff0000;
+	amask = 0xff000000;
+#endif	//SDL_BYTEORDER == SDL_BIG_ENDIAN
 
-	data.reserve(height * width * bpp);
-	for (size_t i = 0; i < height; ++i) {
-		const vector<unsigned char>::const_iterator itCopy = _Data.begin() + x * bpp + (i + y) * _ImgWidth * bpp;
-		copy(itCopy, itCopy + width * bpp, back_inserter(data));
+	_sdl_surf = SDL_CreateRGBSurfaceFrom(&_data.front(), static_cast<int>(_width), static_cast<int>(_height), 32, static_cast<int>(_width * BPP), rmask, gmask, bmask, amask);
+
+	return _sdl_surf;
+}
+
+
+void image::increase_canvas(const size_t h)
+{
+	assert(h > _height);
+	_data.insert(_data.begin(), (h - _height) * _width * BPP, 0);
+	_height = h;
+}
+
+
+void image::increase_canvas(const size_t w, const size_t h)
+{
+	assert(w > _width);
+	assert(h > _height);
+
+	image img;
+	img._width  = w;
+	img._height = h;
+	img._data.resize(img._width * img._height * BPP);
+
+	const size_t new_pos_x = (w - _width) / 2;
+	const size_t new_pos_y = (h - _height) / 2;
+
+	//Copy current image to center of new canvas
+	for (size_t y = 0; y < _height; ++y) {
+		memcpy(
+			&img._data[(new_pos_y + y) * img._width * BPP + new_pos_x * BPP],
+			&_data[y * _width * BPP],
+			_width * BPP);
+	}
+
+	*this = img;
+}
+
+
+image image::sub_image(const size_t x, const size_t y, const size_t w, const size_t h) const
+{
+	assert(!_data.empty());
+
+	if (x > _width || x + w > _width || y > _height || y + h > _height)
+		return *this;	//Sub image coordinates out of range
+
+	image img;
+	img._width = w;
+	img._height = h;
+	img._data.reserve(h * w * BPP);
+
+	for (size_t i = 0; i < h; ++i) {
+		const img_data::const_iterator it = _data.begin() + x * BPP + (i + y) * _width * BPP;
+		copy(it, it + w * BPP, back_inserter(img._data));
+	}
+
+	return img;
+}
+
+
+void image::resize(const size_t w, const size_t h)
+{
+	image img;
+	img._width  = w;
+	img._height = h;
+	img._data.reserve(img._width * img._height * BPP);
+
+	const float factor_x = static_cast<float>(img._width) / static_cast<float>(_width);
+	const float factor_y = static_cast<float>(img._height) / static_cast<float>(_height);
+
+	for (size_t y = 0; y < img._height; ++y) {
+		const size_t row_src = static_cast<size_t>(static_cast<float>(y) / factor_y) * _width * BPP;
+		for (size_t x = 0; x < img._width; ++x) {
+			const unsigned char* data = &_data[row_src + static_cast<size_t>(static_cast<float>(x) / factor_x) * BPP];
+			copy(data, data + BPP, back_inserter(img._data));
+		}
+	}
+
+	*this = img;
+}
+
+
+image image::rotate(const short angle) const
+{
+	short degree = angle;
+	while (degree >= 360)
+		degree -= 360;
+	while (degree < 0)
+		degree += 360;
+
+	image img;
+
+	if (degree == 90) {
+		img._width = _height;
+		img._height = _width;
+		img._data.resize(_data.size());
+		for (size_t y = 0; y < _height; ++y) {
+			for (size_t x = 0; x < _width; ++x) {
+				memcpy(
+					&img._data[(img._width - y - 1) * BPP + x * img._width * BPP],
+					&_data[y * _width * BPP + x * BPP], BPP);
+			}
+		}
+	}
+	else if (degree == 270 /* -90 */) {
+		img._width = _height;
+		img._height = _width;
+		img._data.resize(_data.size());
+		for (size_t y = 0; y < _height; ++y) {
+			for (size_t x = 0; x < _width; ++x) {
+				memcpy(
+					&img._data[(img._height - x - 1) * img._width * BPP + y * BPP],
+					&_data[y * _width * BPP + x * BPP], BPP);
+			}
+		}
+	}
+	else if (degree == 180) {
+		img._width = _width;
+		img._height = _height;
+		img._data.resize(_data.size());
+		for (size_t y = 0; y < img._height; ++y) {
+			const size_t row_src = (_height - y - 1) * _width * BPP;
+			const size_t col_src = y * _width * BPP;
+			for (size_t x = 0; x < img._width; ++x) {
+				const unsigned char* src_data = &_data[col_src + x * BPP];
+				memcpy(&img._data[row_src + (img._width - x - 1) * BPP], src_data, BPP);
+			}
+		}
+	}
+	else {
+		const float radians = 3.14159f / 180.0f * degree;
+		const float sinma = sin(radians);
+		const float cosma = cos(radians);
+		img._width = _width;
+		img._height = _height;
+		img._data.resize(img._width * img._height * BPP);
+		const int half_width = static_cast<int>(_width / 2);
+		const int half_height = static_cast<int>(_height / 2);
+		for (size_t y = 0; y < img._height; ++y) {
+			const int yt = static_cast<int>(y) - half_height;
+			for (size_t x = 0; x < img._width; ++x) {
+				const int xt = static_cast<int>(x) - half_width;
+				const int xs = static_cast<int>(cosma * xt - sinma * yt) + half_width;
+				const int ys = static_cast<int>(sinma * xt + cosma * yt) + half_height;
+				if (xs >= 0 && xs < static_cast<int>(_width) && ys >= 0 && ys < static_cast<int>(_height))
+					memcpy(&img._data[y * img._width * BPP + x * BPP], &_data[ys * _width * BPP + xs * BPP], BPP);
+			}
+		}
+	}
+
+	return img;
+}
+
+
+void image::flip_vertical()
+{
+	assert(!_data.empty());
+
+	const size_t ln_size = _width * BPP;
+	vector<unsigned char> swap_buffer(ln_size);
+	unsigned char* swap_buff = &swap_buffer.front();
+	const size_t ln_count = _height / 2;
+	for (size_t y = 0; y < ln_count; ++y) {
+		unsigned char* src = &_data[y * _width * BPP];
+		unsigned char* dst = &_data[(_height - y - 1) * _width * BPP];
+		memcpy(swap_buff, src, ln_size);
+		memcpy(src, dst, ln_size);
+		memcpy(dst, swap_buff, ln_size);
 	}
 }
 
 
-void CImage::ConvertBGRtoRGB()
+void image::gaussian_blur(const float radius)
 {
-	assert(!_Data.empty());
-	assert(_ImgMode == GL_RGB || _ImgMode == GL_RGBA);
+	assert(!_data.empty());
 
-	if (_ImgMode != GL_RGB && _ImgMode != GL_RGBA)
-		return;	//One-component image
+	image tmp;
+	tmp._width  = _width;
+	tmp._height = _height;
+	tmp._data.resize(tmp._width * tmp._height * BPP);
 
-	const unsigned short bpp = BytesPerPixel();
-	const size_t sizeInBytes = SizeInBytes();
+	const float sigma2 = radius * radius;
+	const int size = 5;	//Good approximation of filter
 
-	for (unsigned int i = 0; i < sizeInBytes; i += bpp) {
-		unsigned char tmp = _Data[i];
-		_Data[i] = _Data[i + 2];
-		_Data[i + 2] = tmp;
+	float sum = 0;
+	float pixel[4];
+	for (int y = 0; y < static_cast<int>(_height); ++y) {
+		for (int x = 0; x < static_cast<int>(_width); ++x) {
+			sum = pixel[0] = pixel[1] = pixel[2] = pixel[3] = 0.0f;
+			//Accumulate colors
+			for (int i = max(0, x - size); i <= min(static_cast<int>(_width) - 1, x + size); ++i) {
+				const float factor = exp(-(i - x) * (i - x) / (2.0f * sigma2));
+				sum += factor;
+				const unsigned char* color = &_data[y * _width * BPP + i * BPP];
+				pixel[0] += factor * color[0];
+				pixel[1] += factor * color[1];
+				pixel[2] += factor * color[2];
+				pixel[3] += factor * color[3];
+			};
+			unsigned char* color = &tmp._data[y * _width * BPP + x * BPP];
+			color[0] = static_cast<unsigned char>(pixel[0] / sum);
+			color[1] = static_cast<unsigned char>(pixel[1] / sum);
+			color[2] = static_cast<unsigned char>(pixel[2] / sum);
+			color[3] = static_cast<unsigned char>(pixel[3] / sum);
+		}
+	}
+
+	for (int y = 0; y < static_cast<int>(_height); ++y) {
+		for (int x = 0; x < static_cast<int>(_width); ++x) {
+			sum = pixel[0] = pixel[1] = pixel[2] = pixel[3] = 0.0f;
+			//Accumulate colors
+			for(int i = max(0, y - size); i <= min(static_cast<int>(_height) - 1, y + size); ++i) {
+				const float factor = exp(-(i - y) * (i - y) / (2.0f * sigma2));
+				sum += factor;
+				const unsigned char* color = &tmp._data[i * _width * BPP + x * BPP];
+				pixel[0] += factor * color[0];
+				pixel[1] += factor * color[1];
+				pixel[2] += factor * color[2];
+				pixel[3] += factor * color[3];
+			};
+			unsigned char* color = &_data[y * _width * BPP + x * BPP];
+			color[0] = static_cast<unsigned char>(pixel[0] / sum);
+			color[1] = static_cast<unsigned char>(pixel[1] / sum);
+			color[2] = static_cast<unsigned char>(pixel[2] / sum);
+			color[3] = static_cast<unsigned char>(pixel[3] / sum);
+		}
 	}
 }
 
 
-void CImage::FlipVertical()
+void image::add_transparency(const float val)
 {
-	assert(!_Data.empty());
+	assert(!_data.empty());
+	assert(val > 0.0f && val < 1.01f);
 
-	const unsigned int sizeWidth = static_cast<unsigned int>(_ImgWidth * BytesPerPixel());
-	vector<unsigned char> swapBuffer;
-	swapBuffer.resize(sizeWidth);
-
-	for (unsigned int i = 0; i < _ImgHeight / 2; ++i) {
-		unsigned char* srcData = &_Data[i * sizeWidth];
-		unsigned char* dstData = &_Data[(_ImgHeight - i - 1) * sizeWidth];
-
-		memcpy(&swapBuffer[0], dstData, sizeWidth);
-		memcpy(dstData, srcData, sizeWidth);
-		memcpy(srcData, &swapBuffer[0], sizeWidth);
+	const size_t pix_num = _width * _height;
+	for (size_t i = 0; i < pix_num; ++i) {
+		unsigned char& a = _data[i * BPP + 3];
+		a = static_cast<unsigned char>(val * a);
 	}
+}
+
+
+void image::fill_color(const unsigned char r, const unsigned char g, const unsigned char b)
+{
+	for (size_t y = 0; y < _height; ++y) {
+		const size_t row_src = y * _width * BPP;
+		for (size_t x = 0; x < _width; ++x) {
+			_data[row_src + x * BPP + 0] = r;
+			_data[row_src + x * BPP + 1] = g;
+			_data[row_src + x * BPP + 2] = b;
+		}
+	}
+}
+
+
+void image::average_color(unsigned char& r, unsigned char& g, unsigned char& b) const
+{
+	size_t sum_r = 0, sum_g = 0, sum_b = 0;
+	for (size_t y = 0; y < _height; ++y) {
+		const size_t row_src = y * _width * BPP;
+		for (size_t x = 0; x < _width; ++x) {
+			sum_r += _data[row_src + x * BPP + 0];
+			sum_g += _data[row_src + x * BPP + 1];
+			sum_b += _data[row_src + x * BPP + 2];
+		}
+	}
+	const size_t max_sum_color = max(sum_r, max(sum_g, sum_b));
+	r = static_cast<unsigned char>((static_cast<float>(sum_r) / max_sum_color) * 255.0f);
+	g = static_cast<unsigned char>((static_cast<float>(sum_g) / max_sum_color) * 255.0f);
+	b = static_cast<unsigned char>((static_cast<float>(sum_b) / max_sum_color) * 255.0f);
 }

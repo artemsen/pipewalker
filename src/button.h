@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2012 by Artem Senichev <artemsen@gmail.com>        *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -19,179 +19,228 @@
 #pragma once
 
 #include "common.h"
-#include "texture.h"
-
-class CGame;
-
-#ifdef _MSC_VER
-#pragma warning(disable: 4512)	//assignment operator could not be generated
-#endif // _MSC_VER
+#include "render.h"
 
 
 /**
- * CButton - Simple button
+ * Simple button
  */
-class CButton
+class button
 {
 public:
-	/**
-	 * Constructor
-	 * \param game the game instance
-	 */
-	CButton(CGame& game);
-
-	/**
-	 * Constructor
-	 * \param game the game instance
-	 * \param x button x coordinate
-	 * \param y button y coordinate
-	 * \param width button width
-	 * \param height button height
-	 * \param tex button texture identifier
-	 * \param id button texture ID
-	 */
-	CButton(CGame& game, const float x, const float y, const float width, const float height, const CTextureBank::TextureType tex, const int id);
+	button() {}
 
 	/**
 	 * Button initialization
-	 * \param x button x coordinate
-	 * \param y button y coordinate
-	 * \param width button width
-	 * \param height button height
-	 * \param tex button texture identifier
+	 * \param img_n button image identifier (normal)
+	 * \param img_s button image identifier (shadow)
+	 * \param x button center x coordinate
+	 * \param y button center y coordinate
+	 * \param scale button scale
 	 * \param id button ID
 	 */
-	void Init(const float x, const float y, const float width, const float height, const CTextureBank::TextureType tex, const int id);
+	button(const render::img_type img_n, const render::img_type img_s, const float x, const float y, const float scale = 1.0f, const int id = 0);
 
 	/**
-	 * Check for cross mouse and button coordinates
-	 * \param x mouse x coordinate
-	 * \param y mouse y coordinate
-	 * \return true if mouse pointer is over button
+	 * Button setup
+	 * \param img_n button image identifier (normal)
+	 * \param img_s button image identifier (shadow)
+	 * \param x button center x coordinate
+	 * \param y button center y coordinate
+	 * \param scale button scale
+	 * \param id button ID
 	 */
-	bool IsMouseOver(const float x, const float y) const;
+	void setup(const render::img_type img_n, const render::img_type img_s, const float x, const float y, const float scale = 1.0f, const int id = 0);
 
 	/**
-	 * Get button ID
-	 * \return button ID
+	 * Check for cross specified point with button's area
+	 * \param x position on the X axis
+	 * \param y position on the Y axis
+	 * \return true if point is over button
 	 */
-	int GetId() const	{ return _BtnId; }
+	inline bool cross(const float x, const float y) const { return (x >= _coord_x - _scale / 2.0f && x <= _coord_x + _scale / 2.0f && y <= _coord_y + _scale / 2.0f && y >= _coord_y - _scale / 2.0f); }
 
 	/**
-	 * Render button
-	 * \param x mouse x coordinate
-	 * \param y mouse y coordinate
+	 * Get button Id
+	 * \return button Id
 	 */
-	virtual void Render(const float x, const float y) const;
+	inline int id() const { return _id; }
 
+	/**
+	 * Mouse move handler
+	 * \param x position of the mouse cursor on the X axis
+	 * \param y position of the mouse cursor on the Y axis
+	 * \return true if cursor enter or leave button's area (ussualy we have to redraw button)
+	 */
+	bool on_mouse_move(const float x, const float y);
+
+	/**
+	 * Draw button
+	 * \param alpha alpha channel in range [0.0f ... 1.0f]
+	 * \return true if redisplay needed
+	 */
+	virtual bool draw(const float alpha = 1.0f);
 
 protected:
-	/**
-	 * Render button
-	 * \param x mouse x coordinate
-	 * \param y mouse y coordinate
-	 * \param texture texture identifier
-	 */
-	void RenderButton(const float x, const float y, const CTextureBank::TextureType texture) const;
-
-
-protected:	//Class variables
-	CGame&	_Game;		///< Game instance
-	float	_X;		///< Button x coordinate
-	float	_Y;		///< Button y coordinate
-	float	_Width;	///< Button width
-	float	_Height;	///< Button height
-	int		_BtnId;	///< Button ID
-	CTextureBank::TextureType	_TexId;	///< Button texture identifier
+	render::img_type _img_n;      ///< Button texture identifier (normal)
+	render::img_type _img_s;      ///< Button texture identifier (shadow)
+	float            _coord_x;    ///< Button x coordinate
+	float            _coord_y;    ///< Button y coordinate
+	float            _scale;      ///< Button scale
+	int              _id;         ///< Button Id
+	unsigned long    _shadow_tr;  ///< Shadow drawing transition start time
+	bool             _mouse_over; ///< Mouse cursot over button flag
 };
 
 
 /**
- * CCheckBoxButton - Simple check box button
+ * Check box button
  */
-class CCheckBoxButton : public CButton
+class button_chbox : public button
 {
 public:
-	/**
-	 * Constructor
-	 * \param game the game instance
-	 */
-	CCheckBoxButton(CGame& game) : CButton(game), _State(false), _TexOff(CTextureBank::TexCounter) {}
+	button_chbox() {}
 
 	/**
-	 * Constructor
-	 * \param game the game instance
+	 * Button initialization
 	 * \param state initial button state (on/off)
-	 * \param x button x coordinate
-	 * \param y button y coordinate
-	 * \param width width button width
-	 * \param height button height
-	 * \param texOn button on-state texture identifier
-	 * \param texOff button off-state texture identifier
+	 * \param x button center x coordinate
+	 * \param y button center y coordinate
+	 * \param scale button scale
 	 * \param id button ID
 	 */
-	CCheckBoxButton(CGame& game, const bool state, const float x, const float y, const float width, const float height, const CTextureBank::TextureType texOn, const CTextureBank::TextureType texOff, const int id);
+	button_chbox(const bool state, const float x, const float y, const float scale, const int id = 0);
+
+	/**
+	 * Button initialization
+	 * \param state initial button state (on/off)
+	 * \param x button center x coordinate
+	 * \param y button center y coordinate
+	 * \param scale button scale
+	 * \param id button ID
+	 */
+	void setup(const bool state, const float x, const float y, const float scale, const int id);
+
+	/**
+	 * Set button state (without transition effect)
+	 * \param state new state
+	 */
+	void set_state(const bool state);
+
+	/**
+	 * Invert button state (with transition effect)
+	 */
+	void invert_state();
 
 	/**
 	 * Get button state
 	 * \return button state
 	 */
-	bool GetState()	const				{ return _State; }
+	inline bool get_state() const			{ return _state; }
 
-	/**
-	 * Set button state
-	 * \param newState new state
-	 */
-	void SetState(const bool newState)	{ _State = newState; }
-
-	// From CButton
-	virtual void Render(const float x, const float y) const;
+	//From button class
+	virtual bool draw(const float alpha = 1.0f);
 
 protected:
-	bool	_State;	///< Button state (on/off)
-	CTextureBank::TextureType	_TexOff;	///< Button second texture identifier
+	bool          _state;       ///< Button state (on/off)
+	unsigned long _state_trans; ///< State transition start time
 };
 
 
 /**
- * CRadioButton - Simple radio buttons group
+ * Radio buttons group
  */
-class CRadioButtons
+template<size_t N> class button_radio
 {
 public:
 	/**
-	 * Add button to group
-	 * \param btn adding button
-	 */
-	void AddButton(const CCheckBoxButton& btn);
-
-	/**
 	 * Render radio button group
-	 * \param mouseX mouse x coordinate
-	 * \param mouseY mouse y coordinate
+	 * \param alpha alpha channel in range [0.0f ... 1.0f]
+	 * \return true if redisplay needed
 	 */
-	void Render(const float mouseX, const float mouseY) const;
+	bool draw(const float alpha = 1.0f)
+	{
+		bool redisplay = false;
+		for (size_t i = 0; i < N; ++i)
+			redisplay |= _buttons[i].draw(alpha);
+		return redisplay;
+	}
 
 	/**
-	 * On mouse click handler
-	 * \param mouseX mouse x coordinate
-	 * \param mouseY mouse y coordinate
+	 * Mouse move handler
+	 * \param x position of the mouse cursor on the X axis
+	 * \param y position of the mouse cursor on the Y axis
+	 * \return true if cursor enter or leave button's area (ussualy we have to redraw button)
+	 */
+	bool on_mouse_move(const float x, const float y)
+	{
+		bool redispay = false;
+		for (size_t i = 0; i < N; ++i)
+			redispay |= _buttons[i].on_mouse_move(x, y);
+		return redispay;
+	}
+
+
+	/**
+	 * Mouse click handler
+	 * \param x position on the X axis
+	 * \param y position on the Y axis
 	 * \return true if state has been changed
 	 */
-	bool OnClick(const float mouseX, const float mouseY);
+	bool on_mouse_click(const float x, const float y)
+	{
+		size_t clicked_id;
+		for (clicked_id = 0; clicked_id < N; ++clicked_id) {
+			if (_buttons[clicked_id].cross(x, y))
+				break;
+		}
+		if (clicked_id == N)
+			return false;	//Not in buttons area
+
+		size_t old_checked;
+		for (old_checked = 0; old_checked < N; ++old_checked) {
+			if (_buttons[old_checked].get_state())
+				break;
+		}
+		if (clicked_id != old_checked) {
+			_buttons[clicked_id].invert_state();
+			_buttons[old_checked].invert_state();
+			return true;
+		}
+
+		return false;
+	}
 
 	/**
 	 * Get current choice id
 	 * \return current choice id
 	 */
-	int GetChoice() const;
+	int get_state() const
+	{
+		int id = -1;
+		for (size_t i = 0; id < 0 && i < N; ++i)
+			if (_buttons[i].get_state())
+				id = _buttons[i].id();
+		return id;
+	}
 
 	/**
 	 * Set current choice id
-	 * \param choiceId current choice id
+	 * \param id current choice id
 	 */
-	void SetChoice(const int choiceId);
+	void set_state(const int id)
+	{
+		for (size_t i = 0; i < N; ++i)
+			_buttons[i].set_state(_buttons[i].id() == id);
+	}
+
+	//Accessor
+	button_chbox& operator [] (size_t i)
+	{
+		assert(i < N);
+		return _buttons[i];
+	}
 
 private:
-	list<CCheckBoxButton>	_Buttons;	///< Buttons group
+	button_chbox _buttons[N]; ///< Buttons group
 };

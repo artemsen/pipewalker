@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2012 by Artem Senichev <artemsen@gmail.com>        *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -19,153 +19,123 @@
 #pragma once
 
 #include "common.h"
-#include "map.h"
-#include "texture.h"
+#include "level.h"
 
 
-/**
- * CSettings - load / save game settungs
- */
-class CSettings
+class settings
 {
-protected:
+private:
+	settings();
+
+public:
 	/**
-	 * Load state
-	 * \param fileName settings file name
-	 * \return map with settings values
+	 * Get class instance
+	 * \return class instance
 	 */
-	map<string, string> Load(const char* fileName) const;
+	static settings& instance();
 
 	/**
-	 * Save state
-	 * \param fileName settings file name
-	 * \param settings map with settings values
-	 * \param firstComment first string commentary
+	 * Load settings
 	 */
-	void Save(const char* fileName, const map<string, string>& settings, const char* firstComment = NULL) const;
+	static void load();
 
 	/**
-	 * Trim string (remove spaces at the end and begining the string)
-	 * \param val source string
+	 * Save settings
 	 */
-	void Trim(string& val) const;
+	static void save();
 
 	/**
-	 * Convert numeric to string value
-	 * \param num source numeric
-	 * \return string value
+	 * Get level state for specified size and mode
+	 * \param sz level size
+	 * \param wrap wrap mode
+	 * \param id last saved level id
+	 * \param state last saved level state
+	 * \return false if state undefined
 	 */
-	inline string NumericToString(const int num) const
+	static bool get_state(const level::size sz, const bool wrap, unsigned long& id, string& state);
+
+	/**
+	 * Set level state for specified id, size and mode
+	 * \param id level Id
+	 * \param size level size
+	 * \param wrap wrap mode
+	 * \param state level state
+	 */
+	static void set_state(const unsigned long id, const level::size sz, const bool wrap, const string& state);
+
+	//Accessors
+	static bool sound_mode()                 { return instance()._sound; }
+	static void sound_mode(const bool mode)  { instance()._sound = mode; }
+	static const char* theme()               { return instance()._theme.c_str(); }
+	static void theme(const char* name)      { assert(name); instance()._theme = name; }
+	static level::size last_size();
+	static bool last_wrap();
+
+private:
+	/**
+	 * Get level section name
+	 * \param sz level size
+	 * \param wrap_mode wrap mode
+	 * \return section name
+	 */
+	const char* level_section_name(const level::size sz, const bool wrap) const;
+
+private:
+	/**
+	 * Load / save game settungs
+	 */
+	class serializer
 	{
-		string r(12, 0);
-		sprintf(&r[0], "%i", num);
-		return r.c_str();
-	}
-};
+	public:
+		/**
+		 * Load settings
+		 * \param settings_file used settings file path
+		 * \return true if settings loaded
+		 */
+		bool load(string& settings_file);
 
+		/**
+		 * Save settings
+		 * \param settings_file used settings file path
+		 */
+		void save(const string& settings_file) const;
 
-/**
- * CGameSettings - game settings
- */
-class CGameSettings : public CSettings
-{
-public:
-	/**
-	 * Load state
-	 */
-	void Load();
+		//Get value
+		string get_value(const string& section, const string& key, const string& default_value) const;
+		int get_value(const string& section, const string& key, const int default_value) const;
+		bool get_value(const string& section, const string& key, const bool default_value) const;
 
-	//! Theme description
-	struct Theme {
-		string Name;
-		string TextureFile;
-		float  TextColor[3];
-		float  TitleColor[3];
+		//Set values
+		void set_value(const string& section, const string& key, const string& val);
+		void set_value(const string& section, const string& key, const int val);
+		void set_value(const string& section, const string& key, const bool val);
+
+	private:
+		/**
+		 * Trim string
+		 * \param val source string
+		 */
+		void trim(string& val);
+
+	private:
+		typedef map<string, string> sett_value;
+		typedef map<string, sett_value> sett_section;
+		sett_section _settings;
 	};
 
-private:
-	/**
-	 * Convert string to float values
-	 * \param src source string (0.1 0.2 0.3 for example)
-	 * \param val output values
-	 */
-	void ConvertToFloat(const string& src, float val[3]) const;
-
-public:
-	//Application properties
-	vector<Theme> Themes;	///< Avialable themes
-};
-
-
-/**
- * CUserSettings - load / save user game settings
- */
-class CUserSettings : public CSettings
-{
-public:
-	//! Default constructor
-	CUserSettings();
-
-	/**
-	 * Load state
-	 */
-	void Load();
-
-	/**
-	 * Save state
-	 */
-	void Save() const;
-
-	/**
-	 * Get map Id
-	 * \return map id
-	 */
-	unsigned long GetCurrentMapId() const;
-
-	/**
-	 * Set map Id
-	 * \param id map id
-	 */
-	void SetCurrentMapId(const unsigned long id);
-
-	/**
-	 * Get map state
-	 * \return map state
-	 */
-	string GetCurrentMapState() const;
-
-	/**
-	 * Set map state
-	 * \param state current map state
-	 */
-	void SetCurrentMapState(const string& state);
 
 private:
-	/**
-	 * Get user settings file name
-	 * \return file name
-	 */
-	string GetFileName() const;
-
-public:
-	//User settings
-	MapSize				Size;		///< Current map size (in cell)
-	size_t				ThemeId;	///< Current theme index
-	bool				Wrapping;	///< Wrapping mode on/off flag
-	bool				Sound;		///< Sound on/off flag
-
-private:
-	struct MapDescr {
-		MapDescr() : Id(1) {}
-		unsigned long Id;	///< Map Id
-		string State;		///< Map state
+	//! Saved level description
+	struct level_state {
+		level_state() : id(0) {}
+		unsigned long id;    ///< Level id
+		string        state; ///< Level state
 	};
-	//Saved map properties
-	MapDescr		_MapSmall;		///< Small map description
-	MapDescr		_MapNormal;		///< Normal map description
-	MapDescr		_MapBig;		///< Big map description
-	MapDescr		_MapExtra;		///< Extra map description
 
-private:
-	bool			_UsePortable;	///< Type of used user settings file path
+	string      _sett_file;  ///< Full path to user settings file
+
+	bool        _sound;      ///< Use sound flag
+	string      _theme;      ///< Default theme file
+	string      _last_level; ///< Last saved level name (one of PWS_SECT_LVL*)
+	level_state _states[8];  ///< Level states (8 = all sizes * wrap modes)
 };

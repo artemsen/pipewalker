@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2012 by Artem Senichev <artemsen@gmail.com>        *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -20,80 +20,52 @@
 
 #include "common.h"
 
-#if defined PW_USE_SDL		//SDL library
-	#include <SDL/SDL.h>
-#endif
 
 /**
- * Sound wrapper
+ * Sound subsystem
  */
-class CSound
+class sound
 {
-public:
-	//Constructor/destructor
-	CSound();
-	~CSound();
-
-	/**
-	 * Free sound
-	 */
-	void Free();
-
-	/**
-	 * Load Wav sound from file
-	 * \param fileName sound file name
-	 */
-	void Load(const char* fileName);
+private:
+	sound();
 
 public:
-#if defined PW_USE_SDL		//SDL library
-	size_t	_Pos;
-#endif
-	vector<unsigned char> _Data;
-};
-
-
-/**
- * Sound bank
- */
-class CSoundBank
-{
-public:
-	//Constructor/Destructor
-	CSoundBank();
-	~CSoundBank();
-
 	//! Sound types
-	enum SoundType {
-		SndClatz = 0,			///< Simple 'Clatz' sound
-		SndComplete,			///< Level complete sound
-		SndCounter				///< sound counter
+	enum snd_type {
+		clatz = 0, ///< Simple 'Clatz' sound
+		complete,  ///< Level complete sound
+		counter    ///< Sound counter
 	};
 
 	/**
-	 * Initialize sound bank (load sounds from files)
+	 * Get class instance
+	 * \return class instance
 	 */
-	void Load();
+	static sound& instance();
+
+	/**
+	 * Initialize sound subsystem
+	 */
+	void initialize();
 
 	/**
 	 * Play sound
 	 * \param type sound identifier
 	 */
-	void Play(const SoundType type);
+	static void play(const snd_type type);
 
 private:
-	/**
-	 * Free sound bank
-	 */
-	void Free();
-
-#ifdef PW_USE_SDL
 	//! SDL fill audio buffer callback (see SDL SDK for more info)
-	static void OnFillBuffer(void* userdata, Uint8* stream, int len);
-	static SoundType _CurrentSnd;	///< Current played sound
-#endif // PW_USE_SDL
+	static void sdl_on_fill_buffer(void* userdata, Uint8* stream, int len);
 
 private:
-	CSound	_Sound[SndCounter];	///< Sound bank
-	bool	_SoundInitialized;	///< Sound subsystem initialization flag
+	//Wave sound description
+	struct wav {
+		vector<unsigned char> data; ///< Plain wave data
+		size_t position;            ///< Current played position
+	};
+
+	wav      _bank[counter]; ///< Sound bank
+	snd_type _curr_played;   ///< Currently played sound
+	bool     _initialized;   ///< Sound subsystem initialization flag
 };

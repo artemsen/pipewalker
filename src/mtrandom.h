@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2012 by Artem Senichev <artemsen@gmail.com>        *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -18,37 +18,58 @@
 
 #pragma once
 
-#define MTSTATE_ARRAY_SIZE 624
+#include "common.h"
+
+#define MTR_STATE_ARRAY_SIZE 624
 
 
-class CMTRandom
+class mtrandom
 {
+private:
+	mtrandom();
+
 public:
+	/**
+	 * Get class instance
+	 * \return class instance
+	 */
+	static mtrandom& instance();
+
 	/**
 	 * Seed random sequence
 	 * \param seed number to seed
 	 */
-	static void Seed(const unsigned long seed);
+	static void seed(const unsigned long seed);
+
+	/**
+	 * Get random number in range [min_val...max_val)
+	 * \param min_val minimal value
+	 * \param max_val maximum value
+	 * \return random number
+	 */
+	static float random(const float min_val, const float max_val);
+
+	/**
+	 * Get random number in range [min_val...max_val)
+	 * \param min_val minimal value
+	 * \param max_val maximum value
+	 * \return random number
+	 */
+	static int random(const int min_val, const int max_val);
+
+private:
+	/**
+	 * State generator
+	 */
+	void generate_state();
 
 	/**
 	 * Get random number
 	 * \return random number
 	 */
-	static unsigned long Rand();
+	unsigned long random();
 
 private:
-	/**
-	 * Number twiddler
-	 */
-	static unsigned long Twiddle(const unsigned long u, const unsigned long v);
-
-	/**
-	 * State generator
-	 */
-	static void GenerateState();
-
-private:
-	static unsigned long	_State[MTSTATE_ARRAY_SIZE];	///< State array
-	static unsigned long	_Pos;						///< Position in state array
-	static bool				_Initialized;				///< Initialization flag
+	unsigned long _state[MTR_STATE_ARRAY_SIZE]; ///< State array
+	unsigned long _pos;                         ///< Position in the state array
 };

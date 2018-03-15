@@ -44,15 +44,12 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
-am_pipewalker_OBJECTS = buffer.$(OBJEXT) button.$(OBJEXT) \
-	cell.$(OBJEXT) explosion.$(OBJEXT) game.$(OBJEXT) \
-	image.$(OBJEXT) main.$(OBJEXT) map.$(OBJEXT) \
-	modepuzzle.$(OBJEXT) modesettings.$(OBJEXT) mtrandom.$(OBJEXT) \
-	rendertext.$(OBJEXT) settings.$(OBJEXT) sound.$(OBJEXT) \
-	synchro.$(OBJEXT) texture.$(OBJEXT) winmgr.$(OBJEXT) \
-	winmgr_sdl.$(OBJEXT) winmgr_xsrv.$(OBJEXT)
+am_pipewalker_OBJECTS = button.$(OBJEXT) cell.$(OBJEXT) \
+	explosion.$(OBJEXT) game.$(OBJEXT) image.$(OBJEXT) \
+	level.$(OBJEXT) main.$(OBJEXT) mode_puzzle.$(OBJEXT) \
+	mode_settings.$(OBJEXT) mtrandom.$(OBJEXT) render.$(OBJEXT) \
+	settings.$(OBJEXT) sound.$(OBJEXT)
 pipewalker_OBJECTS = $(am_pipewalker_OBJECTS)
-pipewalker_LDADD = $(LDADD)
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -86,7 +83,7 @@ CXX = @CXX@
 CXXDEPMODE = @CXXDEPMODE@
 CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
-DEFS = @DEFS@ -DNDEBUG=1 -DDIR_GAMEDATA=\""$(datadir)/games/$(PACKAGE)/"\"
+DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
@@ -118,11 +115,6 @@ SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
 VERSION = @VERSION@
-XMKMF = @XMKMF@
-X_CFLAGS = @X_CFLAGS@
-X_EXTRA_LIBS = @X_EXTRA_LIBS@
-X_LIBS = @X_LIBS@
-X_PRE_LIBS = @X_PRE_LIBS@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
@@ -167,35 +159,25 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 pipewalker_SOURCES = \
-	buffer.h buffer.cpp \
-	button.h button.cpp \
-	cell.h cell.cpp \
+	button.cpp button.h \
+	cell.cpp cell.h \
 	common.h \
-	exception.h \
-	explosion.h explosion.cpp \
-	game.h game.cpp \
-	image.h image.cpp \
+	explosion.cpp explosion.h \
+	game.cpp game.h \
+	image.cpp image.h \
+	level.cpp level.h \
+	loading_xpm.h \
 	main.cpp \
-	map.h map.cpp \
-	modepuzzle.h modepuzzle.cpp \
-	modesettings.h modesettings.cpp \
-	mtrandom.h mtrandom.cpp \
-	rendertext.h rendertext.cpp \
-	settings.h settings.cpp \
-	sound.h sound.cpp \
-	synchro.h synchro.cpp \
-	texture.h texture.cpp \
-	winmgr.h winmgr.cpp \
-	winmgr_sdl.h winmgr_sdl.cpp \
-	winmgr_xsrv.h winmgr_xsrv.cpp
+	mode.h \
+	mode_puzzle.cpp mode_puzzle.h \
+	mode_settings.cpp mode_settings.h \
+	mtrandom.cpp mtrandom.h \
+	render.cpp render.h \
+	settings.cpp settings.h \
+	sound.cpp sound.h
 
-
-#MS Windows specific files
-EXTRA_DIST = \
-	winmgr_win.h winmgr_win.cpp \
-	winmgr_wince.h winmgr_wince.cpp \
-	PipeWalkerRes.h PipeWalker.rc
-
+@WIN32_TRUE@pipewalker_DEPENDENCIES = pipewalker_win32_res.o
+@WIN32_TRUE@pipewalker_LDADD = pipewalker_win32_res.o
 all: all-am
 
 .SUFFIXES:
@@ -277,25 +259,19 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/buffer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/button.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cell.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/explosion.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/game.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/image.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/level.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/map.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/modepuzzle.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/modesettings.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mode_puzzle.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mode_settings.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mtrandom.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rendertext.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/render.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/settings.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sound.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synchro.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/texture.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/winmgr.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/winmgr_sdl.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/winmgr_xsrv.Po@am__quote@
 
 .cpp.o:
 @am__fastdepCXX_TRUE@	$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -509,6 +485,39 @@ uninstall-am: uninstall-binPROGRAMS
 	mostlyclean-generic pdf pdf-am ps ps-am tags uninstall \
 	uninstall-am uninstall-binPROGRAMS
 
+
+pipewalker_win32_res.rc:
+	@echo "#include <windows.h>" > pipewalker_win32_res.rc
+	@echo "0 ICON \"..\\\\extra\\\\pipewalker.ico\"" >> pipewalker_win32_res.rc
+	@echo "LANGUAGE 0, SUBLANG_NEUTRAL" >> pipewalker_win32_res.rc
+	@echo "1 VERSIONINFO" >> pipewalker_win32_res.rc
+	@echo "  FILEVERSION    `echo $(VERSION) | $(AWK) 'ORS=""; { subs = gsub(/\./,","); print $0; for (ndx=subs; ndx < 3; ndx++) print ",0"; }'`" >> pipewalker_win32_res.rc
+	@echo "  PRODUCTVERSION `echo $(VERSION) | $(AWK) 'ORS=""; { subs = gsub(/\./,","); print $0; for (ndx=subs; ndx < 3; ndx++) print ",0"; }'`" >> pipewalker_win32_res.rc
+	@echo "  FILEOS         VOS__WINDOWS32" >> pipewalker_win32_res.rc
+	@echo "  FILEFLAGSMASK  VFT2_UNKNOWN" >> pipewalker_win32_res.rc
+	@echo "  FILETYPE       VFT_UNKNOWN" >> pipewalker_win32_res.rc
+	@echo "BEGIN" >> pipewalker_win32_res.rc
+	@echo "  BLOCK \"StringFileInfo\"" >> pipewalker_win32_res.rc
+	@echo "  BEGIN" >> pipewalker_win32_res.rc
+	@echo "    BLOCK \"000004b0\"" >> pipewalker_win32_res.rc
+	@echo "    BEGIN" >> pipewalker_win32_res.rc
+	@echo "      VALUE \"FileDescription\", \"PipeWalker game\"" >> pipewalker_win32_res.rc
+	@echo "      VALUE \"FileVersion\", \"$(VERSION)\"" >> pipewalker_win32_res.rc
+	@echo "      VALUE \"InternalName\", \"PipeWalker\"" >> pipewalker_win32_res.rc
+	@echo "      VALUE \"LegalCopyright\", \"Copyright (C) 2007-2012 Artem Senichev\"" >> pipewalker_win32_res.rc
+	@echo "      VALUE \"OriginalFilename\", \"PipeWalker.exe\"" >> pipewalker_win32_res.rc
+	@echo "      VALUE \"ProductName\", \"PipeWalker game\"" >> pipewalker_win32_res.rc
+	@echo "      VALUE \"ProductVersion\", \"$(VERSION)\"" >> pipewalker_win32_res.rc
+	@echo "    END" >> pipewalker_win32_res.rc
+	@echo "  END" >> pipewalker_win32_res.rc
+	@echo "  BLOCK \"VarFileInfo\"" >> pipewalker_win32_res.rc
+	@echo "  BEGIN" >> pipewalker_win32_res.rc
+	@echo "    VALUE \"Translation\", 0x0, 1200" >> pipewalker_win32_res.rc
+	@echo "  END" >> pipewalker_win32_res.rc
+	@echo "END" >> pipewalker_win32_res.rc
+
+pipewalker_win32_res.o: pipewalker_win32_res.rc
+	@windres $^ -o $@
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

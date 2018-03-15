@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2012 by Artem Senichev <artemsen@gmail.com>        *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -17,162 +17,102 @@
  **************************************************************************/
 
 #include "sound.h"
-#ifdef PW_USE_WIN
-	#include "buffer.h"
-#endif //PW_USE_WIN
+#include "settings.h"
 
-#ifdef PW_USE_SDL
-	#define PW_AUDIO_FORMAT		AUDIO_S16
-	#define PW_AUDIO_FREQ		44100
-	#define PW_AUDIO_CHANNELS	2
-	CSoundBank::SoundType CSoundBank::_CurrentSnd = CSoundBank::SndCounter;
-#endif //PW_USE_SDL
-
-//! Types and files of textures
-struct SndFile {
-	CSoundBank::SoundType	Type;
-	const char*				FileName;
-};
-
-static const SndFile SoundFiles[] = {
-	{ CSoundBank::SndClatz,		"clatz.wav"		},
-	{ CSoundBank::SndComplete,	"complete.wav"	},
-};
-
-CSound::~CSound()
-{
-	Free();
-}
+#define PW_AUDIO_FORMAT		AUDIO_S16
+#define PW_AUDIO_FREQ		44100
+#define PW_AUDIO_CHANNELS	2
 
 
-void CSound::Load(const char* fileName)
-{
-	assert(fileName);
-
-#if defined PW_USE_SDL		//SDL library
-	SDL_AudioSpec wave;
-	Uint8* data;
-	Uint32 dlen;
-	if (SDL_LoadWAV(fileName, &wave, &data, &dlen) == NULL) {
-		string errDescr = "Unable to load file (SDL_LoadWAV) ";
-		errDescr += fileName;
-		errDescr += ": ";
-		errDescr += SDL_GetError();
-		throw CException(errDescr.c_str());
-	}
-	copy(data, data + dlen, back_inserter(_Data));
-	_Pos = 0;
-#elif defined PW_USE_WIN	//Microsoft Windows
-	CBuffer buf;
-	buf.Load(fileName);
-	buf.Copy(_Data);
-#endif
-}
-
-
-void CSound::Free()
-{
-#if defined PW_USE_SDL		//SDL library
-	_Pos = 0;
-#endif
-	_Data.clear();
-}
-
-
-CSound::CSound()
-#if defined PW_USE_SDL
-	: _Pos(0)
-#endif //PW_USE_SDL
+sound::sound()
+:	_curr_played(counter),
+	_initialized(false)
 {
 }
 
 
-CSoundBank::CSoundBank()
-	: _SoundInitialized(false)
+sound& sound::instance()
 {
+	static sound i;
+	return i;
 }
 
 
-CSoundBank::~CSoundBank()
+void sound::initialize()
 {
-	Free();
-}
-
-
-void CSoundBank::Load()
-{
-#if defined PW_USE_SDL		//SDL library
 	if (SDL_InitSubSystem(SDL_INIT_AUDIO) != 0) {
 		fprintf(stderr, "Audio initialization failed: %s\n", SDL_GetError());
 		return;
 	}
-	SDL_AudioSpec soundAudiospec;
-	soundAudiospec.freq = PW_AUDIO_FREQ;
-	soundAudiospec.format = PW_AUDIO_FORMAT;
-	soundAudiospec.channels = PW_AUDIO_CHANNELS;
-	soundAudiospec.samples = 512;
-	soundAudiospec.callback = OnFillBuffer;
-	soundAudiospec.userdata = this;
-	if (SDL_OpenAudio(&soundAudiospec, NULL) != 0) {
+
+	SDL_AudioSpec as;
+	as.freq = PW_AUDIO_FREQ;
+	as.format = PW_AUDIO_FORMAT;
+	as.channels = PW_AUDIO_CHANNELS;
+	as.samples = 512;
+	as.callback = sound::sdl_on_fill_buffer;
+	as.userdata = this;
+	if (SDL_OpenAudio(&as, NULL) != 0) {
 		fprintf(stderr, "Unable to open audio device: %s\n", SDL_GetError());
 		return;
 	}
 
-	SDL_PauseAudio(1);
-#endif //PW_USE_SDL
+	_initialized = true;
 
-	assert(SndCounter == sizeof(SoundFiles) / sizeof(SoundFiles[0]));	//Don't forget sync counter and files!
+	SDL_PauseAudio(1);	//Set pause
 
-	//Load the sounds from files
-	for (size_t i = 0; i < SndCounter; ++i) {
-		char fileName[256];
-		strcpy(fileName, DIR_GAMEDATA);
-		strcat(fileName, SoundFiles[i].FileName);
-		_Sound[i].Load(fileName);
+	//Load sound files
+	const char* snd_files[] = {
+		PW_GAMEDATADIR "clatz.wav",
+		PW_GAMEDATADIR "complete.wav",
+	};
+	assert(sizeof(snd_files) / sizeof(snd_files[0]) == counter);
+	for (size_t i = 0; i < counter; ++i) {
+		_bank[i].position = 0;
+		SDL_AudioSpec wave_spec;
+		Uint8* data = NULL;
+		Uint32 dlen;
+		if (SDL_LoadWAV(snd_files[i], &wave_spec, &data, &dlen) == NULL)
+			fprintf(stderr, "Unable to load audio file %s: %s\n", snd_files[i], SDL_GetError());
+		else {
+			copy(data, data + dlen, back_inserter(_bank[i].data));
+			SDL_FreeWAV(data);
+		}
 	}
 
-	_SoundInitialized = true;
+	if (_bank[0].data.empty() && _bank[1].data.empty())
+		_initialized = false;
 }
 
 
-void CSoundBank::Free()
+void sound::play(const snd_type type)
 {
-	for (size_t i = 0; i < SndCounter; ++i)
-		_Sound[i].Free();
-}
+	assert(type >= 0 && type < counter);
 
-
-void CSoundBank::Play(const SoundType type)
-{
-	assert(type >= 0 && type < SndCounter);
-#if defined PW_USE_SDL		//SDL library
-	if (_SoundInitialized) {
+	sound& inst = instance();
+	if (inst._initialized && settings::sound_mode()) {
+		inst._curr_played = type;
 		SDL_PauseAudio(0);
-		_CurrentSnd = type;
 	}
-#elif defined PW_USE_WIN	//Microsoft Windows
-	PlaySound(reinterpret_cast<LPCTSTR>(&_Sound[type]._Data.front()), NULL, SND_MEMORY | SND_ASYNC);
-#endif
 }
 
 
-#ifdef PW_USE_SDL
-void CSoundBank::OnFillBuffer(void* userdata, Uint8* stream, int len)
+void sound::sdl_on_fill_buffer(void* userdata, Uint8* stream, int len)
 {
-	CSoundBank* inst = reinterpret_cast<CSoundBank*>(userdata);
-
-	if (_CurrentSnd < 0 || _CurrentSnd >= SndCounter)
+	sound* inst = reinterpret_cast<sound*>(userdata);
+	if (!inst || inst->_curr_played < 0 || inst->_curr_played >= counter)
 		return;
-	
-	Uint32 amount = (inst->_Sound[_CurrentSnd]._Data.size() - inst->_Sound[_CurrentSnd]._Pos);
+
+	wav& wv = inst->_bank[inst->_curr_played];
+
+	Uint32 amount = static_cast<Uint32>(wv.data.size() - wv.position);
 	if (amount > static_cast<Uint32>(len))
 		amount = len;
-	SDL_MixAudio(stream, &inst->_Sound[_CurrentSnd]._Data[inst->_Sound[_CurrentSnd]._Pos], amount, SDL_MIX_MAXVOLUME);
-	inst->_Sound[_CurrentSnd]._Pos += amount;
-	if (inst->_Sound[_CurrentSnd]._Pos >= inst->_Sound[_CurrentSnd]._Data.size()) {
-		inst->_Sound[_CurrentSnd]._Pos = 0;
-		_CurrentSnd = SndCounter;
+	SDL_MixAudio(stream, &wv.data[wv.position], amount, SDL_MIX_MAXVOLUME);
+	wv.position += amount;
+	if (wv.position >= wv.data.size()) {
+		wv.position = 0;
+		inst->_curr_played = counter;
 		SDL_PauseAudio(1);
 	}
 }
-#endif //PW_USE_SDL
