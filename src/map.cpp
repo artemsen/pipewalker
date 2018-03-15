@@ -87,7 +87,8 @@ bool CMap::LoadMap(const MapSize mapSize, const string& descr, const bool wrapMo
 	for (unsigned short y = 0; y < m_MapSize; ++y) {
 		for (unsigned short x = 0; x < m_MapSize; ++x) {
 			CCell& cell = GetCell(x, y);
-			cell.Load(load[x + y * m_MapSize]);
+			if (!cell.Load(load[x + y * m_MapSize]))
+				return false;
 			if (cell.GetCellType() == CCell::CTSender) {
 				m_SenderX = x;
 				m_SenderY = y;
@@ -157,10 +158,10 @@ void CMap::InstallSender()
 	m_ZeroX = m_SenderX;
 	m_ZeroY = m_SenderY;
 	switch (rand() % 4) {
-		case 0: ++m_ZeroX; break;
-		case 1: --m_ZeroX; break;
-		case 2: ++m_ZeroY; break;
-		case 3: --m_ZeroY; break;
+		case 0: m_ZeroX = (m_ZeroX + 1) % m_MapSize;					break;
+		case 1: m_ZeroX = m_ZeroX == 0 ? m_MapSize - 1 : m_ZeroX - 1;	break;
+		case 2: m_ZeroY = (m_ZeroY + 1) % m_MapSize;					break;
+		case 3: m_ZeroY = m_ZeroY == 0 ? m_MapSize - 1 : m_ZeroY - 1;	break;
 		default:
 			assert(false);
 			break;

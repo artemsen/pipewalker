@@ -36,7 +36,7 @@ using namespace std;
 
 
 #ifndef PACKAGE_STRING
-	#define PACKAGE_STRING		"PipeWalker 0.7.1"
+	#define PACKAGE_STRING		"PipeWalker 0.7.2"
 #endif	//PACKAGE_STRING
 
 #ifndef DIR_GAMEDATA

@@ -55,61 +55,63 @@ unsigned short CCell::Save() const
 }
 
 
-void CCell::Load(const unsigned short state)
+bool CCell::Load(const unsigned short state)
 {
+	if (state == 0)
+		return false;
+
 	int rotate = 0;
+	m_TubeType = static_cast<TubeType>((state >> 12) & 0xf);
+	m_CellType = static_cast<CellType>((state >> 8) & 0xf);
+	rotate = ((state >> 4) & 0xf);
+	m_Lock = (state & 0xf) == 1;
 
-	if (state) {
-		m_TubeType = static_cast<TubeType>((state >> 12) & 0xf);
-		m_CellType = static_cast<CellType>((state >> 8) & 0xf);
-		rotate = ((state >> 4) & 0xf);
-		m_Lock = (state & 0xf) == 1;
+	m_Angle = rotate * 90.0f;
 
-		m_Angle = rotate * 90.0f;
-
-		//Restore connection side by rotate angle
-		switch (rotate) {
-			case 0:	//0 degrees
-				switch (m_TubeType) {
-					case TTHalf:		m_ConnTop = true;								break;
-					case TTStraight:	m_ConnTop = m_ConnBottom = true;				break;
-					case TTCurved:		m_ConnTop = m_ConnRight = true;					break;
-					case TTJoiner:		m_ConnTop = m_ConnBottom = m_ConnRight = true;	break;
-					default:			assert(false && "Unknown tube type");
-				}
-				break;
-			case 1:	//90 degrees
-				switch (m_TubeType) {
-					case TTHalf:		m_ConnLeft = true;								break;
-					case TTStraight:	m_ConnRight = m_ConnLeft = true;				break;
-					case TTCurved:		m_ConnTop = m_ConnLeft = true;					break;
-					case TTJoiner:		m_ConnTop = m_ConnLeft = m_ConnRight = true;	break;
-					default:			assert(false && "Unknown tube type");
-				}
-				break;
-			case 2:	//180 degrees
-				switch (m_TubeType) {
-					case TTHalf:		m_ConnBottom = true;							break;
-					case TTStraight:	m_ConnTop = m_ConnBottom = true;				break;
-					case TTCurved:		m_ConnBottom = m_ConnLeft = true;				break;
-					case TTJoiner:		m_ConnTop = m_ConnBottom = m_ConnLeft = true;	break;
-					default:			assert(false && "Unknown tube type");
-				}
-				break;
-			case 3:	//270 degrees
-				switch (m_TubeType) {
-					case TTHalf:		m_ConnRight = true;								break;
-					case TTStraight:	m_ConnRight = m_ConnLeft = true;				break;
-					case TTCurved:		m_ConnRight = m_ConnBottom = true;				break;
-					case TTJoiner:		m_ConnRight = m_ConnLeft = m_ConnBottom = true;	break;
-					default:			assert(false && "Unknown tube type");
-				}
-				break;
-			default:
-				assert(false && "Wrong angle");
-				break;
-		}
+	//Restore connection side by rotate angle
+	switch (rotate) {
+		case 0:	//0 degrees
+			switch (m_TubeType) {
+				case TTHalf:		m_ConnTop = true;								break;
+				case TTStraight:	m_ConnTop = m_ConnBottom = true;				break;
+				case TTCurved:		m_ConnTop = m_ConnRight = true;					break;
+				case TTJoiner:		m_ConnTop = m_ConnBottom = m_ConnRight = true;	break;
+				default:			assert(false && "Unknown tube type"); return false;
+			}
+			break;
+		case 1:	//90 degrees
+			switch (m_TubeType) {
+				case TTHalf:		m_ConnLeft = true;								break;
+				case TTStraight:	m_ConnRight = m_ConnLeft = true;				break;
+				case TTCurved:		m_ConnTop = m_ConnLeft = true;					break;
+				case TTJoiner:		m_ConnTop = m_ConnLeft = m_ConnRight = true;	break;
+				default:			assert(false && "Unknown tube type"); return false;
+			}
+			break;
+		case 2:	//180 degrees
+			switch (m_TubeType) {
+				case TTHalf:		m_ConnBottom = true;							break;
+				case TTStraight:	m_ConnTop = m_ConnBottom = true;				break;
+				case TTCurved:		m_ConnBottom = m_ConnLeft = true;				break;
+				case TTJoiner:		m_ConnTop = m_ConnBottom = m_ConnLeft = true;	break;
+				default:			assert(false && "Unknown tube type"); return false;
+			}
+			break;
+		case 3:	//270 degrees
+			switch (m_TubeType) {
+				case TTHalf:		m_ConnRight = true;								break;
+				case TTStraight:	m_ConnRight = m_ConnLeft = true;				break;
+				case TTCurved:		m_ConnRight = m_ConnBottom = true;				break;
+				case TTJoiner:		m_ConnRight = m_ConnLeft = m_ConnBottom = true;	break;
+				default:			assert(false && "Unknown tube type"); return false;
+			}
+			break;
+		default:
+			assert(false && "Wrong angle");
+			return false;
 	}
+
+	return true;
 }
 
 

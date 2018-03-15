@@ -33,7 +33,7 @@ void CModePuzzle::RenewMap()
 void CModePuzzle::LoadMap()
 {
 	const CSettings& settings = m_Game.Settings();
-	if (!settings.State.empty() || !m_Map.LoadMap(settings.Size, settings.State.c_str(), settings.Wrapping))
+	if (settings.State.empty() || !m_Map.LoadMap(settings.Size, settings.State.c_str(), settings.Wrapping))
 		RenewMap();
 }
 

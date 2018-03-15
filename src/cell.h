@@ -67,8 +67,9 @@ public:	//Helper functions
 	/**
 	 * Load cell state from text
 	 * \param state cell description
+	 * \return false if load failed
 	 */
-	void Load(const unsigned short state);
+	bool Load(const unsigned short state);
 
 	/**
 	 * Reverse lock state of the cell

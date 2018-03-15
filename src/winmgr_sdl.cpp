@@ -101,9 +101,11 @@ void CWinManagerSDL::MainLoop()
 				CreateGLWindow(event.resize.w, event.resize.h);
 				InitializeOpenGL(event.resize.w, event.resize.h);
 
+#ifdef WIN32
 				//We need to reinitialize texture on resizing window (SDL specific)
 				CTextureBank::Load();
 				CRenderText::Load();
+#endif // WIN32
 
 				OnRenderScene();
 				break;
