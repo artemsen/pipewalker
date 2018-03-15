@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2009 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -18,6 +18,8 @@
 
 #include "winmgr.h"
 
+#define BASE_WIDTH		10.4f
+#define ASPECT_RATIO	(static_cast<float>(PW_SCREEN_HEIGHT) / static_cast<float>(PW_SCREEN_WIDTH))
 
 CWinManager::CWinManager(CEventHandler& eventHandler)
 :	m_EventHandler(eventHandler),
@@ -32,6 +34,17 @@ CWinManager::CWinManager(CEventHandler& eventHandler)
 void CWinManager::OnRenderScene()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+
+	const GLdouble baseHalfSize = BASE_WIDTH / 2.0f;
+
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(
+		0.0 - baseHalfSize,	0.0 + baseHalfSize,
+		0.0 - baseHalfSize * ASPECT_RATIO, 0.0 + baseHalfSize * ASPECT_RATIO,
+		-1, 1);
+	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	m_EventHandler.RenderScene(m_MouseWrldX, m_MouseWrldY);
 	SwapBuffers();
@@ -76,15 +89,6 @@ void CWinManager::InitializeOpenGL(const int width, const int height) const
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
 	glViewport(0, 0, width, height);
-
-	//Setup perspective
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	const GLdouble aspect = static_cast<GLdouble>(width) / static_cast<GLdouble>(height);
-	gluPerspective(70.0, aspect, 1.0, 100.0);
-	gluLookAt(0.0, 0.0, 9.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
 }
 
 
@@ -97,18 +101,8 @@ void CWinManager::UpdateMousePosition(const int x, const int y)
 		if (x >= 0 && x <= glViewport[2] && y >= 0 && y <= glViewport[3]) {
 			m_MouseWndX = x;
 			m_MouseWndY = y;
-
-			GLdouble glProjection[16];
-			glGetDoublev(GL_PROJECTION_MATRIX, glProjection);
-			GLdouble glModelView[16];
-			glGetDoublev(GL_MODELVIEW_MATRIX, glModelView);
-			GLfloat depth;
-			glReadPixels(m_MouseWndX, glViewport[3] - m_MouseWndY, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depth);
-			GLdouble worldX, worldY, worldZ;
-			gluUnProject(static_cast<GLdouble>(m_MouseWndX), static_cast<GLdouble>(glViewport[3] - m_MouseWndY), depth, glModelView, glProjection, glViewport, &worldX, &worldY,& worldZ);
-
-			m_MouseWrldX = static_cast<float>(worldX);
-			m_MouseWrldY = static_cast<float>(worldY);
+			m_MouseWrldX = static_cast<float>(m_MouseWndX) * (BASE_WIDTH / static_cast<float>(glViewport[2])) - BASE_WIDTH / 2.0f;
+			m_MouseWrldY = ASPECT_RATIO * (BASE_WIDTH / 2.0f - static_cast<float>(m_MouseWndY) * (BASE_WIDTH / static_cast<float>(glViewport[3])));
 		}
 	}
 }

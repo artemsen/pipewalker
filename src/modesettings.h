@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2009 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -80,5 +80,7 @@ private:
 	CRadioButtons	m_MapSize;		///< Map size radio buttons group
 	CRadioButtons	m_WrapMode;		///< Wrapping mode on/off radio buttons group
 	CRadioButtons	m_Sound;		///< Sound on/off radio buttons group
+	CButton			m_PrevTheme;	///< Previous theme button
+	CButton			m_NextTheme;	///< Next theme button
 	CGame&			m_Game;			///< Game instance
 };

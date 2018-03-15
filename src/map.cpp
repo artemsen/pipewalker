@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2009 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -17,6 +17,7 @@
  **************************************************************************/
 
 #include "map.h"
+#include "mtrandom.h"
 
 
 CMap::CMap()
@@ -31,9 +32,7 @@ void CMap::New(const MapSize mapSize, const unsigned long mapId, const bool wrap
 	m_MapSize = static_cast<unsigned short>(mapSize);
 	m_CellMap.resize(m_MapSize * m_MapSize);
 
-	srand(mapId);	//Initialize random sequence
-
-	m_GameOver = false;
+	CMTRandom::Seed(mapId);	//Initialize random sequence
 
 	const unsigned int receiversNum = (m_MapSize * m_MapSize) / 5;
 
@@ -55,6 +54,7 @@ void CMap::New(const MapSize mapSize, const unsigned long mapId, const bool wrap
 	m_GameOver = false;
 #else
 	ResetByRotate();
+	CheckForGameOver();
 #endif
 }
 
@@ -65,21 +65,20 @@ bool CMap::LoadMap(const MapSize mapSize, const string& descr, const bool wrapMo
 	m_MapSize = static_cast<unsigned short>(mapSize);
 	m_CellMap.resize(m_MapSize * m_MapSize);
 
-	vector<unsigned short> load;
+	//Reset map
+	for (vector<CCell>::iterator it = m_CellMap.begin(); it != m_CellMap.end(); ++it)
+		it->Reset();
+
+	vector<string> load;
 	load.reserve(m_MapSize * m_MapSize);
 
-	string::size_type start = 0;
-	string::size_type end = 0;
-	unsigned int val = 0;
+	size_t start = 0;
+	size_t end = 0;
 	while ((end = descr.find (',', start)) != string::npos) {
-		if (sscanf(descr.substr(start, end - start).c_str(), "%x", &val) != 1)
-			return false;
-		load.push_back(static_cast<unsigned short>(val));
+		load.push_back(descr.substr(start, end - start));
 		start = end + 1;
 	}
-	if (sscanf(descr.substr(start, end - start).c_str(), "%x", &val) != 1)
-		return false;
-	load.push_back(static_cast<unsigned short>(val));
+	load.push_back(descr.substr(start, end - start));
 
 	if (load.size() != static_cast<size_t>(m_MapSize * m_MapSize))
 		return false;
@@ -97,6 +96,7 @@ bool CMap::LoadMap(const MapSize mapSize, const string& descr, const bool wrapMo
 	}
 
 	DefineConnectStatus();
+
 	return true;
 }
 
@@ -109,9 +109,7 @@ string CMap::SaveMap() const
 		for (unsigned short x = 0; x < m_MapSize; ++x) {
 			if (x || y)
 				res += ',';
-			char state[5];
-			sprintf(state, "%04x", GetCell(x, y).Save());
-			res += state;
+			res += GetCell(x, y).Save();
 		}
 	}
 
@@ -122,8 +120,17 @@ string CMap::SaveMap() const
 bool CMap::CheckForGameOver()
 {
 	m_GameOver = true;
+
 	for (unsigned short i = 0; (i < m_MapSize * m_MapSize) && m_GameOver; ++i)
 		m_GameOver = !m_CellMap[i].IsRotationInProgress() && (m_CellMap[i].GetCellType() != CCell::CTReceiver || m_CellMap[i].IsActive());
+
+	if (m_GameOver) {
+		//Reset locks
+		for (unsigned short i = 0; i < m_MapSize * m_MapSize; ++i)
+			if (m_CellMap[i].IsLocked())
+				m_CellMap[i].ReverseLock();
+	}
+
 	return m_GameOver;
 }
 
@@ -132,9 +139,9 @@ void CMap::ResetByRotate()
 {
 	m_GameOver = false;
 	for (unsigned short i = 0; i < m_MapSize * m_MapSize; ++i) {
-		if (m_CellMap[i].GetCellType() != CCell::CTFree && !m_CellMap[i].IsLocked() && (rand() % 10) > 1) {
-			m_CellMap[i].Rotate((rand() % 10) > 5);
-			if ((rand() % 10) > 5) //Twice rotation
+		if (m_CellMap[i].GetCellType() != CCell::CTFree && !m_CellMap[i].IsLocked() && (CMTRandom::Rand() % 10) > 1) {
+			m_CellMap[i].Rotate((CMTRandom::Rand() % 10) > 5);
+			if ((CMTRandom::Rand() % 10) > 5) //Twice rotation
 				m_CellMap[i].Rotate(true);
 		}
 	}
@@ -145,8 +152,8 @@ void CMap::ResetByRotate()
 void CMap::InstallSender()
 {
 	do {
-		m_SenderX = rand() % m_MapSize;
-		m_SenderY = rand() % m_MapSize;
+		m_SenderX = CMTRandom::Rand() % m_MapSize;
+		m_SenderY = CMTRandom::Rand() % m_MapSize;
 
 	} while (!m_WrapMode && (m_SenderX == 0 || m_SenderX == m_MapSize - 1 || m_SenderY == 0 || m_SenderY == m_MapSize - 1));
 
@@ -157,7 +164,7 @@ void CMap::InstallSender()
 	//Define zero point (sender output cell)
 	m_ZeroX = m_SenderX;
 	m_ZeroY = m_SenderY;
-	switch (rand() % 4) {
+	switch (CMTRandom::Rand() % 4) {
 		case 0: m_ZeroX = (m_ZeroX + 1) % m_MapSize;					break;
 		case 1: m_ZeroX = m_ZeroX == 0 ? m_MapSize - 1 : m_ZeroX - 1;	break;
 		case 2: m_ZeroY = (m_ZeroY + 1) % m_MapSize;					break;
@@ -213,7 +220,7 @@ bool CMap::InstallReceiver()
 		for (unsigned short i = 0; i < m_MapSize * m_MapSize; ++i)
 			backup.push_back(m_CellMap[i]);
 
-		const int freeCellInd = rand() % freeCells.size();
+		const int freeCellInd = CMTRandom::Rand() % freeCells.size();
 		const unsigned short freeX = freeCells[freeCellInd].first;
 		const unsigned short freeY = freeCells[freeCellInd].second;
 		CCell& rcv = GetCell(freeX, freeY);
@@ -242,8 +249,8 @@ bool CMap::MakeRoute(const unsigned short x, const unsigned short y)
 	while (tryCounter && !result) {
 		short i, j;
 		do {
-			i = 1 - (rand() % 3);
-			j = 1 - (rand() % 3);
+			i = 1 - (CMTRandom::Rand() % 3);
+			j = 1 - (CMTRandom::Rand() % 3);
 		} while ((i && j) || (!i && !j));	//Diagonal
 
 

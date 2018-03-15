@@ -28,18 +28,22 @@ void CModeSettings::Initialize()
 	const GLuint texOn = CTextureBank::Get(CTextureBank::TexRadBtnOn);
 	const GLuint texOff = CTextureBank::Get(CTextureBank::TexRadBtnOff);
 	const float btnSize = 0.6f;
-	const float btnLeft = -1.2f;
+	const float btnLeft = -0.5f;
 
-	m_MapSize.AddButton(CCheckBoxButton(false, btnLeft, 3.7f, btnSize, btnSize, texOn, texOff, MapSizeSmall));
-	m_MapSize.AddButton(CCheckBoxButton(false, btnLeft, 3.0f, btnSize, btnSize, texOn, texOff, MapSizeNormal));
-	m_MapSize.AddButton(CCheckBoxButton(false, btnLeft, 2.3f, btnSize, btnSize, texOn, texOff, MapSizeBig));
-	m_MapSize.AddButton(CCheckBoxButton(false, btnLeft, 1.6f, btnSize, btnSize, texOn, texOff, MapSizeExtra));
+	m_MapSize.AddButton(CCheckBoxButton(false, btnLeft, 4.0f, btnSize, btnSize, texOn, texOff, MapSizeSmall));
+	m_MapSize.AddButton(CCheckBoxButton(false, btnLeft, 3.3f, btnSize, btnSize, texOn, texOff, MapSizeNormal));
+	m_MapSize.AddButton(CCheckBoxButton(false, btnLeft, 2.6f, btnSize, btnSize, texOn, texOff, MapSizeBig));
+	m_MapSize.AddButton(CCheckBoxButton(false, btnLeft, 1.9f, btnSize, btnSize, texOn, texOff, MapSizeExtra));
 
-	m_WrapMode.AddButton(CCheckBoxButton(false, btnLeft,  0.0f, btnSize, btnSize, texOn, texOff, 1));
-	m_WrapMode.AddButton(CCheckBoxButton(false, btnLeft, -0.7f, btnSize, btnSize, texOn, texOff, 0));
+	m_WrapMode.AddButton(CCheckBoxButton(false, btnLeft, 0.8f, btnSize, btnSize, texOn, texOff, 1));
+	m_WrapMode.AddButton(CCheckBoxButton(false, btnLeft, 0.1f, btnSize, btnSize, texOn, texOff, 0));
 
-	m_Sound.AddButton(CCheckBoxButton(false, btnLeft, -2.4f, btnSize, btnSize, texOn, texOff, 1));
-	m_Sound.AddButton(CCheckBoxButton(false, btnLeft, -3.1f, btnSize, btnSize, texOn, texOff, 0));
+	m_Sound.AddButton(CCheckBoxButton(false, btnLeft, -1.0f, btnSize, btnSize, texOn, texOff, 1));
+	m_Sound.AddButton(CCheckBoxButton(false, btnLeft, -1.7f, btnSize, btnSize, texOn, texOff, 0));
+	
+	m_PrevTheme.Init(btnLeft, -2.8f, btnSize, btnSize, CTextureBank::Get(CTextureBank::TexButtonPrev), 0);
+	m_NextTheme.Init(4.0f, -2.8f, btnSize, btnSize, CTextureBank::Get(CTextureBank::TexButtonNext), 0);
+
 	Reset();
 }
 
@@ -58,31 +62,35 @@ void CModeSettings::Render(const float mouseX, const float mouseY, const float t
 	const float colorText[4] = { 0.0f, 0.5f, 1.0f, transition };
 	const float colorTitle[4] = { 0.0f, 0.3f, 1.0f, transition };
 
-	CRenderText::Print(-4.0f, 4.5f, 1.4f, colorTitle, true, "Map size:");
+	CRenderText::Print(-4.4f, 4.0f, 0.7f, colorTitle, true, "Map size:");
+	CRenderText::Print(0.2f, 4.0f, 0.6f, colorText, true, "Small  [10x10]");
+	CRenderText::Print(0.2f, 3.3f, 0.6f, colorText, true, "Normal [14x14]");
+	CRenderText::Print(0.2f, 2.6f, 0.6f, colorText, true, "Big    [20x20]");
+	CRenderText::Print(0.2f, 1.9f, 0.6f, colorText, true, "Extra  [30x30]");
 
-	CRenderText::Print(-0.5f, 3.7f, 1.1f, colorText, true, "Small  [10x10]");
-	CRenderText::Print(-0.5f, 3.0f, 1.1f, colorText, true, "Normal [14x14]");
-	CRenderText::Print(-0.5f, 2.3f, 1.1f, colorText, true, "Big    [20x20]");
-	CRenderText::Print(-0.5f, 1.6f, 1.1f, colorText, true, "Extra  [30x30]");
+ 	CRenderText::Print(-4.8f, 0.8f, 0.7f, colorTitle, true, "Wrap mode:");
+	CRenderText::Print(0.2f, 0.8f, 0.6f, colorText, true, "On");
+	CRenderText::Print(0.2f, 0.1f, 0.6f, colorText, true, "Off");
 
- 	CRenderText::Print(-4.0f,  0.8f, 1.4f, colorTitle, true, "Wrap mode:");
-	CRenderText::Print(-0.5f,  0.0f, 1.1f, colorText, true, "On");
-	CRenderText::Print(-0.5f, -0.7f, 1.1f, colorText, true, "Off");
+	CRenderText::Print(-3.2f, -1.0f, 0.7f, colorTitle, true, "Sound:");
+	CRenderText::Print(0.2f, -1.0f, 0.6f, colorText, true, "On");
+	CRenderText::Print(0.2f, -1.7f, 0.6f, colorText, true, "Off");
 
-	CRenderText::Print(-4.0f, -1.6f, 1.4f, colorTitle, true, "Sound:");
-	CRenderText::Print(-0.5f, -2.4f, 1.1f, colorText, true, "On");
-	CRenderText::Print(-0.5f, -3.1f, 1.1f, colorText, true, "Off");
+	CRenderText::Print(-3.2f, -2.7f, 0.7f, colorTitle, true, "Theme:");
+	const char* themeName = (m_Game.Settings().Theme == ThemeNetwork ? "Network" : "Plumbing");
+	CRenderText::Print(0.8f, -2.8f, 0.6f, colorText, true, themeName);
 
 	const float colorInfo[4] = { 0.0f, 0.3f, 0.8f, transition };
-	CRenderText::Print(-4.8f, -4.2f, 0.87f, colorInfo, true, "http://pipewalker.sourceforge.net");
-	CRenderText::Print(-4.78f, -4.7f, 0.5f, colorInfo, true, "Copyright (C) 2007-2009 Artem A. Senichev, Moscow, Russia");
+	CRenderText::Print(-4.8f, -4.2f, 0.52f, colorInfo, true, "http://pipewalker.sourceforge.net");
+	CRenderText::Print(-4.78f, -4.7f, 0.3f, colorInfo, true, "Copyright (C) 2007-2010 Artem A. Senichev, Moscow, Russia");
 
 	//Draw buttons
 	glColor4f(1.0f, 1.0, 1.0f, transition);
 	m_MapSize.Render(mouseX, mouseY);
 	m_WrapMode.Render(mouseX, mouseY);
 	m_Sound.Render(mouseX, mouseY);
-
+	m_PrevTheme.Render(mouseX, mouseY);
+	m_NextTheme.Render(mouseX, mouseY);
 	glColor4f(1.0f, 1.0, 1.0f, 1.0f);
 }
 
@@ -90,13 +98,22 @@ void CModeSettings::Render(const float mouseX, const float mouseY, const float t
 void CModeSettings::OnMouseButtonDown(const float mouseX, const float mouseY, const MouseButton btn)
 {
 	if (btn == MouseButton_Left) {
-		bool redrawNeeded = false;
 
-		redrawNeeded |= m_MapSize.OnClick(mouseX, mouseY);
-		redrawNeeded |= m_WrapMode.OnClick(mouseX, mouseY);
-		redrawNeeded |= m_Sound.OnClick(mouseX, mouseY);
-
-		if (redrawNeeded)
+		if (m_NextTheme.IsMouseOver(mouseX, mouseY) || m_PrevTheme.IsMouseOver(mouseX, mouseY)) {
+			if (m_Game.Settings().Theme == ThemeNetwork)
+				m_Game.Settings().Theme = ThemePlumbing;
+			else
+				m_Game.Settings().Theme = ThemeNetwork;
+			CTextureBank::Load(m_Game.Settings().Theme);
 			m_Game.WinManager().PostRedisplay();
+		}
+		else {
+			bool redrawNeeded = false;
+			redrawNeeded |= m_MapSize.OnClick(mouseX, mouseY);
+			redrawNeeded |= m_WrapMode.OnClick(mouseX, mouseY);
+			redrawNeeded |= m_Sound.OnClick(mouseX, mouseY);
+			if (redrawNeeded)
+				m_Game.WinManager().PostRedisplay();
+		}
 	}
 }

@@ -18,42 +18,36 @@
 
 #pragma once
 
-#include "common.h"
+#define MTSTATE_ARRAY_SIZE 624
 
 
-class CSynchro
+class CMTRandom
 {
 public:
-	//! Start timer
-	static void Start();
-
-	//! Stop timer
-	static void Stop();
+	/**
+	 * Seed random sequence
+	 * \param seed number to seed
+	 */
+	static void Seed(const unsigned long seed);
 
 	/**
-	 * Get current tick
-	 * \return current tick count
+	 * Get random number
+	 * \return random number
 	 */
-	static unsigned int GetTick();
-
-	/**
-	 * Get phase (value in range [0...1])
-	 * \param beginTime start tick value
-	 * \param maxTime maximum tick value
-	 * \param val value in range [0...1]
-	 * \return false if time is up
-	 */
-	static bool GetPhase(const unsigned int beginTime, const unsigned int maxTime, float& val);
+	static unsigned long Rand();
 
 private:
 	/**
-	 * Get system time/tick counter (in ms)
-	 * \return system time/tick counter
+	 * Number twiddler
 	 */
-	static unsigned int GetSystemTick();
+	static unsigned long Twiddle(const unsigned long u, const unsigned long v);
+
+	/**
+	 * State generator
+	 */
+	static void GenerateState();
 
 private:
-	static unsigned int	m_TickLast;		///< Last tick number
-	static unsigned int	m_TickDelta;	///< Delta tick number
-	static unsigned int	m_TickStop;		///< Stop time
+	static unsigned long	m_State[MTSTATE_ARRAY_SIZE];	///< State array
+	static unsigned long	m_Pos;							///< Position in state array
 };

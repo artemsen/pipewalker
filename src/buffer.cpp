@@ -1,6 +1,6 @@
  /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2009 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -50,7 +50,7 @@ void CBuffer::Load(const char* fileName)
 		const long size = ftell(file);
 		if (size < 0)
 			throw errno;
-		rewind(file);
+		fseek(file, 0, SEEK_SET);
 
 		m_Data.resize(static_cast<size_t>(size));
 
@@ -121,4 +121,14 @@ unsigned char* CBuffer::GetData(const size_t size)
 	unsigned char* ptr = &m_Data[m_Offset];
 	m_Offset += size;
 	return ptr;
+}
+
+
+string CBuffer::GetString()
+{
+	string result;
+	char c;
+	while (Get(c) && c != '\n')
+		result += c;
+	return result;
 }

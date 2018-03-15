@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2009 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -23,6 +23,15 @@
 #include "PipeWalkerRes.h"
 
 
+CWinManagerWin::~CWinManagerWin()
+{
+	if (m_DC)
+		::ReleaseDC(m_Wnd, m_DC);
+	if (m_Wnd)
+		::DestroyWindow(m_Wnd);
+}
+
+
 void CWinManagerWin::PostRedisplay()
 {
 	if (!m_Redisplay) {
@@ -31,7 +40,7 @@ void CWinManagerWin::PostRedisplay()
  		if (currTick - lastRedraw < 30)
  			::Sleep(30 - (currTick - lastRedraw));
  		lastRedraw = CSynchro::GetTick();
-		::RedrawWindow(m_wnd, NULL, 0, RDW_INTERNALPAINT);
+		::RedrawWindow(m_Wnd, NULL, 0, RDW_INTERNALPAINT);
 		m_Redisplay = true;
 	}
 }
@@ -39,8 +48,8 @@ void CWinManagerWin::PostRedisplay()
 
 void CWinManagerWin::MainLoop()
 {
-	::ShowWindow(m_wnd, SW_SHOWNORMAL);
-	::UpdateWindow(m_wnd);
+	::ShowWindow(m_Wnd, SW_SHOWNORMAL);
+	::UpdateWindow(m_Wnd);
 
 	//Main message loop
 	MSG msg;
@@ -56,7 +65,7 @@ void CWinManagerWin::CreateGLWindow(const int width, const int height)
 	//Register window class
 	static const char* windowClassName = "PipeWalkerWindowClass";
 	WNDCLASSEX wcex;
-	wcex.cbSize = sizeof(WNDCLASSEX);
+	wcex.cbSize = sizeof(wcex);
 	wcex.style			= CS_HREDRAW | CS_VREDRAW;
 	wcex.lpfnWndProc	= (WNDPROC)&CWinManagerWin::WndProc;
 	wcex.cbClsExtra		= 0;
@@ -72,7 +81,7 @@ void CWinManagerWin::CreateGLWindow(const int width, const int height)
 		throw CException("Can't register window class");
 
 	//Window styles
-	const DWORD wndStyle = WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_THICKFRAME | WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
+	const DWORD wndStyle = WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_THICKFRAME | WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
 	const DWORD wndStyleEx = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE;
 
 	//Adjust window to true requested size
@@ -84,15 +93,15 @@ void CWinManagerWin::CreateGLWindow(const int width, const int height)
 	m_AspectRatio = static_cast<float>(rcWnd.right - rcWnd.left) / static_cast<float>(rcWnd.bottom - rcWnd.top);
 
 	//Create main window
-	m_wnd = CreateWindowEx(wndStyleEx, windowClassName, PACKAGE_STRING, wndStyle, CW_USEDEFAULT, 0,
+	m_Wnd = CreateWindowEx(wndStyleEx, windowClassName, PACKAGE_STRING, wndStyle, CW_USEDEFAULT, 0,
 		rcWnd.right - rcWnd.left, rcWnd.bottom - rcWnd.top, NULL, NULL, wcex.hInstance, NULL);
-	if (!m_wnd)
+	if (!m_Wnd)
 		throw CException("Can't create window");
-	::SetWindowLong(m_wnd, GWL_USERDATA, reinterpret_cast<long>(this));
+	::SetWindowLong(m_Wnd, GWL_USERDATA, reinterpret_cast<long>(this));
 
 	PIXELFORMATDESCRIPTOR pfd;
-	memset(&pfd, 0, sizeof(PIXELFORMATDESCRIPTOR));
-	pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+	memset(&pfd, 0, sizeof(pfd));
+	pfd.nSize = sizeof(pfd);
 	pfd.nVersion = 1;
 	pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
 	pfd.iPixelType = PFD_TYPE_RGBA;
@@ -100,29 +109,29 @@ void CWinManagerWin::CreateGLWindow(const int width, const int height)
 	pfd.cDepthBits = 16;
 	pfd.iLayerType = PFD_MAIN_PLANE;
 
-	m_dc = ::GetDC(m_wnd);
-	if (!m_dc)
+	m_DC = ::GetDC(m_Wnd);
+	if (!m_DC)
 		throw CException("Can't create a GL device context");
 
-	const int pixelFormat = ::ChoosePixelFormat(m_dc, &pfd);
+	const int pixelFormat = ::ChoosePixelFormat(m_DC, &pfd);
 	if (!pixelFormat)
 		throw CException("Can't find a suitable pixel format");
 
-	if (!::SetPixelFormat(m_dc, pixelFormat, &pfd))
+	if (!::SetPixelFormat(m_DC, pixelFormat, &pfd))
 		throw CException("Can't set the pixel format");
 
-	HGLRC rc = ::wglCreateContext(m_dc);
+	HGLRC rc = ::wglCreateContext(m_DC);
 	if (!rc)
 		throw CException("Can't create a GL rendering context");
 
-	if (!::wglMakeCurrent(m_dc, rc))
+	if (!::wglMakeCurrent(m_DC, rc))
 		throw CException("Can't activate the GL rendering context");
 }
 
 
 void CWinManagerWin::SwapBuffers() const
 {
-	::SwapBuffers(m_dc);
+	::SwapBuffers(m_DC);
 }
 
 
@@ -133,7 +142,7 @@ void CWinManagerWin::OnApplicationExit()
 
 void CWinManagerWin::ShowError(const char* err)
 {
-	::MessageBox(m_wnd, err, PACKAGE_STRING " Error", MB_ICONERROR | MB_OK);
+	::MessageBoxA(m_Wnd, err, PACKAGE_STRING " Error", MB_ICONERROR | MB_OK);
 }
 
 
@@ -153,7 +162,13 @@ LRESULT CALLBACK CWinManagerWin::WndProc(HWND wnd, UINT msg, WPARAM wParam, LPAR
 			break;
  		case WM_GETMINMAXINFO:
  			{
- 				LPMINMAXINFO mmi = reinterpret_cast<LPMINMAXINFO>(lParam);
+				LPMINMAXINFO mmi = reinterpret_cast<LPMINMAXINFO>(lParam);
+				
+				const int maxSize = GetSystemMetrics(SM_CYMAXIMIZED);
+				static const float aspect = static_cast<float>(PW_SCREEN_WIDTH) / static_cast<float>(PW_SCREEN_HEIGHT);
+
+				mmi->ptMaxSize.x = static_cast<LONG>(static_cast<float>(maxSize) * aspect);
+				mmi->ptMaxSize.y = maxSize;
  				mmi->ptMinTrackSize.x = PW_SCREEN_WIDTH / 3;
  				mmi->ptMinTrackSize.y = PW_SCREEN_HEIGHT / 3;
  			}
@@ -186,11 +201,11 @@ LRESULT CALLBACK CWinManagerWin::WndProc(HWND wnd, UINT msg, WPARAM wParam, LPAR
  				}
  			}
  			break;
- 		case WM_SIZE:
- 			assert(mgr);
- 			mgr->InitializeOpenGL(LOWORD(lParam), HIWORD(lParam));
- 			mgr->OnRenderScene();
- 			break;
+		case WM_SIZE:
+			assert(mgr);
+			mgr->InitializeOpenGL(LOWORD(lParam), HIWORD(lParam));
+			mgr->OnRenderScene();
+			break;
 		case WM_CHAR:
 			assert(mgr);
 			mgr->OnKeyboardKeyDown(static_cast<char>(wParam));
@@ -227,12 +242,6 @@ LRESULT CALLBACK CWinManagerWin::WndProc(HWND wnd, UINT msg, WPARAM wParam, LPAR
 
 void CWinManagerWin::DestroyAndQuit()
 {
-	if (m_dc)
-		::ReleaseDC(m_wnd, m_dc);
-	m_dc = NULL;
-	if (m_wnd)
-		::DestroyWindow(m_wnd);
-	m_wnd = NULL;
 	::PostQuitMessage(0);
 }
 

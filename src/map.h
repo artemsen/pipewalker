@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2009 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -22,10 +22,10 @@
 
 //! Map sizes
 enum MapSize {
-	MapSizeSmall = 10,
+	MapSizeSmall  = 10,
 	MapSizeNormal = 14,
-	MapSizeBig = 20,
-	MapSizeExtra = 30
+	MapSizeBig    = 20,
+	MapSizeExtra  = 30
 };
 
 

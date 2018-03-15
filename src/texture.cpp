@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2009 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -76,12 +76,22 @@ void CTexture::Load(const char* fileName, const int modeWrap /*= GL_CLAMP*/)
 }
 
 
-void CTextureBank::Load()
+void CTextureBank::Load(const DecorTheme theme)
 {
 	Free();
 
+	string themeTextureFileName = DIR_GAMEDATA;
+	switch (theme) {
+		case ThemePlumbing:
+			themeTextureFileName += "plumbing.tga";
+			break;
+		case ThemeNetwork:
+		default:
+			themeTextureFileName += "network.tga";
+	}
+	
 	CImage img;
-	img.Load(DIR_GAMEDATA "network.tga");
+	img.Load(themeTextureFileName.c_str());
 
 	m_Texture[TexEnvBkgr].          Load(img,  8 * 64, 0 * 64, 64, 64, GL_REPEAT);
 	m_Texture[TexEnvTitle].         Load(img,  0 * 64, 0 * 64, 8 * 64, 64, GL_CLAMP);

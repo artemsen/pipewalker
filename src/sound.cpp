@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2009 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -91,7 +91,7 @@ void CSoundBank::Play(const SoundType /*type*/)
 	if (m_SoundInitialized)
 		SDL_PauseAudio(0);
 #elif defined PW_USE_WIN	//Microsoft Windows
-	PlaySound((LPCSTR)&(m_Sound[0].m_Data[0]), NULL, SND_MEMORY | SND_ASYNC);
+	PlaySound(reinterpret_cast<LPCTSTR>(&m_Sound[0].m_Data[0]), NULL, SND_MEMORY | SND_ASYNC);
 #endif
 }
 

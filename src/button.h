@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2009 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -39,6 +39,17 @@ public:
 	 * \param id button ID
 	 */
 	CButton(const float x, const float y, const float width, const float height, const GLuint tex, const int id);
+
+	/**
+	 * Button initialization
+	 * \param x button x coordinate
+	 * \param y button y coordinate
+	 * \param width button width
+	 * \param height button height
+	 * \param tex button texture identifier
+	 * \param id button ID
+	 */
+	void Init(const float x, const float y, const float width, const float height, const GLuint tex, const int id);
 
 	/**
 	 * Check for cross mouse and button coordinates

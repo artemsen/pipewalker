@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2009 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -26,14 +26,15 @@ void CModePuzzle::RenewMap()
 {
 	StopWinnerAnimation();
 	const CSettings& settings = m_Game.Settings();
-	m_Map.New(settings.Size, settings.MapId, settings.Wrapping);
+	m_Map.New(settings.Size, settings.GetCurrentMapId(), settings.Wrapping);
 }
 
 
 void CModePuzzle::LoadMap()
 {
+	StopWinnerAnimation();
 	const CSettings& settings = m_Game.Settings();
-	if (settings.State.empty() || !m_Map.LoadMap(settings.Size, settings.State.c_str(), settings.Wrapping))
+	if (!m_Map.LoadMap(settings.Size, settings.GetCurrentMapState(), settings.Wrapping))
 		RenewMap();
 }
 
@@ -41,8 +42,8 @@ void CModePuzzle::LoadMap()
 void CModePuzzle::SaveMap() const
 {
 	CSettings& settings = m_Game.Settings();
-	settings.Size = static_cast<MapSize>(m_Map.GetMapSize());
-	settings.State = m_Map.SaveMap();
+	settings.Size = m_Map.GetMapSize();
+	settings.SetCurrentMapState(m_Map.SaveMap());
 }
 
 
@@ -53,21 +54,21 @@ void CModePuzzle::Render(const float transition)
 	redarawIsNeeded |= RenderPuzzle(transition);
 
 	//Render map ID
-	static const float mapIdVertex[] =			{ -0.2f, 0.4f, -0.2f, -0.4f, 0.2f, -0.4f, 0.2f, 0.4f };
-	static const short mapIdTexture[] =			{ 0, 1, 0, 0, 1, 0, 1, 1 };
-	static const unsigned int mapIdIndices[] =	{ 0, 1, 2, 0, 2, 3 };
+	static const float mapIdVertex[] =				{ -0.2f, 0.4f, -0.2f, -0.4f, 0.2f, -0.4f, 0.2f, 0.4f };
+	static const short mapIdTexture[] =				{ 0, 1, 0, 0, 1, 0, 1, 1 };
+	static const unsigned short mapIdIndices[] =	{ 0, 1, 2, 0, 2, 3 };
+	glColor4f(1.0f, 1.0, 1.0f, transition);
+	char szMapId[64];
+	sprintf(szMapId, "%08u", static_cast<unsigned int>(m_Game.Settings().GetCurrentMapId()));
+	string mapIdAsString(szMapId);
+	glVertexPointer(2, GL_FLOAT, 0, mapIdVertex);
+	glTexCoordPointer(2, GL_SHORT, 0, mapIdTexture);
 	glPushMatrix();
-		glTranslatef(-2.25f, -5.7f, 0.0f);
-		glColor4f(1.0f, 1.0, 1.0f, transition);
-		char szMapId[64];
-		sprintf(szMapId, "%08u", static_cast<unsigned int>(m_Game.Settings().MapId));
-		string mapIdAsString(szMapId);
+		glTranslatef(-2.25f, -5.6f, 0.0f);
 		for (size_t i = 0; i < 8; ++i) {
-			glTranslatef(0.5f, 0.0f, 0.0f);
 			glBindTexture(GL_TEXTURE_2D, CTextureBank::Get(static_cast<CTextureBank::TextureType>(CTextureBank::TexNum0 + (mapIdAsString[i] - '0'))));
-			glVertexPointer(2, GL_FLOAT, 0, mapIdVertex);
-			glTexCoordPointer(2, GL_SHORT, 0, mapIdTexture);
-			glDrawElements(GL_TRIANGLES, (sizeof(mapIdIndices) / sizeof(mapIdIndices[0])), GL_UNSIGNED_INT, mapIdIndices);
+			glTranslatef(0.5f, 0.0f, 0.0f);
+			glDrawElements(GL_TRIANGLES, (sizeof(mapIdIndices) / sizeof(mapIdIndices[0])), GL_UNSIGNED_SHORT, mapIdIndices);
 		}
 		glColor4f(1.0f, 1.0, 1.0f, 1.0f);
 	glPopMatrix();
@@ -108,7 +109,7 @@ void CModePuzzle::Render(const float transition)
 
 void CModePuzzle::OnMouseButtonDown(const float mouseX, const float mouseY, const MouseButton btn)
 {
-	if (!m_Map.IsGameOver() && mouseX > -5.0f && mouseX < 5.0f && mouseY > -5.0f && mouseY < 5.0f) {	//point in game field
+	if (!m_Map.IsGameOver() && mouseX > -5.0f && mouseX < 5.0f && mouseY > -5.0f && mouseY < 5.0f) {		//point in game field
 		bool redrawNeeded = false;
 
 		const float scale = GetMapScaleFactor();
@@ -232,10 +233,10 @@ void CModePuzzle::RenderCell(const CTextureBank::TextureType type) const
 {
 	static const float vertices[] =			{ -0.5f, 0.5f, -0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f };
 	static const short texture[] =			{ 0, 1, 0, 0, 1, 0, 1, 1 };
-	static const unsigned int indices[] =	{ 0, 1, 2, 0, 2, 3 };
+	static const unsigned short indices[] =	{ 0, 1, 2, 0, 2, 3 };
 
  	glBindTexture(GL_TEXTURE_2D, CTextureBank::Get(type));
  	glVertexPointer(2, GL_FLOAT, 0, vertices);
  	glTexCoordPointer(2, GL_SHORT, 0, texture);
- 	glDrawElements(GL_TRIANGLES, (sizeof(indices) / sizeof(indices[0])), GL_UNSIGNED_INT, indices);
+ 	glDrawElements(GL_TRIANGLES, (sizeof(indices) / sizeof(indices[0])), GL_UNSIGNED_SHORT, indices);
 }

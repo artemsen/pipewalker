@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2009 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -31,13 +31,19 @@ CButton::CButton()
 
 
 CButton::CButton(const float x, const float y, const float width, const float height, const GLuint tex, const int id)
-:	m_X(x),
-	m_Y(y),
-	m_Width(width),
-	m_Height(height),
-	m_TexId(tex),
-	m_BtnId(id)
 {
+	Init(x, y, width, height, tex, id);
+}
+
+
+void CButton::Init(const float x, const float y, const float width, const float height, const GLuint tex, const int id)
+{
+	m_X = x;
+	m_Y = y;
+	m_Width = width;
+	m_Height = height;
+	m_TexId = tex;
+	m_BtnId = id;
 }
 
 
@@ -66,12 +72,12 @@ void CButton::RenderButton(const float x, const float y, const GLuint texture) c
 		m_X + m_Width + coeff, m_Y + coeff };
 
 	static const short Tex[] =			{ 0, 1, 0, 0, 1, 0, 1, 1 };	//Texture coordinates
-	static const unsigned int Ind[] =	{ 0, 1, 2, 0, 2, 3 };		//Indices
+	static const unsigned short Ind[] =	{ 0, 1, 2, 0, 2, 3 };		//Indices
 
 	glBindTexture(GL_TEXTURE_2D, texture);
 	glVertexPointer(2, GL_FLOAT, 0, Vertex);
 	glTexCoordPointer(2, GL_SHORT, 0, Tex);
-	glDrawElements(GL_TRIANGLES, (sizeof(Ind) / sizeof(Ind[0])), GL_UNSIGNED_INT, Ind);
+	glDrawElements(GL_TRIANGLES, (sizeof(Ind) / sizeof(Ind[0])), GL_UNSIGNED_SHORT, Ind);
 }
 
 

@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2009 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -27,7 +27,8 @@ class CWinManagerWin : public CWinManager
 {
 public:
 	//! Default constructor
-	CWinManagerWin(CEventHandler& eventHandler) : CWinManager(eventHandler), m_wnd(NULL), m_dc(NULL), m_AspectRatio(0.0f), m_Redisplay(false)  {}
+	CWinManagerWin(CEventHandler& eventHandler) : CWinManager(eventHandler), m_Wnd(NULL), m_DC(NULL), m_AspectRatio(0.0f), m_Redisplay(false)  {}
+	~CWinManagerWin();
 
 public:
 	//From CWinManager
@@ -59,8 +60,8 @@ private:
 	static LRESULT CALLBACK WndProc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 private:
-	HWND	m_wnd;			///< Holds Our Window Handle
-	HDC		m_dc;			///< Private GDI Device Context
+	HWND	m_Wnd;			///< Holds Our Window Handle
+	HDC		m_DC;			///< Private GDI Device Context
 	float	m_AspectRatio;	///< Needed window aspect ration
 	bool	m_Redisplay;	///< Redisplay flag
 };

@@ -22,11 +22,16 @@
 class CException
 {
 public:
-	CException(const char* descr)	: exeptionDescr(descr) {}
-	CException(const string& descr)	: exeptionDescr(descr) {}
-	CException(const char* descr1, const char* descr2)	: exeptionDescr(string(descr1) + string(descr2)) {}
-	CException(const char* descr1, const char* descr2, const char* descr3)	: exeptionDescr(string(descr1) + string(descr2) + string(descr3)) {}
-	CException(const char* descr1, const char* descr2, const char* descr3, const char* descr4)	: exeptionDescr(string(descr1) + string(descr2) + string(descr3) + string(descr4)) {}
+	CException(const char* descr)
+		: exeptionDescr(descr) {}
+	CException(const string& descr)
+		: exeptionDescr(descr) {}
+	CException(const char* descr1, const char* descr2)
+		: exeptionDescr(string(descr1) + string(descr2)) {}
+	CException(const char* descr1, const char* descr2, const char* descr3)
+		: exeptionDescr(string(descr1) + string(descr2) + string(descr3)) {}
+	CException(const char* descr1, const char* descr2, const char* descr3, const char* descr4)
+		: exeptionDescr(string(descr1) + string(descr2) + string(descr3) + string(descr4)) {}
 
 	const char* what() const { return exeptionDescr.c_str(); }
 

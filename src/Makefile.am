@@ -1,27 +1,28 @@
 DEFS = @DEFS@ -DNDEBUG=1 -DPW_USE_SDL=1 -DDIR_GAMEDATA=\""$(datadir)/games/$(PACKAGE)/"\"
 bin_PROGRAMS = pipewalker
 pipewalker_SOURCES = \
-	buffer.cpp buffer.h \
-	button.cpp button.h \
-	cell.cpp cell.h	\
+	buffer.h buffer.cpp \
+	button.h button.cpp \
+	cell.h cell.cpp \
 	common.h \
 	exception.h \
-	explosion.cpp explosion.h \
-	game.cpp game.h \
-	image.cpp image.h \
+	explosion.h explosion.cpp \
+	game.h game.cpp \
+	image.h image.cpp \
 	main.cpp \
-	map.cpp map.h \
-	modepuzzle.cpp modepuzzle.h \
-	modesettings.cpp modesettings.h \
-	rendertext.cpp rendertext.h \
-	settings.cpp settings.h \
-	sound.cpp sound.h \
-	synchro.cpp synchro.h \
-	texture.cpp texture.h \
-	winmgr.cpp winmgr.h \
-	winmgr_sdl.cpp winmgr_sdl.h
+	map.h map.cpp \
+	modepuzzle.h modepuzzle.cpp \
+	modesettings.h modesettings.cpp \
+	mtrandom.h mtrandom.cpp \
+	rendertext.h rendertext.cpp \
+	settings.h settings.cpp \
+	sound.h sound.cpp \
+	synchro.h synchro.cpp \
+	texture.h texture.cpp \
+	winmgr.h winmgr.cpp \
+	winmgr_sdl.h winmgr_sdl.cpp
 
 #MS Windows specific files
 EXTRA_DIST = \
-	winmgr_win.cpp winmgr_win.h \
-	PipeWalker.rc PipeWalkerRes.h
+	winmgr_win.h winmgr_win.cpp \
+	PipeWalkerRes.h PipeWalker.rc

@@ -5,5 +5,5 @@ pkgdocdata_DATA = README
 
 EXTRA_DIST = $(pkgdocdata_DATA) \
 	Makefile.win32 \
-	PipeWalker.sln \
-	PipeWalker.vcproj
+	PipeWalker.nsi \
+	PipeWalker.sln PipeWalker.vcxproj PipeWalker.vcxproj.filters

@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2009 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -21,6 +21,7 @@
 #include "winmgr_sdl.h"
 #include "texture.h"
 #include "rendertext.h"
+#include "game.h"
 
 //SDL library
 #include <SDL/SDL.h>
@@ -103,7 +104,7 @@ void CWinManagerSDL::MainLoop()
 
 #ifdef WIN32
 				//We need to reinitialize texture on resizing window (SDL specific)
-				CTextureBank::Load();
+				CTextureBank::Load(ThemeNetwork);
 				CRenderText::Load();
 #endif // WIN32
 
@@ -141,14 +142,14 @@ void CWinManagerSDL::CreateGLWindow(const int width, const int height)
 	static SDL_Surface* srfIcon = NULL;
 	if (!srfIcon) {
 		static CImage wndIcon;
-		wndIcon.LoadXPM(PipeWalker_xpm, sizeof(PipeWalker_xpm) / sizeof(PipeWalker_xpm[0]));
+		wndIcon.LoadXPM(pipewalker_xpm, sizeof(pipewalker_xpm) / sizeof(pipewalker_xpm[0]));
 
 		static const Uint32 mask[4] = {
-#if SDL_BYTEORDER == SDL_BIG_ENDIAN
+#ifdef PW_BYTEORDER_BIG_ENDIAN
 			0xff000000, 0x00ff0000, 0x0000ff00, 0x000000ff
 #else
 			0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000
-#endif
+#endif	//PW_BYTEORDER_BIG_ENDIAN
 		};
 		srfIcon = SDL_CreateRGBSurfaceFrom(wndIcon.GetData(), wndIcon.GetWidth(), wndIcon.GetHeight(), wndIcon.BytesPerPixel() * 8, wndIcon.GetWidth() * wndIcon.BytesPerPixel(), mask[0], mask[1], mask[2], mask[3]);
 	}
@@ -192,9 +193,11 @@ void CWinManagerSDL::ShowError(const char* err)
 #ifdef WIN32
 	SDL_SysWMinfo wminfo;
 	SDL_VERSION(&wminfo.version);
-	::MessageBox(SDL_GetWMInfo(&wminfo) == 1 ? wminfo.window : NULL, err, PACKAGE_STRING " Error", MB_ICONERROR | MB_OK);
+	::MessageBoxA(SDL_GetWMInfo(&wminfo) == 1 ? wminfo.window : NULL, err, PACKAGE_STRING " Error", MB_ICONERROR | MB_OK);
 #else
-	fprintf(stderr, "Error in " PACKAGE_STRING ": %s\n", err);
+	fprintf(stderr, "Critical error: ");
+	fprintf(stderr, err);
+	fprintf(stderr, "\n");
 #endif // WIN32
 }
 

@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2009 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -123,38 +123,37 @@ void CImage::Load(const char* fileName)
 }
 
 
-void CImage::LoadXPM(const char* data[], const size_t strNum)
+void CImage::LoadXPM(char* data[], const size_t strNum)
 {
 	assert(data);
 
-	//Read image properties
-	const char* token = data[0];
 	m_ImgMode = GL_RGBA;
-	m_ImgWidth = atoi(data[0]);
-	token = strchr(token + 1, ' ') + 1;
-	m_ImgHeight = atoi(token);
 
-	token = strchr(token + 1, ' ') + 1;
-	const size_t colorMapSize = atoi(token);
-	token = strchr(token + 1, ' ') + 1;
-	const size_t bytePerPixel = atoi(token);
-	assert(strNum > bytePerPixel);
+	//Read image properties
+	int colorMapSize = 0, bytePerPixel = 0;
+	sscanf(data[0], "%i %i %i %i", &m_ImgWidth, &m_ImgHeight, &colorMapSize, &bytePerPixel);
 
 	//Read the color map
 	map< string, vector<unsigned char> > colorMap;
-	for (size_t i = 1; i <= colorMapSize; ++i) {
-		if (i >= strNum)
+	for (int i = 1; i <= colorMapSize; ++i) {
+		if (i >= static_cast<int>(strNum))
 			throw CException("XPM: Incorrect format");
 
 		const string index(data[i], data[i] + bytePerPixel);
 		vector<unsigned char> color;
-		color.resize(4);
+		color.resize(4, 0);
 		if (strcmp(data[i] + bytePerPixel + 3, "None") != 0) {
 			unsigned int colorRef = 0;
 			sscanf(data[i] + bytePerPixel + 4, "%x", &colorRef);
+#ifdef PW_BYTEORDER_LITTLE_ENDIAN
 			color[0] = static_cast<unsigned char>((colorRef & 0x00ff0000) >> 16);
 			color[1] = static_cast<unsigned char>((colorRef & 0x0000ff00) >> 8);
 			color[2] = static_cast<unsigned char>((colorRef & 0x000000ff) >> 0);
+#else
+			color[0] = static_cast<unsigned char>((colorRef & 0xff000000) << 0);
+			color[1] = static_cast<unsigned char>((colorRef & 0x00ff0000) << 8);
+			color[2] = static_cast<unsigned char>((colorRef & 0x0000ff00) << 16);
+#endif	//PW_BYTEORDER_LITTLE_ENDIAN
 			color[3] = 0xff;	//Non transparent
 		}
 		colorMap.insert(make_pair(index, color));

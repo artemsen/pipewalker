@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2009 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -20,6 +20,10 @@
 
 #include "common.h"
 
+//! Cell state description (used to load/save map)
+// struct CellState {
+// 
+// };
 
 class CCell
 {
@@ -62,14 +66,14 @@ public:	//Helper functions
 	 * Save cell state as text
 	 * \return cell description
 	 */
-	unsigned short Save() const;
+	string Save() const;
 
 	/**
 	 * Load cell state from text
 	 * \param state cell description
 	 * \return false if load failed
 	 */
-	bool Load(const unsigned short state);
+	bool Load(const string& state);
 
 	/**
 	 * Reverse lock state of the cell

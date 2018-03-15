@@ -1,27 +1,35 @@
-SOURCES =	src/*.cpp
-LIBS =		-lmingw32 -lOpenGL32 -lglu32
-RESFILE =	src/PipeWalker.rc
-OUTRESFILE =	PipeWalkerRes.obj
-OUTFILE =	PipeWalker.exe
-DEFINES =	-DWIN32 -DNDEBUG
-CC_OPTS =	-mwindows -Wall -Wextra -Wundef -Woverloaded-virtual -Wsign-promo -Wswitch-default -Wfloat-equal -Wcast-qual -Wcast-align -Wwrite-strings $(DEFINES)
-MINGWPATH =	C:/MinGW/bin/
-BUILDOPT =	$(SOURCES) -o $(OUTFILE) $(OUTRESFILE) $(DEFINES) $(CC_OPTS) $(LIBS)
+VERSION   = 0.8.0
+SOURCES   = src/*.cpp
+RESFILE   = src/PipeWalker.rc
+INSTFILE  = PipeWalker.nsi
+OUTFILE   = PipeWalker.exe
+OUTRES    = PipeWalkerRes.obj
+DEFINES   = -DNDEBUG -DPW_USE_WIN -D'PACKAGE_STRING="PipeWalker $(VERSION)"'
+WNDRES    = windres
+STRIPTOOL = strip
+INSTALLER = makensis
+CXX       = g++
+CXXFLAGS  = -Wall $(DEFINES)
+LNKFLAGS  = -mwindows -lOpenGL32 -lwinmm -lgdi32 -static-libgcc
 
 
-all: all_win
+all: $(OUTFILE) install portable
 
-all_win:
-	$(MINGWPATH)windres $(RESFILE) -o $(OUTRESFILE)
-	$(MINGWPATH)g++ $(BUILDOPT) -DPW_USE_WIN -lWinmm
-	$(MINGWPATH)strip $(OUTFILE)
+install: $(OUTFILE)
+	$(INSTALLER) /DVERSION=$(VERSION) $(INSTFILE)
 
-all_sdl:
-	$(MINGWPATH)windres $(RESFILE) -o $(OUTRESFILE)
-	$(MINGWPATH)g++ $(BUILDOPT) -DPW_USE_SDL -lSDL
-	$(MINGWPATH)strip $(OUTFILE)
+portable: $(OUTFILE)
+	echo # This is the user settings file of the PipeWalker game > .pipewalker
+	zip pipewalker-$(VERSION)-win32bin.zip $(OUTFILE) ChangeLog README data\clatz.wav data\font.tga data\network.tga data\plumbing.tga .pipewalker
+	del .pipewalker
+
+$(OUTFILE):
+	$(WNDRES) $(RESFILE) -o $(OUTRES)
+	$(CXX) $(SOURCES) -o $(OUTFILE) $(OUTRES) $(CXXFLAGS) $(LNKFLAGS)
+	$(STRIPTOOL) $(OUTFILE)
 
 clean:
+	if exist *.zip del *.zip
 	if exist *.exe del *.exe
 	if exist *.obj del *.obj
 	if exist *.pdb del *.pdb

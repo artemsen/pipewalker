@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2009 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -49,16 +49,16 @@ CGame::CGame()
 	m_TrnStartTime(0),
 	m_NextMapId(0),
 	m_RenewMap(false),
+	m_LoadMap(false),
 	m_ModePuzzle(*this),
 	m_ModeSettings(*this)
 {
+	m_Settings.Load();
 }
 
 
 void CGame::Initialize(CWinManager& winMgr)
 {
-	m_Settings.Load();
-
 	m_WinManager = &winMgr;
 
 	//Configure buttons
@@ -104,11 +104,15 @@ void CGame::RenderScene(const float mouseX, const float mouseY)
 				trnPhase = 0.0f;
 				m_TrnPhase = SecondPhase;
 
-
+				assert((!m_RenewMap && !m_LoadMap) || (m_RenewMap && !m_LoadMap) || (!m_RenewMap && m_LoadMap));
 				if (m_RenewMap) {
-					m_Settings.MapId = m_NextMapId;
+					m_Settings.SetCurrentMapId(m_NextMapId);
 					m_ModePuzzle.RenewMap();
 					m_RenewMap = false;
+				}
+				else if (m_LoadMap) {
+					m_ModePuzzle.LoadMap();
+					m_LoadMap = false;
 				}
 
 				m_TrnStartTime = CSynchro::GetTick();	//second phase begin
@@ -153,8 +157,8 @@ void CGame::RenderEnvironment()
  	const float wndWidth = static_cast<float>(glViewport[2]);
  	const float wndHeight = static_cast<float>(glViewport[3]);
  	const float vertBkgr[] = { 0.0f, wndHeight, 0.0f, 0.0f, wndWidth, 0.0f, wndWidth, wndHeight };
- 	static const short texBkgr[] =	{ 0, 8, 0, 0, 6, 0, 6, 8 };
- 	static const unsigned int plainInd[] =	{ 0, 1, 2, 0, 2, 3 };
+ 	static const short texBkgr[] = { 0, 8, 0, 0, 6, 0, 6, 8 };
+ 	static const unsigned short plainInd[] = { 0, 1, 2, 0, 2, 3 };
 
  	glMatrixMode(GL_PROJECTION);
  	glPushMatrix();
@@ -166,7 +170,7 @@ void CGame::RenderEnvironment()
  			glBindTexture(GL_TEXTURE_2D, CTextureBank::Get(CTextureBank::TexEnvBkgr));
  			glVertexPointer(2, GL_FLOAT, 0, vertBkgr);
  			glTexCoordPointer(2, GL_SHORT, 0, texBkgr);
- 			glDrawElements(GL_TRIANGLES, (sizeof(plainInd) / sizeof(plainInd[0])), GL_UNSIGNED_INT, plainInd);
+ 			glDrawElements(GL_TRIANGLES, (sizeof(plainInd) / sizeof(plainInd[0])), GL_UNSIGNED_SHORT, plainInd);
 			glMatrixMode(GL_PROJECTION);
  		glPopMatrix();
  		glMatrixMode(GL_MODELVIEW);
@@ -179,7 +183,7 @@ void CGame::RenderEnvironment()
 	glBindTexture(GL_TEXTURE_2D, CTextureBank::Get(CTextureBank::TexEnvTitle));
 	glVertexPointer(2, GL_FLOAT, 0, vertTitle);
 	glTexCoordPointer(2, GL_SHORT, 0, texTitle);
-	glDrawElements(GL_TRIANGLES, (sizeof(plainInd) / sizeof(plainInd[0])), GL_UNSIGNED_INT, plainInd);
+	glDrawElements(GL_TRIANGLES, (sizeof(plainInd) / sizeof(plainInd[0])), GL_UNSIGNED_SHORT, plainInd);
 
 	//Draw cell's background
 	const unsigned short mapSize = static_cast<const unsigned short>(m_ModePuzzle.GetMapSize());
@@ -188,7 +192,7 @@ void CGame::RenderEnvironment()
 	glVertexPointer(2, GL_FLOAT, 0, cellVertex);
 	const short cellTexture[] =	{ 0, mapSize, 0, 0, mapSize, 0, mapSize, mapSize };
 	glTexCoordPointer(2, GL_SHORT, 0, cellTexture);
-	glDrawElements(GL_TRIANGLES, (sizeof(plainInd) / sizeof(plainInd[0])), GL_UNSIGNED_INT, plainInd);
+	glDrawElements(GL_TRIANGLES, (sizeof(plainInd) / sizeof(plainInd[0])), GL_UNSIGNED_SHORT, plainInd);
 }
 
 
@@ -204,7 +208,7 @@ void CGame::OnMouseButtonDown(const float mouseX, const float mouseY, const Mous
 				switch (itBtn->GetId()) {
 					case PW_BUTTONID_NEXT:
 					case PW_BUTTONID_PREV:
-						RenewMap(m_Settings.MapId + (itBtn->GetId() == PW_BUTTONID_NEXT ? 1 : -1));
+						RenewMap(m_Settings.GetCurrentMapId() + (itBtn->GetId() == PW_BUTTONID_NEXT ? 1 : -1));
 						break;
 					case PW_BUTTONID_RESET:
 						m_ModePuzzle.ResetByRotate();
@@ -215,14 +219,19 @@ void CGame::OnMouseButtonDown(const float mouseX, const float mouseY, const Mous
 						BeginTransition(Options);
 						break;
 					case PW_BUTTONID_OK:
-						if (m_Settings.Size != m_ModeSettings.GetMapSize() || m_Settings.Wrapping != m_ModeSettings.GetWrapMode())
-							RenewMap(m_Settings.MapId);
-						else {
+						m_ModePuzzle.SaveMap();	//Save current map
+						
+						if (m_Settings.Size != m_ModeSettings.GetMapSize()) {
+							m_Settings.Size = m_ModeSettings.GetMapSize();
+							m_LoadMap = true;
 							BeginTransition(Puzzle);
-							m_WinManager->PostRedisplay();
 						}
-						m_Settings.Size = m_ModeSettings.GetMapSize();
-						m_Settings.Wrapping = m_ModeSettings.GetWrapMode();
+						else if (m_Settings.Wrapping != m_ModeSettings.GetWrapMode()) {
+							m_Settings.Wrapping = m_ModeSettings.GetWrapMode();
+							RenewMap(m_Settings.GetCurrentMapId());
+						}
+						else
+							BeginTransition(Puzzle);
 						m_Settings.Sound = m_ModeSettings.GetSoundMode();
 						break;
 					case PW_BUTTONID_CANCEL:

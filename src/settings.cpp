@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2009 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -19,202 +19,238 @@
 #include "settings.h"
 #include "buffer.h"
 
-#define PW_SERIALIZE_MAPID		"MapID"				///< Map ID field
-#define PW_SERIALIZE_MAPSTATE	"MapState"			///< Map state field
 #define PW_SERIALIZE_MAPSIZE	"MapSize"			///< Map size field
 #define PW_SERIALIZE_WRAPMODE	"Wrapping"			///< Map wrapping mode field
-//#define PW_SERIALIZE_BLACKOUT	"Blackout"			///< Blackout mode field
+#define PW_SERIALIZE_THEME		"Theme"				///< Theme id field
 #define PW_SERIALIZE_SOUND		"Sound"				///< Sound mode field
+
+#define PW_SERIALIZE_MAPID_S	"MapIDSmall"		///< Map ID field
+#define PW_SERIALIZE_MAPST_S	"MapStateSmall"		///< Map state field
+#define PW_SERIALIZE_MAPID_N	"MapIDNormal"		///< Map ID field
+#define PW_SERIALIZE_MAPST_N	"MapStateNormal"	///< Map state field
+#define PW_SERIALIZE_MAPID_B	"MapIDBig"			///< Map ID field
+#define PW_SERIALIZE_MAPST_B	"MapStateBig"		///< Map state field
+#define PW_SERIALIZE_MAPID_E	"MapIDExtra"		///< Map ID field
+#define PW_SERIALIZE_MAPST_E	"MapStateExtra"		///< Map state field
 
 #define PW_SERIALIZE_FILENAME	".pipewalker"		///< Filename to save state
 
 
-/**
- * CIniFile - work with Ini files
- */
-class CIniFile
-{
-public:
-	/**
-	 * Load ini file
-	 * \param fileName file name
-	 */
-	void Load(const char* fileName)
-	{
-		assert(fileName);
-
-		CBuffer buf;
-		buf.Load(fileName);
-
-		while (!buf.EOB()) {
-			string name;
-			name.reserve(32);
-			while (!buf.EOB()) {
-				char c = 0;
-				buf.Get(c);
-				if (c == '\r')
-					continue;
-				if (c != '=')
-					name += c;
-				else
-					break;
-			}
-
-			string val;
-			val.reserve(32);
-			while (!buf.EOB()) {
-				char c = 0;
-				buf.Get(c);
-				if (c == '\r')
-					continue;
-				if (c != '\n')
-					val += c;
-				else
-					break;
-			}
-
-			SetProperty(name.c_str(), val.c_str());
-		}
-	}
-
-	/**
-	 * Save ini file
-	 * \param fileName file name
-	 */
-	void Save(const char* fileName) const
-	{
-		assert(fileName);
-
-		CBuffer buf;
-
-		for (map<string, string>::const_iterator it = m_Ini.begin(); it != m_Ini.end(); ++it) {
-			buf.Put(it->first);
-			buf.PutData("=", 1);
-			buf.Put(it->second);
-			buf.PutData("\n", 1);
-		}
-
-		buf.Save(fileName);
-	}
-
-	/**
-	 * For for property existing
-	 * \param name property name
-	 * \return true if property has been set
-	 */
-	inline bool ExistProperty(const char* name) const		{ assert(name); return m_Ini.find(name) != m_Ini.end(); }
-
-
-	/**
-	 * Get property
-	 * \param name property name
-	 * \return property value
-	 */
-	string GetProperty(const char* name) const
-	{
-		assert(name);
-		map<string, string>::const_iterator it = m_Ini.find(name);
-		return (it != m_Ini.end() ? it->second : string());
-	}
-
-	/**
-	 * Set property
-	 * \param name property name
-	 * \param value property value
-	 */
-	void SetProperty(const char* name, const char* value)	{ assert(name && value); m_Ini.insert(make_pair(name, value)); }
-
-
-	/**
-	 * Set property
-	 * \param name property name
-	 * \param value property value
-	 */
-	void SetProperty(const char* name, const unsigned long value)
-	{
-		char sz[16];
-		sprintf(sz, "%u", static_cast<unsigned int>(value));
-		SetProperty(name, sz);
-	}
-
-private:
-	map<string, string>	m_Ini;	///< Ini values
-};
-
-
 CSettings::CSettings()
-:	MapId(1),
-	Size(MapSizeNormal),
-	//Blackout(false),
+:	Size(MapSizeNormal),
+	Theme(ThemeNetwork),
 	Wrapping(true),
-	Sound(true)
+	Sound(true),
+	m_UsePortable(true)
 {
 }
 
 
 void CSettings::Load()
 {
+	vector<KeyVal> sett;
+
+	//Try to open portable version settings file
 	try {
-		CIniFile ini;
-		ini.Load(GetFileName().c_str());
-
-		if (ini.ExistProperty(PW_SERIALIZE_MAPSTATE))
-			State = ini.GetProperty(PW_SERIALIZE_MAPSTATE);
-
-		if (ini.ExistProperty(PW_SERIALIZE_MAPID))
-			MapId = atoi(ini.GetProperty(PW_SERIALIZE_MAPID).c_str());
-
-		if (ini.ExistProperty(PW_SERIALIZE_MAPSIZE))
-			Size = static_cast<MapSize>(atoi(ini.GetProperty(PW_SERIALIZE_MAPSIZE).c_str()));
-
-		if (ini.ExistProperty(PW_SERIALIZE_SOUND))
-			Sound = atoi(ini.GetProperty(PW_SERIALIZE_SOUND).c_str()) != 0;
-
-		if (ini.ExistProperty(PW_SERIALIZE_WRAPMODE))
-			Wrapping = atoi(ini.GetProperty(PW_SERIALIZE_WRAPMODE).c_str()) != 0;
-
-// 		if (ini.ExistProperty(PW_SERIALIZE_BLACKOUT))
-// 			Blackout = atoi(ini.GetProperty(PW_SERIALIZE_BLACKOUT).c_str()) != 0;
+		sett = LoadSettings(GetFileName().c_str());
 	}
 	catch (CException& /*ex*/) {
 	}
+
+	//Try to open non-portable version settings file
+	if (sett.empty() && m_UsePortable) {
+		m_UsePortable = false;
+		try {
+			sett = LoadSettings(GetFileName().c_str());
+		}
+		catch (CException& /*ex*/) {
+		}
+	}
+
+	string val;
+
+	if (GetVal(PW_SERIALIZE_MAPSIZE, val, sett))
+		Size = static_cast<MapSize>(atoi(val.c_str()));
+	if (GetVal(PW_SERIALIZE_THEME, val, sett))
+		Theme = static_cast<DecorTheme>(atoi(val.c_str()));
+	if (GetVal(PW_SERIALIZE_SOUND, val, sett))
+		Sound = atoi(val.c_str()) != 0;
+	if (GetVal(PW_SERIALIZE_WRAPMODE, val, sett))
+		Wrapping = atoi(val.c_str()) != 0;
+	
+	if (GetVal(PW_SERIALIZE_MAPID_S, val, sett))
+		m_MapSmall.Id = atoi(val.c_str());
+	if (GetVal(PW_SERIALIZE_MAPST_S, val, sett))
+		m_MapSmall.State = val;
+
+	if (GetVal(PW_SERIALIZE_MAPID_N, val, sett))
+		m_MapNormal.Id = atoi(val.c_str());
+	if (GetVal(PW_SERIALIZE_MAPST_N, val, sett))
+		m_MapNormal.State = val;
+
+	if (GetVal(PW_SERIALIZE_MAPID_B, val, sett))
+		m_MapBig.Id = atoi(val.c_str());
+	if (GetVal(PW_SERIALIZE_MAPST_B, val, sett))
+		m_MapBig.State = val;
+
+	if (GetVal(PW_SERIALIZE_MAPID_E, val, sett))
+		m_MapExtra.Id = atoi(val.c_str());
+	if (GetVal(PW_SERIALIZE_MAPST_E, val, sett))
+		m_MapExtra.State = val;
 }
 
 
 void CSettings::Save() const
 {
-	const string fileName = GetFileName();
-
 	try {
-		CIniFile ini;
+		vector<KeyVal> sett;
 
-		ini.SetProperty(PW_SERIALIZE_MAPID, MapId);
-		ini.SetProperty(PW_SERIALIZE_MAPSTATE, State.c_str());
-		ini.SetProperty(PW_SERIALIZE_MAPSIZE, Size);
-		ini.SetProperty(PW_SERIALIZE_SOUND, Sound ? 100 : 0);
-		ini.SetProperty(PW_SERIALIZE_WRAPMODE, Wrapping ? 1 : 0);
-		//ini.SetProperty(PW_SERIALIZE_BLACKOUT, Blackout ? 1 : 0);
+		sett.push_back(KeyVal(PW_SERIALIZE_MAPSIZE, NumericToString(static_cast<int>(Size))));
+		sett.push_back(KeyVal(PW_SERIALIZE_THEME, NumericToString(static_cast<int>(Theme))));
+		sett.push_back(KeyVal(PW_SERIALIZE_SOUND, Sound ? "100" : "0"));
+		sett.push_back(KeyVal(PW_SERIALIZE_WRAPMODE, Wrapping ? "1" : "0"));
 
-		ini.Save(fileName.c_str());
+		sett.push_back(KeyVal(PW_SERIALIZE_MAPID_S, NumericToString(static_cast<int>(m_MapSmall.Id))));
+		sett.push_back(KeyVal(PW_SERIALIZE_MAPST_S, m_MapSmall.State));
+		sett.push_back(KeyVal(PW_SERIALIZE_MAPID_N, NumericToString(static_cast<int>(m_MapNormal.Id))));
+		sett.push_back(KeyVal(PW_SERIALIZE_MAPST_N, m_MapNormal.State));
+		sett.push_back(KeyVal(PW_SERIALIZE_MAPID_B, NumericToString(static_cast<int>(m_MapBig.Id))));
+		sett.push_back(KeyVal(PW_SERIALIZE_MAPST_B, m_MapBig.State));
+		sett.push_back(KeyVal(PW_SERIALIZE_MAPID_E, NumericToString(static_cast<int>(m_MapExtra.Id))));
+		sett.push_back(KeyVal(PW_SERIALIZE_MAPST_E, m_MapExtra.State));
+
+		SaveSettings(sett, GetFileName().c_str());
 	}
 	catch (CException& /*ex*/) {
 	}
 }
 
 
+unsigned long CSettings::GetCurrentMapId() const
+{
+	switch (Size) {
+		case MapSizeSmall:	return m_MapSmall.Id;
+		case MapSizeNormal:	return m_MapNormal.Id;
+		case MapSizeBig:	return m_MapBig.Id;
+		case MapSizeExtra:	return m_MapExtra.Id;
+		default:			assert(false && "Unknown size");
+	}
+	return 0;
+}
+
+
+void CSettings::SetCurrentMapId(const unsigned long id)
+{
+	switch (Size) {
+		case MapSizeSmall:	m_MapSmall.Id = id;		break;
+		case MapSizeNormal:	m_MapNormal.Id = id;	break;
+		case MapSizeBig:	m_MapBig.Id = id;		break;
+		case MapSizeExtra:	m_MapExtra.Id = id;		break;
+		default:			assert(false && "Unknown size");
+	}
+}
+
+
+string CSettings::GetCurrentMapState() const
+{
+	switch (Size) {
+		case MapSizeSmall:	return m_MapSmall.State;
+		case MapSizeNormal:	return m_MapNormal.State;
+		case MapSizeBig:	return m_MapBig.State;
+		case MapSizeExtra:	return m_MapExtra.State;
+		default:			assert(false && "Unknown size");
+	}
+	return string();
+}
+
+
+void CSettings::SetCurrentMapState(const string& state)
+{
+	switch (Size) {
+		case MapSizeSmall:	m_MapSmall.State = state;	break;
+		case MapSizeNormal:	m_MapNormal.State = state;	break;
+		case MapSizeBig:	m_MapBig.State = state;		break;
+		case MapSizeExtra:	m_MapExtra.State = state;	break;
+		default:			assert(false && "Unknown size");
+	}
+}
+
+
+bool CSettings::GetVal(const string& key, string& val, const vector<KeyVal>& sett) const
+{
+	bool found = false;
+	for (vector<KeyVal>::const_iterator it = sett.begin(); !found && it != sett.end(); ++it) {
+		if (it->Key.compare(key) == 0) {
+			found = true;
+			val = it->Value;
+		}
+	}
+	return found;
+}
+
+
+vector<CSettings::KeyVal> CSettings::LoadSettings(const char* fileName) const
+{
+	assert(fileName);
+	
+	vector<KeyVal> result;
+
+	CBuffer buf;
+	buf.Load(fileName);
+
+	while (!buf.EOB()) {
+		const string str = buf.GetString();
+		if (str.empty() || str[0] == ';' || str[0] == '#')
+			continue;
+
+		const size_t delimPos = str.find('=');
+		if (delimPos != string::npos) {
+			KeyVal kv;
+			kv.Key = str.substr(0, delimPos);
+			kv.Value = str.substr(delimPos + 1);
+			
+			//Trim
+			const char* trimSpaces = " \t";
+			size_t sp = 0;
+			while ((sp = kv.Key.find_first_of(trimSpaces)) != string::npos)
+				kv.Key.erase(sp, 1);
+			sp = 0;
+			while ((sp = kv.Value.find_first_of(trimSpaces)) != string::npos)
+				kv.Value.erase(sp, 1);
+			
+			result.push_back(kv);
+		}
+	}
+
+	return result;
+}
+
+
+void CSettings::SaveSettings(const vector<KeyVal>& sett, const char* fileName) const
+{
+	CBuffer buf;
+	buf.Put(string("# This is the user settings file of the PipeWalker game\n# Please, do not edit it manually\n\n"));
+
+	for (vector<KeyVal>::const_iterator it = sett.begin(); it != sett.end(); ++it) {
+		buf.Put(it->Key);
+		buf.PutData(" = ", 3);
+		buf.Put(it->Value);
+		buf.PutData("\n", 1);
+	}
+
+	buf.Save(fileName);
+}
+
+
 string CSettings::GetFileName() const
 {
-#ifdef PW_PORTABLE
-	string loadFileName = ".";
-#else
-	string loadFileName = getenv(
+	string loadFileName = m_UsePortable ? "." : getenv(
 #ifdef WIN32
 		"USERPROFILE"
 #else
 		"HOME"
 #endif //WIN32
 		);
-#endif //PW_PORTABLE
 
 #ifdef WIN32
 	loadFileName += '\\';

@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2009 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -85,7 +85,12 @@ private:
 	 */
 	void BeginTransition(const GameMode nextMode, const TransitionPhase startPhase = FirstPhase);
 
+	/**
+	 * Check for transition in progress
+	 * \return true if transition in progress
+	 */
 	inline bool TransitionInProgress() const	{ return (m_TrnStartTime != 0); }
+
 public:
 	//Accessors
 	inline CWinManager& WinManager()	{ return *m_WinManager; }
@@ -99,16 +104,10 @@ private:	//Class variables
 	GameMode		m_NextMode;			///< Next mode
 	TransitionPhase	m_TrnPhase;			///< Transition phase (first=true, second=false)
 	unsigned int	m_TrnStartTime;		///< Transition (mode changing) start time (zero if transition is not active)
-
-
-
-
+	
 	unsigned long	m_NextMapId;		///< Next map id (for next new game level)
 	bool			m_RenewMap;			///< Map renew flag
-
-
-
-
+	bool			m_LoadMap;			///< Map load flag
 
 	CModePuzzle		m_ModePuzzle;		///< Renderer/handler (game mode)
 	vector<CButton>	m_BtnPuzzle;		///< Buttons array (game mode)

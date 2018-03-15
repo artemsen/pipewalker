@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2009 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -26,6 +26,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <iterator>
 #include <string.h>
 
 #ifdef WIN32
@@ -34,24 +35,34 @@
 
 using namespace std;
 
-
 #ifndef PACKAGE_STRING
-	#define PACKAGE_STRING		"PipeWalker 0.7.2"
+	#define PACKAGE_STRING	"PipeWalker"
 #endif	//PACKAGE_STRING
 
 #ifndef DIR_GAMEDATA
-	#define DIR_GAMEDATA		"./data/"
+	#define DIR_GAMEDATA	"./data/"
 #endif	//DIR_GAMEDATA
-
-
-//OpenGL library
-#include <GL/gl.h>
-#include <GL/glu.h>
-
-#include "exception.h"
 
 #define PW_SCREEN_WIDTH		490	///< Initial screen (main window) width
 #define PW_SCREEN_HEIGHT	580	///< Initial screen (main window) height
+
+//OpenGL library
+#include <GL/gl.h>
+
+#ifndef __MINGW32__
+#pragma warning(disable: 4996)	///The POSIX name for this item is deprecated
+#endif	//__MINGW32__
+
+//Byte order
+#if defined(__hppa__) || defined(__m68k__) || defined(mc68000) || defined(_M_M68K) || \
+	(defined(__MIPS__) && defined(__MISPEB__)) || \
+	defined(__ppc__) || defined(__POWERPC__) || defined(_M_PPC) || defined(__sparc__)
+	#define PW_BYTEORDER_BIG_ENDIAN 1
+#else
+	#define PW_BYTEORDER_LITTLE_ENDIAN 1
+#endif
+
+#include "exception.h"
 
 
 /**
@@ -63,7 +74,7 @@ inline bool CheckGLError()
 	bool res = true;
 	GLenum glErr;
 	while ((glErr = glGetError()) != GL_NO_ERROR) {
-		fprintf(stderr, "OpenGL error: 0x%x: %s", glErr, gluErrorString(glErr));
+		fprintf(stderr, "OpenGL error: 0x\n", glErr);
 		res = false;
 	}
 	return res;

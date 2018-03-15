@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2009 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -41,30 +41,35 @@ void CCell::Reset()
 }
 
 
-unsigned short CCell::Save() const
+string CCell::Save() const
 {
-	int rotate = static_cast<int>(IsRotationInProgress() ? m_Rotate.InitAngle / 90.0f : m_Angle / 90.0f);
+	const int rotate = static_cast<int>(IsRotationInProgress() ? m_Rotate.InitAngle / 90.0f : m_Angle / 90.0f);
 	assert(rotate >= 0 && rotate <= 3);
 
-	unsigned short save = 0;
-	save |= (m_TubeType << 12);
-	save |= (m_CellType << 8);
-	save |= (rotate << 4);
-	save |= (m_Lock ? 1 : 0);
-	return save;
+	string state(4, 0);
+	state[0] = '0' + m_TubeType;
+	state[1] = '0' + m_CellType;
+	state[2] = '0' + rotate;
+	state[3] = '0' + (m_Lock ? 1 : 0);
+	return state;
 }
 
 
-bool CCell::Load(const unsigned short state)
+bool CCell::Load(const string& state)
 {
-	if (state == 0)
+	if (state.length() != 4)	//Incorrect format?
 		return false;
 
-	int rotate = 0;
-	m_TubeType = static_cast<TubeType>((state >> 12) & 0xf);
-	m_CellType = static_cast<CellType>((state >> 8) & 0xf);
-	rotate = ((state >> 4) & 0xf);
-	m_Lock = (state & 0xf) == 1;
+	m_TubeType = static_cast<TubeType>(state[0] - '0');
+	if (m_TubeType < TTNone || m_TubeType > TTJoiner)
+		return false;
+	m_CellType = static_cast<CellType>(state[1] - '0');
+	if (m_CellType < CTFree || m_CellType > CTReceiver)
+		return false;
+	const int rotate = state[2] - '0';
+	if (rotate < 0 || rotate > 3)
+		return false;
+	m_Lock = state[3] - '0' == 1;
 
 	m_Angle = rotate * 90.0f;
 
@@ -72,6 +77,7 @@ bool CCell::Load(const unsigned short state)
 	switch (rotate) {
 		case 0:	//0 degrees
 			switch (m_TubeType) {
+				case TTNone:														break;
 				case TTHalf:		m_ConnTop = true;								break;
 				case TTStraight:	m_ConnTop = m_ConnBottom = true;				break;
 				case TTCurved:		m_ConnTop = m_ConnRight = true;					break;
@@ -81,6 +87,7 @@ bool CCell::Load(const unsigned short state)
 			break;
 		case 1:	//90 degrees
 			switch (m_TubeType) {
+				case TTNone:														break;
 				case TTHalf:		m_ConnLeft = true;								break;
 				case TTStraight:	m_ConnRight = m_ConnLeft = true;				break;
 				case TTCurved:		m_ConnTop = m_ConnLeft = true;					break;
@@ -90,6 +97,7 @@ bool CCell::Load(const unsigned short state)
 			break;
 		case 2:	//180 degrees
 			switch (m_TubeType) {
+				case TTNone:														break;
 				case TTHalf:		m_ConnBottom = true;							break;
 				case TTStraight:	m_ConnTop = m_ConnBottom = true;				break;
 				case TTCurved:		m_ConnBottom = m_ConnLeft = true;				break;
@@ -99,6 +107,7 @@ bool CCell::Load(const unsigned short state)
 			break;
 		case 3:	//270 degrees
 			switch (m_TubeType) {
+				case TTNone:														break;
 				case TTHalf:		m_ConnRight = true;								break;
 				case TTStraight:	m_ConnRight = m_ConnLeft = true;				break;
 				case TTCurved:		m_ConnRight = m_ConnBottom = true;				break;

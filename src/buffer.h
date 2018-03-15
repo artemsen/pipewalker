@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2009 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -96,6 +96,12 @@ public:
 	 * \return data pointer (NULL if error)
 	 */
 	unsigned char* GetData(const size_t size);
+
+	/**
+	 * Get single string
+	 * \return single string
+	 */
+	string GetString();
 
 	/**
 	 * Get data at current position
