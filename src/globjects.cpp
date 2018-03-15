@@ -27,38 +27,42 @@ struct TextFiles {
 };
 
 static const TextFiles TextureFiles[] = {
-	{ CGLObjects::TxrCell,			"textures/cell_bkgr.tga" },
-	{ CGLObjects::TxrLock,			"textures/cell_lock.tga" },
-	{ CGLObjects::TxrActiveTube,	"textures/tube_act.tga" },
-	{ CGLObjects::TxrPassiveTube,	"textures/tube_psv.tga" },
-	{ CGLObjects::TxrSender,		"textures/sender.tga" },
-	{ CGLObjects::TxrRcvActive,		"textures/rcv_dsp_act.tga" },
-	{ CGLObjects::TxrRcvPassive,	"textures/rcv_dsp_psv.tga" },
-	{ CGLObjects::TxrRcvBack,		"textures/rcv_static.tga" },
-	{ CGLObjects::TxrButtonRad,		"textures/btn_radio.tga" },
-	{ CGLObjects::TxrButtonNew,		"textures/btn_new.tga" },
-	{ CGLObjects::TxrButtonCust,	"textures/btn_custom.tga" },
-	{ CGLObjects::TxrButtonRset,	"textures/btn_reset.tga" },
-	{ CGLObjects::TxrButtonOk,		"textures/btn_ok.tga" },
-	{ CGLObjects::TxrButtonCncl,	"textures/btn_cancel.tga" },
-	{ CGLObjects::TxrWndInfo,		"textures/wnd_info.tga" },
-	{ CGLObjects::TxrWndCustom,		"textures/wnd_custom.tga" },
-	{ CGLObjects::TxrHexNum,		"textures/hexnum.tga"},
-	{ CGLObjects::TxrTitle,			"textures/env_title.tga" },
-	{ CGLObjects::TxrEnvironment,	"textures/env_bkgr.tga" }
+	{ CGLObjects::TxrCell,			"cell_bkgr.tga"		},
+	{ CGLObjects::TxrLock,			"cell_lock.tga"		},
+	{ CGLObjects::TxrActiveTube,	"tube_act.tga"		},
+	{ CGLObjects::TxrPassiveTube,	"tube_psv.tga"		},
+	{ CGLObjects::TxrSender,		"sender.tga"		},
+	{ CGLObjects::TxrRcvActive,		"rcv_dsp_act.tga"	},
+	{ CGLObjects::TxrRcvPassive,	"rcv_dsp_psv.tga"	},
+	{ CGLObjects::TxrRcvBack,		"rcv_static.tga"	},
+	{ CGLObjects::TxrButtonRad,		"btn_radio.tga"		},
+	{ CGLObjects::TxrButtonNew,		"btn_new.tga"		},
+	{ CGLObjects::TxrButtonCust,	"btn_custom.tga"	},
+	{ CGLObjects::TxrButtonRset,	"btn_reset.tga"		},
+	{ CGLObjects::TxrButtonOk,		"btn_ok.tga"		},
+	{ CGLObjects::TxrButtonInfo,	"btn_info.tga"		},
+	{ CGLObjects::TxrButtonBase,	"btn_base.tga"		},	
+	{ CGLObjects::TxrButtonCncl,	"btn_cancel.tga"	},
+	{ CGLObjects::TxrWndInfo,		"wnd_info.tga"		},
+	{ CGLObjects::TxrWndCustom,		"wnd_custom.tga"	},
+	{ CGLObjects::TxrMapId,			"mapid.tga"			},
+	{ CGLObjects::TxrHexNum,		"hexnum.tga"		},
+	{ CGLObjects::TxrTitle,			"env_title.tga"		},
+	{ CGLObjects::TxrEnvironment,	"env_bkgr.tga"		}
 };
 
 
 CGLObjects::CGLObjects(void)
 {
 	m_pszLastErrorMessage[0] = 0;
+	assert(TxrCounter == sizeof(TextureFiles) / sizeof(TextureFiles[0]));	//Don't forget sync counter and files!
 }
 
 
 CGLObjects::~CGLObjects()
 {
-	//TODO: Destroy textures and display lists
-	//glDeleteLists(0, m_aDispList[ObjCounter]);
+	glDeleteLists(0, m_aDispList[ObjCounter]);
+	glDeleteTextures(TxrCounter, &m_aTextures[0]);
 }
 
 
@@ -67,8 +71,13 @@ bool CGLObjects::Initialize(void)
 	unsigned int i;	//Counter
 
 	//Load the textures from files
-	for (i = 0; i < sizeof(TextureFiles) / sizeof(TextureFiles[0]); i++) {
-		if (!CTGALoader::LoadTexture(&m_aTextures[TextureFiles[i].Type], TextureFiles[i].FileName, m_pszLastErrorMessage)) {
+	glGenTextures(TxrCounter, &m_aTextures[0]);
+	for (i = 0; i < TxrCounter; i++) {
+		char szFileName[512];
+		strcpy(szFileName, PW_GAMEDATA_DIR);
+		strcat(szFileName, "/textures/");
+		strcat(szFileName, TextureFiles[i].FileName);
+		if (!CTGALoader::LoadTexture(&m_aTextures[TextureFiles[i].Type], szFileName, m_pszLastErrorMessage)) {
 			return false;
 		}
 	}
@@ -84,24 +93,11 @@ bool CGLObjects::Initialize(void)
 				glNormal3f(0.0f, 0.0f, 1.0f);
 				glTexCoord2f(dX,                  0.0f); glVertex2f(0.0f,               0.0f);
 				glTexCoord2f(dX + (1.0f / 16.0f), 0.0f); glVertex2f(dHexNumSize / 1.2f, 0.0f);
-				glTexCoord2f(dX + (1.0f / 16.0f), 1.0f); glVertex2f(dHexNumSize / 1.2f, dHexNumSize);
-				glTexCoord2f(dX,                  1.0f); glVertex2f(0.0f,               dHexNumSize);
+				glTexCoord2f(dX + (1.0f / 16.0f),-1.0f); glVertex2f(dHexNumSize / 1.2f, -dHexNumSize);
+				glTexCoord2f(dX,                 -1.0f); glVertex2f(0.0f,               -dHexNumSize);
 			glEnd();											
 		glEndList();						
 	}
-	
-	//Text "Map ID:"
-	Image hMapIdText;
-	if (!CTGALoader::LoadImage(&hMapIdText, "textures/mapid.tga", m_pszLastErrorMessage))
-		return false;
-	m_aDispList[ObjMapId] = glGenLists(1);
-	glNewList(m_aDispList[ObjMapId], GL_COMPILE);
-		glDisable(GL_TEXTURE_2D);
-		glDisable(GL_LIGHTING);
-			glDrawPixels(hMapIdText.Width, hMapIdText.Height, hMapIdText.Format, GL_UNSIGNED_BYTE, hMapIdText.Data);
-		glEnable(GL_LIGHTING);
-		glEnable(GL_TEXTURE_2D);
-	glEndList();
 
 	//Radio button
 	m_aDispList[ObjButtonRadio] = glGenLists(2);	//2 button: on and off
@@ -251,9 +247,9 @@ bool CGLObjects::Initialize(void)
 	glNewList(m_aDispList[ObjButton], GL_COMPILE);
 		glBegin(GL_QUADS);
 			glNormal3f(0.0f, 0.0f, 1.0f);
-			glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f, 0.7f, 0.0f);
-			glTexCoord2f(1.0f, 1.0f); glVertex3f(2.8f, 0.7f, 0.0f);
-			glTexCoord2f(1.0f, 0.0f); glVertex3f(2.8f, 0.0f, 0.0f);
+			glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f, 1.0f, 0.0f);
+			glTexCoord2f(1.0f, 1.0f); glVertex3f(1.0f, 1.0f, 0.0f);
+			glTexCoord2f(1.0f, 0.0f); glVertex3f(1.0f, 0.0f, 0.0f);
 			glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f, 0.0f, 0.0f);
 		glEnd();
 	glEndList();
@@ -319,31 +315,40 @@ bool CGLObjects::Initialize(void)
 		glDrawElements(GL_QUAD_STRIP, sizeof(EnvInd) / sizeof(EnvInd[0]), GL_UNSIGNED_SHORT, EnvInd);
 		//Top front side (main background)
 		glBegin(GL_QUADS);
-			glNormal3b(0, 0, 1);
-			glTexCoord2i(0, 0); glVertex3f(-8.0f, 9.0f, 0.0f);
-			glTexCoord2i(0, 1); glVertex3f( 8.0f, 9.0f, 0.0f);
-			glTexCoord2i(1, 1); glVertex3f( 8.0f, 5.0f, 0.0f);
-			glTexCoord2i(1, 0); glVertex3f(-8.0f, 5.0f, 0.0f);
+			glNormal3f(0.0f, 0.0f, 1.0f);
+			glTexCoord2i(0, 1); glVertex3f(-6.0f, 7.0f, 0.0f);
+			glTexCoord2i(6, 1); glVertex3f( 6.0f, 7.0f, 0.0f);
+			glTexCoord2i(6, 0); glVertex3f( 6.0f, 5.0f, 0.0f);
+			glTexCoord2i(0, 0); glVertex3f(-6.0f, 5.0f, 0.0f);
 
+			glTexCoord2i(0, 1); glVertex3f(-6.0f,-5.0f, 0.0f);
+			glTexCoord2i(6, 1); glVertex3f( 6.0f,-5.0f, 0.0f);
+			glTexCoord2i(6, 0); glVertex3f( 6.0f,-7.0f, 0.0f);
+			glTexCoord2i(0, 0); glVertex3f(-6.0f,-7.0f, 0.0f);
+
+			glTexCoord2i(3, 0); glVertex3f(-8.0f, 5.0f, 0.0f);
+			glTexCoord2i(3, 1); glVertex3f(-5.0f, 5.0f, 0.0f);
+			glTexCoord2i(0, 1); glVertex3f(-5.0f,-5.0f, 0.0f);
 			glTexCoord2i(0, 0); glVertex3f(-8.0f,-5.0f, 0.0f);
+
+			glTexCoord2i(3, 0); glVertex3f( 5.0f, 5.0f, 0.0f);
+			glTexCoord2i(3, 1); glVertex3f( 8.0f, 5.0f, 0.0f);
 			glTexCoord2i(0, 1); glVertex3f( 8.0f,-5.0f, 0.0f);
-			glTexCoord2i(1, 1); glVertex3f( 8.0f,-9.0f, 0.0f);
-			glTexCoord2i(1, 0); glVertex3f(-8.0f,-9.0f, 0.0f);
-
-			glTexCoord2i(0, 0); glVertex3f(-8.0f, 5.0f, 0.0f);
-			glTexCoord2i(0, 1); glVertex3f(-5.0f, 5.0f, 0.0f);
-			glTexCoord2i(1, 1); glVertex3f(-5.0f,-5.0f, 0.0f);
-			glTexCoord2i(1, 0); glVertex3f(-8.0f,-5.0f, 0.0f);
-
-			glTexCoord2i(0, 0); glVertex3f( 5.0f, 5.0f, 0.0f);
-			glTexCoord2i(0, 1); glVertex3f( 8.0f, 5.0f, 0.0f);
-			glTexCoord2i(1, 1); glVertex3f( 8.0f,-5.0f, 0.0f);
-			glTexCoord2i(1, 0); glVertex3f( 5.0f,-5.0f, 0.0f);
+			glTexCoord2i(0, 0); glVertex3f( 5.0f,-5.0f, 0.0f);
 
 			glTexCoord2i(0, 0); glVertex3f( 10.0f,  10.0f, -10.5f);
 			glTexCoord2i(0, 1); glVertex3f(-10.0f,  10.0f, -10.5f);
 			glTexCoord2i(1, 1); glVertex3f(-10.0f, -10.0f, -10.5f);
 			glTexCoord2i(1, 0); glVertex3f( 10.0f, -10.0f, -10.5f);
+		glEnd();
+		//Title
+		BindTexture(CGLObjects::TxrTitle);
+		glBegin(GL_QUADS);
+			glNormal3b(0, 0, 1);
+			glTexCoord2i(0, 1); glVertex3f(-5.1f, 6.7f, 0.0f);
+			glTexCoord2i(1, 1); glVertex3f( 5.1f, 6.7f, 0.0f);
+			glTexCoord2i(1, 0); glVertex3f( 5.1f, 5.2f, 0.0f);
+			glTexCoord2i(0, 0); glVertex3f(-5.1f, 5.2f, 0.0f);
 		glEnd();
 	glEndList();
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
@@ -420,21 +425,32 @@ void CGLObjects::DrawBox(GLfloat dX1, GLfloat dY1, GLfloat dZ1, GLfloat dWidth, 
 }
 
 
+void CGLObjects::DrawButton(const Texture enuType) const
+{
+	BindTexture(CGLObjects::TxrButtonBase);
+	DrawObject(CGLObjects::ObjButton);
+	BindTexture(enuType);
+	DrawObject(CGLObjects::ObjButton);
+}
+
+
 void CGLObjects::DrawStatusBar(const unsigned int nMapId) const
 {
-	glTranslatef(0.0f, -0.1f, 0.0f);
-	glDisable(GL_TEXTURE_2D);
-	glDisable(GL_LIGHTING);
-	glPushAttrib(GL_LIST_BIT);
-		glRasterPos2f(0.0f, 0.0f);
-		glCallList(m_aDispList[ObjMapId]);
-	glPopAttrib();
-	glEnable(GL_LIGHTING);
-	glEnable(GL_TEXTURE_2D);
+	//Text "Map ID:"
+	glTranslatef(1.5f, 0.0f, 0.1f);
+	glBindTexture(GL_TEXTURE_2D, m_aTextures[TxrMapId]);
+	glBegin(GL_QUADS);
+		glNormal3f(0.0f, 0.0f, 1.0f);
+		glTexCoord2i(0, 1); glVertex3f(0.0f, 0.0f, 0.1f);
+		glTexCoord2i(1, 1); glVertex3f(2.0f, 0.0f, 0.1f);
+		glTexCoord2i(1, 0); glVertex3f(2.0f,-0.5f, 0.1f);
+		glTexCoord2i(0, 0); glVertex3f(0.0f,-0.5f, 0.1f);
+	glEnd();
 
-	glTranslatef(1.5f, -0.1f, 0.0f);
+
+	glTranslatef(-1.5f, -0.5f, 0.1f);
 	for (int i = 0; i < 8; i++) {
-		unsigned short nNumPart = (nMapId & (0xF0000000 >> (i * sizeof(unsigned int)))) >> (sizeof(unsigned int) * 8 - sizeof(unsigned int) - i * sizeof(unsigned int));
+		unsigned short nNumPart = static_cast<unsigned short>((nMapId & (0xF0000000 >> (i * sizeof(unsigned int)))) >> (sizeof(unsigned int) * 8 - sizeof(unsigned int) - i * sizeof(unsigned int)));
 		glTranslatef(0.5f, 0.0f, 0.0f);
 		PrintHexNumber(nNumPart);
 	}

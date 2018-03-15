@@ -21,15 +21,17 @@
 //Standart C libraries
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <math.h>
 #include <cassert>
-#include <time.h>
-#include <string>
+
 
 #if defined PW_SYSTEM_WINNT		//Microsoft Windows NT
 	#define WIN32_LEAN_AND_MEAN
 	#include <windows.h>
 	#pragma comment(lib, "opengl32.lib")
+	#define PACKAGE_STRING "PipeWalker 0.4.3"
+	#define PW_GAMEDATA_DIR "."
 #elif defined PW_SYSTEM_NIX		//Linux/Unix using X server
 	#include <sys/time.h>
 #else
@@ -66,14 +68,14 @@
 #endif
 
 #define PW_ROTATION_TIME	300		///< Time in ms for rotate operation
-#define PW_ROTATION_ANGLE	90		///< Degree of angle
-#define PW_SCREEN_HEIGHT	600		///< Screen (main window) height
-#define PW_SCREEN_WIDTH		480		///< Screen (main window) width
-#define PW_WINDOW_TITLE		"PipeWalker ver.0.4.2"	///< Main window title
+#define PW_ROTATION_ANGLE	90.0f		///< Single angle
+#define PW_SCREEN_HEIGHT	640		///< Initial screen (main window) height
+#define PW_SCREEN_WIDTH		480		///< Initial screen (main window) width
+#define PW_WINDOW_TITLE		PACKAGE_STRING	///< Main window title
 
 #ifndef PW_SYSTEM_WINNT
 /**
- * Analog of function GetTickCount() by MS Windows for unix systems (used to calculate time for rotate tubes)
+ * Analog of function GetTickCount() by MS Windows for unix systems (used to calculate time for animation)
  * @return milliseconds
  */
 inline unsigned long GetTickCount(void)
@@ -90,7 +92,7 @@ inline unsigned long GetTickCount(void)
  * @param nMax maximum value
  * @return random number from range [0, max]
  */
-inline unsigned int GetRandom(const unsigned int nMax)
+inline int GetRandom(const unsigned int nMax)
 {
-	return abs(static_cast<unsigned int>(static_cast<double>(rand()) / (RAND_MAX + 1) * nMax));
+	return abs(static_cast<int>(static_cast<double>(rand()) / (RAND_MAX + 1) * nMax));
 }

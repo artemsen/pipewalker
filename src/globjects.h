@@ -45,11 +45,14 @@ public:
 		TxrButtonRset,	///< button 'reset'
 		TxrButtonOk,	///< button 'Ok'
 		TxrButtonCncl,	///< button 'cancel'
+		TxrButtonInfo,	///< button 'info'
 		TxrButtonRad,	///< radion button
+		TxrButtonBase,	///< base button
 		TxrWndInfo,		///< info window
 		TxrWndCustom,	///< custom game window
 		TxrEnvironment,	///< environment texture
 		TxrHexNum,		///< hex numbers
+		TxrMapId,		///< text "Map ID:"
 		TxrTitle,		///< title
 		TxrCounter		///< texture type counter (for static memory allocation)
 	};
@@ -64,7 +67,6 @@ public:
 		ObjReceiverMon,	///< receiver (monitor)
 		ObjSpin,		///< spin
 		ObjLock,		///< lock
-		ObjMapId,		///< text "Map ID:"
 		ObjButtonRadio,	///< radio button
 		ObjButton,		///< button (new/reset/custom)
 		ObjHexNum,		///< hex numbers
@@ -95,6 +97,12 @@ public:
 	 * @param enuType object (display list) type
 	 */
 	inline void DrawObject(const Object enuType) const		{ glCallList(m_aDispList[enuType]); }
+
+	/**
+	 * Draw button
+	 * @param enuType object (display list) type
+	 */
+	void DrawButton(const Texture enuType) const;
 
 	/**
 	 * Draw radio button

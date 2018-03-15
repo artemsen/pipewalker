@@ -61,7 +61,7 @@ public:
 	 * @param nYPoint an Y coordinate of cell
 	 * @return pointer to object cell
 	 */
-	CCell* GetObject(const int nXPoint, const int nYPoint);
+	CCell* GetObject(const unsigned int nXPoint, const unsigned int nYPoint);
 
 	/**
 	 * Rotate the tube
@@ -80,7 +80,7 @@ public:
 	 * Get current map size
 	 * @return current map size
 	 */
-	unsigned short GetMapSize(void) const	{ return m_nMapSize; }
+	unsigned int GetMapSize(void) const	{ return m_nMapSize; }
 
 	/**
 	 * Get current map ID

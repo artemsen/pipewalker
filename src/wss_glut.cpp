@@ -30,8 +30,8 @@ bool CGlut::Initialize(void)
 
 	//GLUT initialization
 	int argc = 1;	//dummy
-	char* argv = "NULL";
-	glutInit(&argc, &argv);
+	const char* argv = "NULL";
+	glutInit(&argc, const_cast<char**>(&argv));
 	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_ALPHA | GLUT_DEPTH);  
 	glutInitWindowSize(PW_SCREEN_WIDTH, PW_SCREEN_HEIGHT);  
 	glutInitWindowPosition(200, 200);
@@ -39,6 +39,7 @@ bool CGlut::Initialize(void)
 
 	//Register callback functions
 	glutDisplayFunc(&CGlut::OnDrawGLScene);
+	glutReshapeFunc(&CGlut::OnWndResize);
 	glutKeyboardFunc(&CGlut::OnKeyPressed);
 	glutMouseFunc(&CGlut::OnMouseButton);
 	return true;
@@ -81,10 +82,25 @@ void CGlut::OnKeyPressed(unsigned char ucKey, int /* nX */, int /* nY */)
 }
 
 
+void CGlut::OnWndResize(int nWidth, int nHeight)
+{
+	assert(m_pThis);					//Not initialized?
+
+	static const float dNeedAspect = static_cast<float>(PW_SCREEN_WIDTH) / static_cast<float>(PW_SCREEN_HEIGHT);
+	const float dCurrAspect = static_cast<float>(nHeight) / static_cast<float>(nWidth);
+	if (dNeedAspect != dCurrAspect) {
+		nWidth = static_cast<long>(static_cast<float>(nHeight) * dNeedAspect);
+		glutReshapeWindow(nWidth, nHeight);
+	}
+	m_pThis->m_pEventHandler->OnWndSizeChanged(nWidth, nHeight);
+}
+
+
 void CGlut::PostExit(void)
 {
 	assert(m_pThis);					//Not initialized?
 	glutDestroyWindow(m_pThis->m_nWnd);	//Shut down our window
+	exit(0);							//GLUT cannot return from main loop
 }
 
 

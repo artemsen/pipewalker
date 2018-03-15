@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>. * 
  **************************************************************************/
 
-#ifdef PW_SYSTEM_NIX
+#if defined PW_SYSTEM_NIX && !defined PW_USE_GLUT
 
 #pragma once
 

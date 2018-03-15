@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Encoding=UTF-8
+Name=PipeWalker
+Comment=Connect all hosts to network!
+Comment[ru]=Объедините все компьютеры в сеть!
+TryExec=pipewalker
+Exec=pipewalker
+Categories=Game;LogicGame;
+Icon=PipeWalker.xpm
+MimeType=

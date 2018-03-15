@@ -79,12 +79,4 @@ private:
 	 * @param pImg a pointer to output Image structure
 	 */
 	static void LoadTGA(CBuffer* pBuf, Image* pImg);
-
-	/**
-	 * Convert data from BGR to RGB mode
-	 * @param pImgData image data
-	 * @param nLength length of image data
-	 * @param nBPP bots per pixel of image
-	 */
-	static void ConvertBGR2RGB(unsigned char* pImgData, const unsigned long nLength, const unsigned short nBPP);
 };

@@ -43,6 +43,7 @@ public:
 	void OnMouseClick(const MouseButton enuButton, const int nXCoord, const int nYCoord);
 	void OnKeyPress(const int nKeyCode);
 	void OnDraw(void);
+	void OnWndSizeChanged(const int nWidth, const int nHeight);
 
 private:	//Class variables
 

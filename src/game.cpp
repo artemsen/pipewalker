@@ -105,6 +105,7 @@ void CGame::InstallSender(void)
 {
 	m_nXSndrPos = GetRandom(m_nMapSize);
 	m_nYSndrPos = GetRandom(m_nMapSize);
+
 	CCell* pSrv = GetObject(m_nXSndrPos, m_nYSndrPos);
 	pSrv->Type = CCell::Sender;
 
@@ -139,21 +140,21 @@ void CGame::InstallSender(void)
 #ifndef NDEBUG
 	printf("Map weight:\n");
 	printf("   | ");
-	for (int xt = 0; xt < m_nMapSize; xt++)
+	for (unsigned int xt = 0; xt < m_nMapSize; xt++)
 		printf("%02i ", xt);
 	printf("\n");
 	printf("---+------------------------------\n");
-	for (int y = 0; y < m_nMapSize; y++) {
+	for (unsigned int y = 0; y < m_nMapSize; y++) {
 		printf("%02i | ", y);
-		for (int x = 0; x < m_nMapSize; x++)
-			printf("%#2i ", GetObject(x, y)->Weight);
+		for (unsigned int x = 0; x < m_nMapSize; x++)
+			printf("% 2i ", GetObject(x, y)->Weight);
 		printf("\n");
 	}
 #endif	//NDEBUG
 }
 
 
-CCell* CGame::GetObject(int nXPoint, int nYPoint)
+CCell* CGame::GetObject(const unsigned int nXPoint, const unsigned int nYPoint)
 {
 	//Check for Outside the map
 	assert(nXPoint >= 0 && nYPoint >= 0 && nXPoint < m_nMapSize && nYPoint < m_nMapSize);
@@ -245,7 +246,7 @@ bool CGame::InstallReceiver(void)
 }
 
 
-bool CGame::MakeRoute(unsigned int nXPoint, unsigned int nYPoint, int nWeight, bool fUseMaxRoute)
+bool CGame::MakeRoute(unsigned int nXPoint, unsigned int nYPoint, int /* TODO: nWeight*/, bool fUseMaxRoute)
 {
 	//Searching for maximal/minimal weigth and coordinates of neighbouring cell's
 	int nMinX = -1, nMinY = -1, nMinWeight = -1;	//Minimal coordinates/weight of new next cell

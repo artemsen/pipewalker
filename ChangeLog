@@ -1,4 +1,11 @@
-PipeWalker 0.4.2 2008-05-10
+PipeWalker 0.4.3 2008-05-19
+---------------------------
+ * full install/uninstall support (using automake/autoconf)
+ * added capability to change window size with fixed aspect ratio
+ * some minor bugs fixed
+ * some interface updates
+
+PipeWalker 0.4.2 2008-05-06
 ---------------------------
  * fixed bug: in hard and paranoic modes, the tiles on both vertical margins will not turn
 
@@ -14,17 +21,14 @@ PipeWalker 0.4.1 2008-05-05
  * major rendering optimizations
  * some important bugs fixed
 
-
 PipeWalker 0.3.1 2008-04-18
 ---------------------------
  * game engine ported to OpenGL
  * removed Qt dependency
 
-
 PipeWalker 0.2.1 2007-06-28
 ---------------------------
  * some important bugs fixed
-
 
 PipeWalker 0.1.1 2007-06-09
 ---------------------------

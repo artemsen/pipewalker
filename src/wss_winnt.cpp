@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>. * 
  **************************************************************************/
 
-#ifdef PW_SYSTEM_WINNT	//Only for MS Windows
+#if defined PW_SYSTEM_WINNT && !defined PW_USE_GLUT
 
 #include "wss_winnt.h"
 
@@ -43,7 +43,7 @@ bool CMSWindows::Initialize(void)
 			throw("Can't register window class");
 
 		//Window styles
-		const DWORD dwWndStyle = WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
+		const DWORD dwWndStyle = WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_THICKFRAME | WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
 		const DWORD dwWndStyleEx = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE;
 
 		//Adjust window to true requested size
@@ -68,26 +68,25 @@ bool CMSWindows::Initialize(void)
 			throw("Can't create window");
 		SetWindowLong(m_hWnd, GWL_USERDATA, reinterpret_cast<long>(this));
 
-		static PIXELFORMATDESCRIPTOR pfd=				// pfd Tells Windows How We Want Things To Be
-		{
-			sizeof(PIXELFORMATDESCRIPTOR),				// Size Of This Pixel Format Descriptor
-			1,											// Version Number
-			PFD_DRAW_TO_WINDOW |						// Format Must Support Window
-			PFD_SUPPORT_OPENGL |						// Format Must Support OpenGL
-			PFD_DOUBLEBUFFER,							// Must Support Double Buffering
-			PFD_TYPE_RGBA,								// Request An RGBA Format
-			16,											// Select Our Color Depth
-			0, 0, 0, 0, 0, 0,							// Color Bits Ignored
-			0,											// No Alpha Buffer
-			0,											// Shift Bit Ignored
-			0,											// No Accumulation Buffer
-			0, 0, 0, 0,									// Accumulation Bits Ignored
-			16,											// 16Bit Z-Buffer (Depth Buffer)
-			0,											// No Stencil Buffer
-			0,											// No Auxiliary Buffer
-			PFD_MAIN_PLANE,								// Main Drawing Layer
-			0,											// Reserved
-			0, 0, 0										// Layer Masks Ignored
+		static PIXELFORMATDESCRIPTOR pfd = {			//pfd Tells Windows How We Want Things To Be
+			sizeof(PIXELFORMATDESCRIPTOR),				//Size Of This Pixel Format Descriptor
+			1,											//Version Number
+			PFD_DRAW_TO_WINDOW |						//Format Must Support Window
+			PFD_SUPPORT_OPENGL |						//Format Must Support OpenGL
+			PFD_DOUBLEBUFFER,							//Must Support Double Buffering
+			PFD_TYPE_RGBA,								//Request An RGBA Format
+			16,											//Select Our Color Depth
+			0, 0, 0, 0, 0, 0,							//Color Bits Ignored
+			0,											//No Alpha Buffer
+			0,											//Shift Bit Ignored
+			0,											//No Accumulation Buffer
+			0, 0, 0, 0,									//Accumulation Bits Ignored
+			16,											//16Bit Z-Buffer (Depth Buffer)
+			0,											//No Stencil Buffer
+			0,											//No Auxiliary Buffer
+			PFD_MAIN_PLANE,								//Main Drawing Layer
+			0,											//Reserved
+			0, 0, 0										//Layer Masks Ignored
 		};
 
 		//Get device context
@@ -113,7 +112,7 @@ bool CMSWindows::Initialize(void)
 		char pErrMsg[1024];
 		lstrcpy(pErrMsg, "Unable to initialize:\n");
 		lstrcat(pErrMsg, pszErr);
-		MessageBox(NULL, pErrMsg, NULL, MB_ICONERROR | MB_OK);
+		ShowErrorMessage(pErrMsg);
 		return false;
 	}
 	return true;
@@ -148,6 +147,43 @@ LRESULT CALLBACK CMSWindows::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
 			pThis->m_pEventHandler->OnDraw();
 			SwapBuffers(pThis->m_hDC);
 			EndPaint(hWnd, &ps);
+			break;
+		case WM_GETMINMAXINFO:
+			{
+				LPMINMAXINFO mmi = reinterpret_cast<LPMINMAXINFO>(lParam);
+				mmi->ptMinTrackSize.x = PW_SCREEN_WIDTH / 2;
+				mmi->ptMinTrackSize.y = PW_SCREEN_HEIGHT / 2;
+			}
+			break;
+		case WM_SIZING:
+			{
+				//Preserve correct aspect ratio
+				LPRECT rc = reinterpret_cast<LPRECT>(lParam);
+				static const float dNeedAspect = static_cast<float>(PW_SCREEN_WIDTH) / static_cast<float>(PW_SCREEN_HEIGHT);
+				const float dCurrAspect = static_cast<float>(rc->right - rc->left) / static_cast<float>(rc->bottom - rc->top);
+				if (dNeedAspect != dCurrAspect) {
+					switch (wParam) {
+						case WMSZ_BOTTOM:
+						case WMSZ_BOTTOMRIGHT:
+						case WMSZ_TOP:
+						case WMSZ_TOPRIGHT:
+							rc->right = rc->left + static_cast<long>(static_cast<float>(rc->bottom - rc->top) * dNeedAspect);
+							break;
+						case WMSZ_TOPLEFT:
+						case WMSZ_BOTTOMLEFT:
+							rc->left = rc->right - static_cast<long>(static_cast<float>(rc->bottom - rc->top) * dNeedAspect);
+							break;
+						case WMSZ_RIGHT:
+						case WMSZ_LEFT:
+							rc->bottom = rc->top + static_cast<long>(static_cast<float>(rc->right - rc->left) / dNeedAspect);
+							break;
+					}
+				}
+			}
+			break;
+		case WM_SIZE:
+			assert(pThis);
+			pThis->m_pEventHandler->OnWndSizeChanged(LOWORD(lParam), HIWORD(lParam));
 			break;
 		case WM_CHAR:
 			assert(pThis);

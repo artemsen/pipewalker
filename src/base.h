@@ -57,6 +57,13 @@ public:
 	 * Handler - draw the GL window
 	 */
 	virtual void OnDraw(void) = 0;
+
+	/**
+	 * Handler - window size changed
+	 * @param nWidth new width of the window
+	 * @param nHeight new heigth of the window
+	 */
+	virtual void OnWndSizeChanged(const int nWidth, const int nHeight) = 0;
 };
 
 

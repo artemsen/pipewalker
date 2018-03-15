@@ -33,7 +33,7 @@
 
 
 //Game properties
-static unsigned short PW_GAME_MODES[3][2] = {
+static const unsigned short PW_GAME_MODES[3][2] = {
 	{10, 25},	///< Game map mode 10 (width) * 10 (heigth) with 25 (receivers) - deafult mode
 	{20, 90},	///< Game map mode 20 (width) * 20 (heigth) with 90 (receivers)
 	{30, 150}	///< Game map mode 30 (width) * 30 (heigth) with 150 (receivers)
@@ -41,8 +41,8 @@ static unsigned short PW_GAME_MODES[3][2] = {
 
 struct GameSettings {
 	GameSettings() : Size(PW_GAME_MODES[0]), ID(0) {}
-	unsigned short*	Size;
-	unsigned int	ID;
+	const unsigned short*	Size;
+	unsigned int			ID;
 } NewGameSettings;
 
 
@@ -56,10 +56,9 @@ struct GameSettings {
 #define PW_BTN_NEW_ID			0x01
 #define PW_BTN_RESET_ID			0x02
 #define PW_BTN_INFO_ID			0x03
-#define PW_BTN_INFO_OK_ID		0x04
-#define PW_BTN_CUSTOM_ID		0x05
-#define PW_BTN_CUSTOM_OK_ID		0x06
-#define PW_BTN_CUSTOM_CANCEL_ID	0x07
+#define PW_BTN_CUSTOM_ID		0x04
+#define PW_BTN_OK_ID			0x05
+#define PW_BTN_CANCEL_ID		0x06
 
 
 COpenGL::COpenGL(void)
@@ -143,6 +142,18 @@ bool COpenGL::Initialize(CWinSubsystem* pWinSubsystem)
 	glEnable(GL_LIGHT1);
 	glEnable(GL_LIGHTING);
 
+	//Create fog
+	/*
+	glEnable(GL_FOG);
+	GLfloat fogColor[4] = {0.0f, 0.0f, 0.2f, 0.0f};	//background color
+	glFogi(GL_FOG_MODE, GL_EXP);
+	glFogfv(GL_FOG_COLOR, fogColor);
+	glFogf(GL_FOG_DENSITY, 0.2f);
+	glHint(GL_FOG_HINT, GL_DONT_CARE);
+	glFogf(GL_FOG_START, 0.0f);
+	glFogf(GL_FOG_END, -5.0f);
+	*/
+
 	//Create class objects
 	m_pGameLogic = new CGame;
 	m_pObjects = new CGLObjects;
@@ -177,7 +188,7 @@ void COpenGL::OnMouseClick(const MouseButton enuButton, const int nXCoord, const
 
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
-		PickMatrix(static_cast<GLdouble>(nXCoord), static_cast<GLdouble>(glViewport[3]) - nYCoord, 0.001f, 0.001f, glViewport);
+		PickMatrix(static_cast<GLfloat>(nXCoord), static_cast<GLfloat>(glViewport[3] - nYCoord), 0.001f, 0.001f, glViewport);
 		SetupProjection();
 		glMatrixMode(GL_MODELVIEW);
 		//Render to get objects names
@@ -196,6 +207,8 @@ void COpenGL::OnMouseClick(const MouseButton enuButton, const int nXCoord, const
 #ifndef NDEBUG
 		printf("Processing ID 0x%08x\n", nIDChoose);
 #endif	//NDEBUG
+
+
 		if (HIWORD(nIDChoose) == PW_BUTTONS_ID) {
 			//Screen button (environment) click
 			switch (LOWORD(nIDChoose)) {
@@ -211,12 +224,11 @@ void COpenGL::OnMouseClick(const MouseButton enuButton, const int nXCoord, const
 				case PW_BTN_CUSTOM_ID:
 					SetNewMode(ModeCustomGame);
 					break;
-				case PW_BTN_INFO_OK_ID:
-				case PW_BTN_CUSTOM_CANCEL_ID:
-					SetNewMode(ModePlayGame);
+				case PW_BTN_OK_ID:
+					SetNewMode(m_enuCurrentMode == ModeCustomGame ? ModeNewGame : ModePlayGame);
 					break;
-				case PW_BTN_CUSTOM_OK_ID:
-					SetNewMode(ModeNewGame);
+				case PW_BTN_CANCEL_ID:
+					SetNewMode(ModePlayGame);
 					break;
 				default:
 					assert(NULL && "Undefined button identifier");
@@ -253,7 +265,10 @@ void COpenGL::OnMouseClick(const MouseButton enuButton, const int nXCoord, const
 						assert(HIWORD(nIDChoose) == PW_CUST_SPINUP_ID || HIWORD(nIDChoose) == PW_CUST_SPINDN_ID);
 						//unsigned short nMapIdNum = (m_nMapId & (0xF0000000 >> (HIBYTE(nChooseID) * sizeof(unsigned int)))) >> (sizeof(unsigned int) * 8 - sizeof(unsigned int) - HIBYTE(nChooseID) * sizeof(unsigned int));
 						unsigned int nDelta = 0x10000000 >> (LOWORD(nIDChoose) * sizeof(unsigned int));
-						NewGameSettings.ID += (HIWORD(nIDChoose) == PW_CUST_SPINUP_ID ? nDelta : -nDelta);
+						if (HIWORD(nIDChoose) == PW_CUST_SPINUP_ID)
+							NewGameSettings.ID += nDelta;
+						else
+							NewGameSettings.ID -= nDelta;
 					}
 					fRedisplay = true;
 					break;
@@ -346,9 +361,9 @@ void COpenGL::OnDraw(void)
 				m_pObjects->BindTexture(CGLObjects::TxrEnvironment);
 				glBegin(GL_QUADS);
 					glNormal3f(0.0f, 0.0f, 1.0f);
-					glTexCoord2f(0.0f, 1.0f); glVertex3f(-5.0f, 5.0f, 0.0f);
-					glTexCoord2f(1.0f, 1.0f); glVertex3f( 5.0f, 5.0f, 0.0f);
-					glTexCoord2f(1.0f, 0.0f); glVertex3f( 5.0f,-5.0f, 0.0f);
+					glTexCoord2f(0.0f, 5.0f); glVertex3f(-5.0f, 5.0f, 0.0f);
+					glTexCoord2f(5.0f, 5.0f); glVertex3f( 5.0f, 5.0f, 0.0f);
+					glTexCoord2f(5.0f, 0.0f); glVertex3f( 5.0f,-5.0f, 0.0f);
 					glTexCoord2f(0.0f, 0.0f); glVertex3f(-5.0f,-5.0f, 0.0f);
 				glEnd();
 				m_pObjects->BindTexture(CGLObjects::TxrWndInfo);
@@ -374,7 +389,7 @@ void COpenGL::OnDraw(void)
 	//Draw map ID
 	if (m_nMotionStartTime == 0 && m_enuCurrentMode == ModePlayGame) {
 		glPushMatrix();
-			glTranslatef(-3.0f, -5.5f, 0.0f);
+			glTranslatef(-2.4f, -5.3f, 0.0f);
 			m_pObjects->DrawStatusBar(m_pGameLogic->GetMapID());
 		glPopMatrix();
 	}
@@ -389,70 +404,55 @@ void COpenGL::DrawEnvironment(void)
 	//Draw environment
 	m_pObjects->DrawObject(CGLObjects::ObjEnvironment);
 
-	//Title
-	glLoadName(MAKELONG(PW_BTN_INFO_ID, PW_BUTTONS_ID));
-	m_pObjects->BindTexture(CGLObjects::TxrTitle);
-	glBegin(GL_QUADS);
-		glNormal3b(0, 0, 1);
-		glTexCoord2i(0, 1); glVertex3f(-5.1f, 6.5f, 0.0f);
-		glTexCoord2i(1, 1); glVertex3f( 5.1f, 6.5f, 0.0f);
-		glTexCoord2i(1, 0); glVertex3f( 5.1f, 5.2f, 0.0f);
-		glTexCoord2i(0, 0); glVertex3f(-5.1f, 5.2f, 0.0f);
-	glEnd();
-
 	if (m_nMotionStartTime != 0)
 		return;	//Don't draw buttons in motion mode
 
-	const GLfloat dButtonY = -6.5f;
-
 	//Draw buttons
-	switch (m_enuCurrentMode) {
-		case ModePlayGame:
-			//New button
-			glLoadName(MAKELONG(PW_BTN_NEW_ID, PW_BUTTONS_ID));
-			glPushMatrix();
-				glTranslatef(-5.0f, dButtonY, 0.0f);
-				m_pObjects->BindTexture(CGLObjects::TxrButtonNew);
-				m_pObjects->DrawObject(CGLObjects::ObjButton);
-			glPopMatrix();
-			//Custom button
-			glLoadName(MAKELONG(PW_BTN_CUSTOM_ID, PW_BUTTONS_ID));
-			glPushMatrix();
-				glTranslatef(-1.3f, dButtonY, 0.0f);
-				m_pObjects->BindTexture(CGLObjects::TxrButtonCust);
-				m_pObjects->DrawObject(CGLObjects::ObjButton);
-			glPopMatrix();
-			//Reset button
-			glLoadName(MAKELONG(PW_BTN_RESET_ID, PW_BUTTONS_ID));
-			glPushMatrix();
-				glTranslatef(2.2f, dButtonY, 0.0f);
-				m_pObjects->BindTexture(CGLObjects::TxrButtonRset);
-				m_pObjects->DrawObject(CGLObjects::ObjButton);
-			glPopMatrix();
-			break;
-		case ModeInfo:
-		case ModeNewGame:
-		case ModeCustomGame:
-			break;
-	}
+	glPushMatrix();
+		glTranslatef(-5.0f, -6.5f, 0.0f);
+		switch (m_enuCurrentMode) {
+			case ModePlayGame:
+				//New button
+				glLoadName(MAKELONG(PW_BTN_NEW_ID, PW_BUTTONS_ID));
+				m_pObjects->DrawButton(CGLObjects::TxrButtonNew);
+
+				//Reset button
+				glLoadName(MAKELONG(PW_BTN_RESET_ID, PW_BUTTONS_ID));
+				glTranslatef(1.5f, 0.0f, 0.0f);
+				m_pObjects->DrawButton(CGLObjects::TxrButtonRset);
+
+				//Custom button
+				glLoadName(MAKELONG(PW_BTN_CUSTOM_ID, PW_BUTTONS_ID));
+				glTranslatef(5.9f, 0.0f, 0.0f);
+				m_pObjects->DrawButton(CGLObjects::TxrButtonCust);
+
+				//Info button
+				glLoadName(MAKELONG(PW_BTN_INFO_ID, PW_BUTTONS_ID));
+				glTranslatef(1.5f, 0.0f, 0.0f);
+				m_pObjects->DrawButton(CGLObjects::TxrButtonInfo);
+				break;
+			case ModeInfo:
+			case ModeNewGame:
+			case ModeCustomGame:
+				break;
+		}
+	glPopMatrix();
 
 	if (m_enuCurrentMode == ModeCustomGame || m_enuCurrentMode == ModeInfo) {
 		//OK button
 		glPushMatrix();
-			glLoadName(MAKELONG(m_enuCurrentMode == ModeCustomGame ? PW_BTN_CUSTOM_OK_ID : PW_BTN_INFO_OK_ID, PW_BUTTONS_ID));
-			glTranslatef(2.2f, dButtonY, 0.0f);
-			m_pObjects->BindTexture(CGLObjects::TxrButtonOk);
-			m_pObjects->DrawObject(CGLObjects::ObjButton);
+			glLoadName(MAKELONG(PW_BTN_OK_ID, PW_BUTTONS_ID));
+			glTranslatef(4.0f, -6.5f, 0.0f);
+			m_pObjects->DrawButton(CGLObjects::TxrButtonOk);
 		glPopMatrix();
 	}
 
 	if (m_enuCurrentMode == ModeCustomGame) {
 		//Cancel button
-		glLoadName(MAKELONG(PW_BTN_CUSTOM_CANCEL_ID, PW_BUTTONS_ID));
+		glLoadName(MAKELONG(PW_BTN_CANCEL_ID, PW_BUTTONS_ID));
 		glPushMatrix();
-			glTranslatef(-5.0f, dButtonY, 0.0f);
-			m_pObjects->BindTexture(CGLObjects::TxrButtonCncl);
-			m_pObjects->DrawObject(CGLObjects::ObjButton);
+			glTranslatef(-5.0f, -6.5f, 0.0f);
+			m_pObjects->DrawButton(CGLObjects::TxrButtonCncl);
 		glPopMatrix();
 	}
 }
@@ -464,9 +464,9 @@ void COpenGL::DrawSetUpGame(int nGLMode)
 		m_pObjects->BindTexture(CGLObjects::TxrEnvironment);
 		glBegin(GL_QUADS);
 			glNormal3f(0.0f, 0.0f, 1.0f);
-			glTexCoord2f(0.0f, 1.0f); glVertex3f(-5.0f, 5.0f, 0.0f);
-			glTexCoord2f(1.0f, 1.0f); glVertex3f( 5.0f, 5.0f, 0.0f);
-			glTexCoord2f(1.0f, 0.0f); glVertex3f( 5.0f,-5.0f, 0.0f);
+			glTexCoord2f(0.0f, 5.0f); glVertex3f(-5.0f, 5.0f, 0.0f);
+			glTexCoord2f(5.0f, 5.0f); glVertex3f( 5.0f, 5.0f, 0.0f);
+			glTexCoord2f(5.0f, 0.0f); glVertex3f( 5.0f,-5.0f, 0.0f);
 			glTexCoord2f(0.0f, 0.0f); glVertex3f(-5.0f,-5.0f, 0.0f);
 		glEnd();
 
@@ -491,7 +491,6 @@ void COpenGL::DrawSetUpGame(int nGLMode)
 		glPopMatrix();
 	}
 
-
 	//Draw map id choose
 	for (i = 0; i < 8; i++) {
 		glPushMatrix();
@@ -502,13 +501,13 @@ void COpenGL::DrawSetUpGame(int nGLMode)
 			m_pObjects->DrawObject(CGLObjects::ObjSpin);
 
 			//Map id
-			glTranslatef(-0.2f, -1.2f, 0.0f);
-			unsigned short nMapIdNum = (NewGameSettings.ID & (0xF0000000 >> (i * sizeof(unsigned int)))) >> (sizeof(unsigned int) * 8 - sizeof(unsigned int) - i * sizeof(unsigned int));
+			glTranslatef(-0.2f, -0.6f, 0.0f);
+			unsigned short nMapIdNum = static_cast<unsigned short>((NewGameSettings.ID & (0xF0000000 >> (i * sizeof(unsigned int)))) >> (sizeof(unsigned int) * 8 - sizeof(unsigned int) - i * sizeof(unsigned int)));
 			m_pObjects->PrintHexNumber(nMapIdNum);
 
 			//Bottom spin
 			glLoadName(MAKELONG(i, PW_CUST_SPINDN_ID));
-			glTranslatef(0.2f, -0.7f, 0.0f);
+			glTranslatef(0.2f, -1.1f, 0.0f);
 			glRotatef(180.0f, 0.0f, 0.0f, 1.0f);
 			m_pObjects->DrawObject(CGLObjects::ObjSpin);
 		glPopMatrix();
@@ -529,7 +528,7 @@ bool COpenGL::DrawGame(int nGLMode)
 		glDisable(GL_LIGHTING);
 		glPushMatrix();
 			glTranslatef(0.05f, -0.05f, 0.0f);
-			glColor3f(0.3f, 0.3f, 0.3f);
+			glColor4f(0.3f, 0.3f, 0.3f, 0.5f);
 			fRedisplay |= DrawMapObjects(true);
 		glPopMatrix();
 		glEnable(GL_LIGHTING);
@@ -553,9 +552,9 @@ void COpenGL::DrawMapCells(void)
 
 	//Draw cells background
 	for (unsigned short nY = 0; nY < m_pGameLogic->GetMapSize(); nY++) {
-		GLfloat dY = -m_pGameLogic->GetMapSize() / 2.0f + 0.5f + nY;
+		GLfloat dY = -(m_pGameLogic->GetMapSize() / 2.0f) + 0.5f + nY;
 		for (unsigned short nX = 0; nX < m_pGameLogic->GetMapSize(); nX++) {
-			GLfloat dX = -m_pGameLogic->GetMapSize() / 2.0f + 0.5f + nX;
+			GLfloat dX = -(m_pGameLogic->GetMapSize() / 2.0f) + 0.5f + nX;
 			glLoadName(MAKELONG(MAKEWORD(nX, nY), PW_CELL_ID));	//Set current coordinates by cell on map as name
 			glPushMatrix();
 				glTranslatef(dX, -dY, 0.0f);
@@ -577,9 +576,9 @@ bool COpenGL::DrawMapObjects(bool fIsShadow)
 	glScalef(glScale, glScale, glScale);
 
 	for (unsigned short nY = 0; nY < m_pGameLogic->GetMapSize(); nY++) {
-		GLfloat dY = -m_pGameLogic->GetMapSize() / 2.0f + 0.5f + nY;
+		GLfloat dY = -(m_pGameLogic->GetMapSize() / 2.0f) + 0.5f + nY;
 		for (unsigned short nX = 0; nX < m_pGameLogic->GetMapSize(); nX++) {
-			GLfloat dX = -m_pGameLogic->GetMapSize() / 2.0f + 0.5f + nX;
+			GLfloat dX = -(m_pGameLogic->GetMapSize() / 2.0f) + 0.5f + nX;
 			CCell* pCell = m_pGameLogic->GetObject(nX, nY);
 			glPushMatrix();
 				glTranslatef(dX, -dY, 0.0f);
@@ -712,8 +711,8 @@ void COpenGL::LookAt(GLfloat eyeX, GLfloat eyeY, GLfloat eyeZ, GLfloat lookAtX, 
 	f[1] = lookAtY - eyeY;
 	f[2] = lookAtZ - eyeZ;
 	
-	GLfloat dMag = sqrt(f[0] * f[0] + f[1] * f[1] + f[2] * f[2]);
-	GLfloat upMag = sqrt(upX * upX + upY * upY + upZ * upZ);
+	GLfloat dMag = static_cast<GLfloat>(sqrt(f[0] * f[0] + f[1] * f[1] + f[2] * f[2]));
+	GLfloat upMag = static_cast<GLfloat>(sqrt(upX * upX + upY * upY + upZ * upZ));
 	
 	//Normalizing the viewing vector
 	if (dMag != 0) {
@@ -779,16 +778,22 @@ void COpenGL::CrossProd(GLfloat x1, GLfloat y1, GLfloat z1, GLfloat x2, GLfloat 
 
 void COpenGL::SetupProjection() const
 {
-	GLfloat dAspect = static_cast<GLfloat>(PW_SCREEN_WIDTH) / static_cast<GLfloat>(PW_SCREEN_HEIGHT);
+	const GLfloat dAspect = 0.75f;	// 3 x 4 sides aspect
 	const GLfloat dFov = 50.0f;
     const GLfloat dNear = 1.0f;
-	GLfloat dTop = tan(dFov * 3.14159f / 360.0f) * dNear;
+	GLfloat dTop = static_cast<GLfloat>(tan(dFov * 3.14159f / 360.0f) * dNear);
     GLfloat dBottom = -dTop;
     GLfloat dLeft = dAspect * dBottom;
     GLfloat dRight = dAspect * dTop;
 
 	glFrustum(dLeft, dRight, dBottom, dTop, dNear, 20.0f);
 
-	LookAt(0.0f, 0.0f, 14.3f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f);
+	LookAt(0.0f, 0.0f, 15.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f);
 }
 	
+
+void COpenGL::OnWndSizeChanged(const int nWidth, const int nHeight)
+{
+	glViewport(0, 0, nWidth, nHeight);
+	SetupProjection();
+}

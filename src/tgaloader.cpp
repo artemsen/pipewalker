@@ -24,12 +24,9 @@ bool CTGALoader::LoadTexture(GLuint* pnTexture, const char* pszFileName, char* p
 	Image hImage;
 	if (LoadImage(&hImage, pszFileName, pszErrorDescr)) {
 		//Create Texture
-		glGenTextures(1, pnTexture);
 		glBindTexture(GL_TEXTURE_2D, *pnTexture);
-
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); //scale linearly when image bigger than texture
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); //scale linearly when image smalled than texture
-
 		glTexImage2D(GL_TEXTURE_2D, 0, hImage.Format, hImage.Width, hImage.Height, 0, hImage.Format, GL_UNSIGNED_BYTE, hImage.Data);
 		return true;
 	}
@@ -62,19 +59,8 @@ bool CTGALoader::LoadImage(Image* pImage, const char* pszFileName, char* pszErro
 		if (fread(pImgData, nSize, 1, pFile) != 1)
 			throw("Error reading file");
 
-		//Image headers
-		static const char HdrTGAUnc[] = {0x00,0x00,0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};	//Uncompressed TGA
-		static const char HdrTGARle[] = {0x00,0x00,0x0A,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};	//RLE compressed TGA
-
 		CBuffer imgBuf(pImgData, nSize);
-
-		//Check header to define format
-		if (memcmp(HdrTGAUnc, pImgData, sizeof(HdrTGAUnc)) == 0 ||
-			memcmp(HdrTGARle, pImgData, sizeof(HdrTGARle)) == 0) {
-			LoadTGA(&imgBuf, pImage);
-		}
-		else
-			throw("Unknown format");
+		LoadTGA(&imgBuf, pImage);
 		
 		fResult = true;
 	}
@@ -96,7 +82,14 @@ bool CTGALoader::LoadImage(Image* pImage, const char* pszFileName, char* pszErro
 void CTGALoader::LoadTGA(CBuffer* pBuf, Image* pImg)
 {
 	pBuf->GetData(2);
-	bool fUseRLE = (pBuf->GetUCHAR8() == 0x0A);
+	unsigned char nFormat = pBuf->GetUCHAR8();
+	bool fUseRLE;
+	if (nFormat == 0x0A)
+		fUseRLE = true;			//RLE compressed TGA
+	else if (nFormat == 0x02)
+		fUseRLE = false;		//Uncompressed TGA
+	else
+		throw("Incorrect format (unknown RLE flag in header)");
 	pBuf->GetData(9);	//Seek through the TGA header, up to the First 6 Useful Bytes From The Header
 
 	const unsigned char* pszHeader = pBuf->GetData(6);
@@ -116,7 +109,7 @@ void CTGALoader::LoadTGA(CBuffer* pBuf, Image* pImg)
 		throw("Incorrect format (color type unsupported)");
 
 	//Calculate the number of bytes per pixel
-	unsigned short int usBPP = pszHeader[4] / 8;
+	unsigned int usBPP = pszHeader[4] / 8;
 
 	//Calculate the size (assuming 24 bits or 3 or 4 bytes per pixel).
 	unsigned long ulSize = pImg->Width * pImg->Height * usBPP;
@@ -131,16 +124,17 @@ void CTGALoader::LoadTGA(CBuffer* pBuf, Image* pImg)
 		unsigned int nBufPos = 0;
 
 		while (nBufPos < ulSize) {
-			assert(pBuf->IsDataExist());
+			if (!pBuf->IsDataExist())
+				throw("Incorrect format (not enought data)");
 			int nPacketHeader = pBuf->GetUCHAR8();
 			int nPacketLength = (nPacketHeader & 0x7F) + 1;
 			if ((nPacketHeader & 0x80) != 0) {	// Run-length encoding packet (RLE)
 				const unsigned char* pPacket = pBuf->GetData(usBPP);
-				for (int j = 0; j < nPacketLength * usBPP; j++)
+				for (unsigned int j = 0; j < nPacketLength * usBPP; j++)
 					pImg->Data[nBufPos++] = pPacket[j % usBPP];
 			}
 			else {								//Raw packet
-				for (int j = 0; j < nPacketLength * usBPP; j++)
+				for (unsigned int j = 0; j < nPacketLength * usBPP; j++)
 					pImg->Data[nBufPos++] = pBuf->GetUCHAR8();
 			}
 		}
@@ -150,18 +144,5 @@ void CTGALoader::LoadTGA(CBuffer* pBuf, Image* pImg)
 		unsigned char cTmp = pImg->Data[i];
 		pImg->Data[i] = pImg->Data[i + 2];
 		pImg->Data[i + 2] = cTmp;
-	}
-}
-
-
-void CTGALoader::ConvertBGR2RGB(unsigned char* pImgData, const unsigned long nLength, const unsigned short nBPP)
-{
-	assert(nBPP == 3 || nBPP == 4);
-	assert(nLength % nBPP == 0);
-
-	for (unsigned long i = 0; i < nLength; i += nBPP) {
-		unsigned char cTmp = pImgData[i];
-		pImgData[i] = pImgData[i + 2];
-		pImgData[i + 2] = cTmp;
 	}
 }

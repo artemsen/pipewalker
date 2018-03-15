@@ -2,33 +2,33 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(PipeWalker, 0.4.2, artemsen@gmail.com)
+AC_INIT([PipeWalker], [0.4.3], [artemsen@gmail.com])
+AM_INIT_AUTOMAKE([-Wall -Werror])
 AC_CONFIG_SRCDIR([src/PipeWalker.xpm])
 
 # Checks for programs.
 AC_PROG_CXX
+AC_PROG_CC
 
-#Check for X.
+# Checks for libraries.
 AC_PATH_XTRA
 LIBS="$LIBS $X_LIBS"
 
 AC_ARG_WITH(glut, [  --with-glut             use GLUT library instead of native X],
 	[
-	AC_CHECK_LIB([glut], [glutInit], [], AC_MSG_ERROR([libglut not found]))
+	AC_CHECK_LIB([glut], [glutInit], [], AC_MSG_ERROR([libglut not found (freeglut3-dev ?)]))
 	CXXFLAGS="$CXXFLAGS -DPW_USE_GLUT"
 	],
 	[
-	AC_CHECK_LIB([X11], [XOpenDisplay], [], AC_MSG_ERROR([libX11 not found]))
-	AC_CHECK_LIB([Xpm], [XpmCreatePixmapFromData], [], AC_MSG_ERROR([libXpm not found]))
+	AC_CHECK_LIB([X11], [XOpenDisplay], [], AC_MSG_ERROR([libX11 not found (libgl1-mesa-dev ?)]))
+	AC_CHECK_LIB([Xpm], [XpmCreatePixmapFromData], [], AC_MSG_ERROR([libXpm not found (libxpm-dev ?)]))
 	]
 )
-
-# Checks for libraries.
 AC_CHECK_LIB([GL], [glBegin], [], AC_MSG_ERROR([libGL not found]))
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([stdlib.h sys/time.h])
+AC_CHECK_HEADERS([stdlib.h string.h sys/time.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL
@@ -37,8 +37,10 @@ AC_C_INLINE
 AC_HEADER_TIME
 
 # Checks for library functions.
-AC_FUNC_MEMCMP
 AC_CHECK_FUNCS([gettimeofday sqrt])
 
-AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([Makefile
+		src/Makefile
+		extra/Makefile
+		textures/Makefile])
 AC_OUTPUT

@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>. * 
  **************************************************************************/
 
-#ifdef PW_SYSTEM_NIX
+#if defined PW_SYSTEM_NIX && !defined PW_USE_GLUT
 
 #include "wss_x11.h"
 #include "PipeWalker.xpm"	//Window icon
@@ -32,26 +32,52 @@ bool CXServer::Initialize(void)
 
 		int nScreen = DefaultScreen(m_xDisp);
 
-		//Attributes for a double buffered visual in RGBA format with at least 4 bits per color and a 16 bit depth buffer
-		static int pnAttrList[] = { GLX_RGBA, GLX_DOUBLEBUFFER,
-									GLX_RED_SIZE, 4,
-                                    GLX_GREEN_SIZE, 4,
-                                    GLX_BLUE_SIZE, 4,
-                                    GLX_DEPTH_SIZE, 16,
-                                    None };
+		//Check extension and version
+		int nErrorBase = 0, nEventBase = 0;
+		if (!glXQueryExtension(m_xDisp, &nErrorBase, &nEventBase))
+			throw("GLX extension unsupported");
+		int nVerMajor = 0, nVerMinor = 0;
+		if (!glXQueryVersion(m_xDisp, &nVerMajor, &nVerMinor))
+			throw("Unable to query GLX version");
+		printf("Using GLX version: %i.%i\n", nVerMajor, nVerMinor);
 
-		//Get an appropriate visual
-		XVisualInfo* pVI = glXChooseVisual(m_xDisp, nScreen, pnAttrList);
-		if (!pVI)
-			throw("Double buffered visual not supported");
-
-		//Create a GLX context
-		m_xCtx = glXCreateContext(m_xDisp, pVI, 0, GL_TRUE);
+/*
+I can't verufy 1.3 version, so use old 1.2 style
+		if (nVerMajor > 1 || (nVerMajor == 1 && nVerMinor > 2)) {
+			//1.3 or greater
+			int nFBElements = 0;
+			GLXFBConfig* glxConf = glXGetFBConfigs(m_xDisp, nScreen, &nFBElements);
+			int nCheckAttrValue = 0;
+			if (!glXGetFBConfigAttrib(m_xDisp, *glxConf, GLX_DOUBLEBUFFER, &nCheckAttrValue))
+				throw("Unable to get GLX attribute");
+			if (nCheckAttrValue == 0)
+				throw("Double buffered visual not supported");
+			//Create GLX context
+			m_xCtx = glXCreateNewContext(m_xDisp, *glxConf, GLX_RGBA_TYPE, NULL, True);
+		}
+		else {
+*/		
+			//1.2
+			//Attributes for a double buffered visual in RGBA format with at least 4 bits per color and a 16 bit depth buffer
+			static int pnAttrList[] = { GLX_RGBA, GLX_DOUBLEBUFFER,
+					    GLX_RED_SIZE, 4,
+	                                    GLX_GREEN_SIZE, 4,
+	                                    GLX_BLUE_SIZE, 4,
+	                                    GLX_DEPTH_SIZE, 16,
+	                                    None };
+	
+			//Get an appropriate visual
+			XVisualInfo* pVI = glXChooseVisual(m_xDisp, nScreen, pnAttrList);
+			if (!pVI)
+				throw("Double buffered visual not supported");
+	
+			//Create a GLX context
+			m_xCtx = glXCreateContext(m_xDisp, pVI, 0, GL_TRUE);
+//		}
 
 		//Create new window
-		m_xWnd = XCreateWindow(m_xDisp, RootWindow(m_xDisp, pVI->screen),
-							0, 0, PW_SCREEN_WIDTH, PW_SCREEN_HEIGHT, 0, pVI->depth, InputOutput, pVI->visual,
-							/*CWBorderPixel | CWColormap | CWEventMask*/ 0, 0);
+		m_xWnd = XCreateWindow(m_xDisp, RootWindow(m_xDisp, nScreen),
+				 0, 0, PW_SCREEN_WIDTH, PW_SCREEN_HEIGHT, 0, CopyFromParent, InputOutput, CopyFromParent, 0, 0);
 		if (!m_xWnd)
 			throw("Can't create window");
 
@@ -60,20 +86,25 @@ bool CXServer::Initialize(void)
         XSetWMProtocols(m_xDisp, m_xWnd, &wmDelete, 1);
 
 		//Set window properties
-		XSizeHints xSize;	//Set min/max window size (to avoid window size changes)
-		xSize.flags = PMinSize | PMaxSize;
-		xSize.min_width = xSize.max_width = PW_SCREEN_WIDTH;
-		xSize.min_height = xSize.max_height = PW_SCREEN_HEIGHT;
+		XSizeHints xSize;	//Set min window size and aspect ratio
+		xSize.flags = PMinSize | PMaxSize | PAspect;
+		xSize.min_width = PW_SCREEN_WIDTH / 2;
+		xSize.min_height = PW_SCREEN_HEIGHT / 2;
+		xSize.max_width = PW_SCREEN_WIDTH * 10;
+		xSize.max_height = PW_SCREEN_HEIGHT * 10;
+		xSize.max_aspect.x = xSize.min_aspect.x = PW_SCREEN_WIDTH;
+		xSize.max_aspect.y = xSize.min_aspect.y = PW_SCREEN_HEIGHT;
 		Pixmap xIcon;
 		XpmCreatePixmapFromData(m_xDisp, m_xWnd, const_cast<char**>(PipeWalker_xpm), &xIcon, NULL, NULL);
 		XSetStandardProperties(m_xDisp, m_xWnd, PW_WINDOW_TITLE, PW_WINDOW_TITLE, xIcon, NULL, 0, &xSize);
 
 		//Register handled events
-		XSelectInput(m_xDisp, m_xWnd, ExposureMask | KeyPressMask | ButtonPressMask);
-
+		XSelectInput(m_xDisp, m_xWnd, ExposureMask | KeyPressMask | ButtonPressMask | StructureNotifyMask);
+			
 		//Connect the glx-context to the window
 		glXMakeCurrent(m_xDisp, m_xWnd, m_xCtx);
 
+		//Just warning
 		if (!glXIsDirect(m_xDisp, m_xCtx))
 			printf("Warning: No Direct Rendering possible!\n");
 
@@ -92,6 +123,9 @@ bool CXServer::Initialize(void)
 
 int CXServer::DoMainLoop(void)
 {
+	int nXWndWidth = PW_SCREEN_WIDTH;
+	int nXWndHeight = PW_SCREEN_HEIGHT;
+
 	while(!m_fDone) {
 		XEvent xEvent;
 		XNextEvent(m_xDisp, &xEvent);
@@ -101,6 +135,14 @@ int CXServer::DoMainLoop(void)
 				if (xEvent.xexpose.count == 0) {
 					m_pEventHandler->OnDraw();
 					glXSwapBuffers(m_xDisp, m_xWnd);
+				}
+				break;
+			case ConfigureNotify:
+				//Resize window
+				if (nXWndWidth != xEvent.xconfigure.width || nXWndHeight != xEvent.xconfigure.height) {
+					nXWndWidth = xEvent.xconfigure.width;
+					nXWndHeight = xEvent.xconfigure.height;
+					m_pEventHandler->OnWndSizeChanged(nXWndWidth, nXWndHeight);
 				}
 				break;
 			case KeyPress:
@@ -160,13 +202,14 @@ void CXServer::PostRedisplay(void)
 		xExpEvent.xexpose.send_event = True;
 		xExpEvent.xexpose.x = 0;
 		xExpEvent.xexpose.y = 0;
-		xExpEvent.xexpose.width = PW_SCREEN_WIDTH;
-		xExpEvent.xexpose.height = PW_SCREEN_HEIGHT;
+		xExpEvent.xexpose.width = 0;
+		xExpEvent.xexpose.height = 0;
 		xExpEvent.xexpose.count = 0;
 		xExpEvent.xexpose.serial = 1;
 	}
 	XSendEvent(m_xDisp, m_xWnd, True, ExposureMask, &xExpEvent);
 }
+
 
 void CXServer::ShowErrorMessage(const char* pszErrorMsg)
 {

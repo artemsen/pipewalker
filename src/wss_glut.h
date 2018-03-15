@@ -48,6 +48,7 @@ private:
 	//Glut callback functions
 	static void OnMouseButton(int nButton, int nState, int nX, int nY);
 	static void OnKeyPressed(unsigned char ucKey, int nX, int nY);
+	static void OnWndResize(int nWidth, int nHeight);
 	static void OnDrawGLScene(void);
 };
 
