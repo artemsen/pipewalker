@@ -340,10 +340,10 @@ bool CGLObjects::Initialize(void)
 			glTexCoord2i(1, 1); glVertex3f( 8.0f,-5.0f, 0.0f);
 			glTexCoord2i(1, 0); glVertex3f( 5.0f,-5.0f, 0.0f);
 
-			glTexCoord2i(0, 0); glVertex3f( 8.0f,  9.0f, -10.5f);
-			glTexCoord2i(0, 1); glVertex3f(-8.0f,  9.0f, -10.5f);
-			glTexCoord2i(1, 1); glVertex3f(-8.0f, -9.0f, -10.5f);
-			glTexCoord2i(1, 0); glVertex3f( 8.0f, -9.0f, -10.5f);
+			glTexCoord2i(0, 0); glVertex3f( 10.0f,  10.0f, -10.5f);
+			glTexCoord2i(0, 1); glVertex3f(-10.0f,  10.0f, -10.5f);
+			glTexCoord2i(1, 1); glVertex3f(-10.0f, -10.0f, -10.5f);
+			glTexCoord2i(1, 0); glVertex3f( 10.0f, -10.0f, -10.5f);
 		glEnd();
 	glEndList();
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);

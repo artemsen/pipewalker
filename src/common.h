@@ -69,7 +69,7 @@
 #define PW_ROTATION_ANGLE	90		///< Degree of angle
 #define PW_SCREEN_HEIGHT	600		///< Screen (main window) height
 #define PW_SCREEN_WIDTH		480		///< Screen (main window) width
-#define PW_WINDOW_TITLE		"PipeWalker ver.0.4.1"	///< Main window title
+#define PW_WINDOW_TITLE		"PipeWalker ver.0.4.2"	///< Main window title
 
 #ifndef PW_SYSTEM_WINNT
 /**

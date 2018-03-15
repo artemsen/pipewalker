@@ -1,3 +1,7 @@
+PipeWalker 0.4.2 2008-05-10
+---------------------------
+ * fixed bug: in hard and paranoic modes, the tiles on both vertical margins will not turn
+
 PipeWalker 0.4.1 2008-05-05
 ---------------------------
  * added map id to choose custom map
