@@ -18,23 +18,20 @@
 
 #pragma once
 
-//Standard C libraries
+//Standard libraries
 #include <stdlib.h>
 #include <stdio.h>
-#include <time.h>
-#include <math.h>
 #include <cassert>
 #include <exception>
 #include <string>
 #include <map>
 #include <vector>
-#include <list>
-
 
 using namespace std;
 
+
 #ifndef PACKAGE_STRING
-	#define PACKAGE_STRING		"PipeWalker 0.5.1"
+	#define PACKAGE_STRING		"PipeWalker 0.6.1"
 #endif	//PACKAGE_STRING
 
 #ifndef DIR_GAMEDATA
@@ -46,15 +43,6 @@ using namespace std;
 #endif	//DIR_TEXTURES
 
 
-#define SCREEN_HEIGHT	500		///< Initial screen (main window) height
-#define SCREEN_WIDTH	420		///< Initial screen (main window) width
-
-
-#if defined WIN32		//Microsoft Windows NT
-	#define WIN32_LEAN_AND_MEAN
-	#include <windows.h>
-#endif	//WIN32
-
 #if defined WIN32 && !defined NDEBUG		//Microsoft Windows NT (MS VS debug session): make release in MinGW32!
 	#pragma comment(lib, "opengl32.lib")
 	#pragma comment(lib, "glu32.lib")
@@ -65,6 +53,8 @@ using namespace std;
 
 //SDL library
 #include <SDL/SDL.h>
+#include <SDL/SDL_syswm.h>
+
 //OpenGL library
 #include <GL/gl.h>
 #include <GL/glu.h>

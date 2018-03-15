@@ -160,6 +160,22 @@
 			>
 		</File>
 		<File
+			RelativePath=".\src\modepuzzle.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\src\modepuzzle.h"
+			>
+		</File>
+		<File
+			RelativePath=".\src\modesettings.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\src\modesettings.h"
+			>
+		</File>
+		<File
 			RelativePath=".\extra\pipewalker.ico"
 			>
 		</File>
@@ -172,11 +188,11 @@
 			>
 		</File>
 		<File
-			RelativePath=".\src\serializer.cpp"
+			RelativePath=".\src\settings.cpp"
 			>
 		</File>
 		<File
-			RelativePath=".\src\serializer.h"
+			RelativePath=".\src\settings.h"
 			>
 		</File>
 		<File

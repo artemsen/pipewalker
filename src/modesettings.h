@@ -19,77 +19,47 @@
 #pragma once
 
 #include "common.h"
+#include "button.h"
+#include "map.h"
 
-/**
- * CSerializer - load / save game state
- */
-class CSerializer
+
+class CModeSettings
 {
 public:
 	/**
-	 * Load state
-	 * \param mapId map ID
-	 * \param mapState map state
-	 * \return false if error
+	 * Initialization
 	 */
-	static bool Load(unsigned int& mapId, string& mapState);
+	void Initialize();
 
 	/**
-	 * Save state
-	 * \param mapId map ID
-	 * \param mapState map state
-	 * \return false if error
+	 * Render scene
+	 * \param mouseX an X world mouse coordinate
+	 * \param mouseY an Y world mouse coordinate
+	 * \param transition transition phase [0...1]
+	 * \return true if redraw is needed
 	 */
-	static bool Save(const unsigned int mapId, const char* mapState);
+	bool Render(const float mouseX, const float mouseY, const float transition);
+
+	/**
+	 * Mouse click handler
+	 * \param button mouse button identifier
+	 * \param mouseX world mouse X coordinate
+	 * \param mouseY world mouse Y coordinate
+	 */
+	void OnMouseClick(const Uint8 button, const float mouseX, const float mouseY);
+
+	/**
+	 * Set default map size
+	 * \param map size
+	 */
+	void SetMapSize(const MapSize mapSize);
+
+	/**
+	 * Get currently chosen map size
+	 * \return map size
+	 */
+	MapSize GetMapSize() const;
 
 private:
-	/**
-	 * Get file name
-	 * \return file name
-	 */
-	static string GetFileName();
-};
-
-
-/**
- * CIniFile - work with Ini files
- */
-class CIniFile
-{
-public:
-	/**
-	 * Load ini file
-	 * \param fileName file name
-	 */
-	void Load(const char* fileName);
-
-	/**
-	 * Save ini file
-	 * \param fileName file name
-	 */
-	void Save(const char* fileName) const;
-
-	/**
-	 * Get property
-	 * \param name property name
-	 * \return property value
-	 */
-	string GetProperty(const char* name) const;
-
-	/**
-	 * Set property
-	 * \param name property name
-	 * \param value property value
-	 */
-	void SetProperty(const char* name, const char* value);
-
-	/**
-	 * Set property
-	 * \param name property name
-	 * \param value property value
-	 */
-	void SetProperty(const char* name, const unsigned int value);
-
-private:
-	map<string, string>	m_Ini;	///< Ini values
+	vector<CRadioButton>	m_MapChoose;	///< Map size choosing buttons
 };

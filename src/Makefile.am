@@ -3,10 +3,12 @@ bin_PROGRAMS = pipewalker
 pipewalker_SOURCES = \
 	common.h exception.h \
 	main.cpp \
+	modepuzzle.h modepuzzle.cpp \
+	modesettings.h modesettings.cpp \
 	game.h game.cpp \
 	map.h map.cpp \
 	cell.h cell.cpp \
-	serializer.h serializer.cpp \
+	settings.h settings.cpp \
 	explosion.h explosion.cpp \
 	buffer.h buffer.cpp \
 	button.h button.cpp \

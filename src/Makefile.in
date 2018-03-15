@@ -42,8 +42,9 @@ CONFIG_CLEAN_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
-am_pipewalker_OBJECTS = main.$(OBJEXT) game.$(OBJEXT) map.$(OBJEXT) \
-	cell.$(OBJEXT) serializer.$(OBJEXT) explosion.$(OBJEXT) \
+am_pipewalker_OBJECTS = main.$(OBJEXT) modepuzzle.$(OBJEXT) \
+	modesettings.$(OBJEXT) game.$(OBJEXT) map.$(OBJEXT) \
+	cell.$(OBJEXT) settings.$(OBJEXT) explosion.$(OBJEXT) \
 	buffer.$(OBJEXT) button.$(OBJEXT) image.$(OBJEXT) \
 	sound.$(OBJEXT) synchro.$(OBJEXT) texture.$(OBJEXT)
 pipewalker_OBJECTS = $(am_pipewalker_OBJECTS)
@@ -157,10 +158,12 @@ top_srcdir = @top_srcdir@
 pipewalker_SOURCES = \
 	common.h exception.h \
 	main.cpp \
+	modepuzzle.h modepuzzle.cpp \
+	modesettings.h modesettings.cpp \
 	game.h game.cpp \
 	map.h map.cpp \
 	cell.h cell.cpp \
-	serializer.h serializer.cpp \
+	settings.h settings.cpp \
 	explosion.h explosion.cpp \
 	buffer.h buffer.cpp \
 	button.h button.cpp \
@@ -248,7 +251,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/image.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/map.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/serializer.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/modepuzzle.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/modesettings.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/settings.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sound.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synchro.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/texture.Po@am__quote@

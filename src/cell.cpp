@@ -26,11 +26,6 @@ CCell::CCell()
 }
 
 
-CCell::~CCell()
-{
-}
-
-
 void CCell::Reset()
 {
 	m_TubeType = TTNone;
@@ -49,7 +44,7 @@ void CCell::Reset()
 string CCell::Save() const
 {
 	char state[32];
-	sprintf(state, "%i,%i,%03i,%i,%i,%i,%i,%i", m_TubeType, m_CellType, static_cast<int>(m_Angle), m_Lock ? 1 : 0,
+	sprintf(state, "%i,%i,%03i,%i,%i,%i,%i,%i", m_TubeType, m_CellType, static_cast<int>(IsRotationInProgress() ? m_Rotate.InitAngle : m_Angle), m_Lock ? 1 : 0,
 		m_ConnTop ? 1 : 0,
 		m_ConnBottom  ? 1 : 0,
 		m_ConnLeft ? 1 : 0,
@@ -95,7 +90,7 @@ void CCell::AddTube(const ConnectionSide side)
 	//Define cell type
 	if (m_CellType == CTFree)
 		m_CellType = CTTube;
-		
+
 	//Define tube type
 	switch (GetTubeSideCount()) {
 		case 1:	m_TubeType = TTHalf;	break;
@@ -137,7 +132,7 @@ void CCell::AddTube(const ConnectionSide side)
 bool CCell::CanAddTube() const
 {
 	const unsigned char connectionCount = GetTubeSideCount();
-	return 
+	return
 		m_CellType == CTFree ||
 		(m_CellType == CTTube && connectionCount < 3) ||
 		((m_CellType == CTSender || m_CellType == CTReceiver) && connectionCount == 0);

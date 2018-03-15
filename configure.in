@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([PipeWalker], [0.5.1], [artemsen@gmail.com])
+AC_INIT([PipeWalker], [0.6.1], [artemsen@gmail.com])
 AM_INIT_AUTOMAKE([-Wall -Werror])
 AC_CONFIG_SRCDIR([src/cell.cpp])
 

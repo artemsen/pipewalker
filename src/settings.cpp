@@ -16,56 +16,62 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>. *
  **************************************************************************/
 
-#include "serializer.h"
+#include "settings.h"
 #include "buffer.h"
 
 #define PW_SERIALIZE_MAPID		"MapID"					///< Map ID field
 #define PW_SERIALIZE_MAPSTATE	"MapState"				///< Map state field
+#define PW_SERIALIZE_MAPSIZE	"MapSize"				///< Map size field
 #define PW_SERIALIZE_FILENAME	".pipewalker.save"		///< Filename to save state
 
+CSettings::SETTINGS CSettings::Settings;
 
-bool CSerializer::Load(unsigned int& mapId, string& mapState)
+
+void CSettings::Load()
 {
+	//Set default values
+	Settings.Id = 0;
+	Settings.Size = MapSizeNormal;
+
 	const string fileName = GetFileName();
 
 	try {
 		CIniFile ini;
 		ini.Load(fileName.c_str());
-		
-		mapId = atoi(ini.GetProperty(PW_SERIALIZE_MAPID).c_str());
-		mapState = ini.GetProperty(PW_SERIALIZE_MAPSTATE);
+
+		if (ini.ExistProperty(PW_SERIALIZE_MAPSTATE))
+			Settings.State = ini.GetProperty(PW_SERIALIZE_MAPSTATE);
+
+		if (ini.ExistProperty(PW_SERIALIZE_MAPID))
+			Settings.Id = atoi(ini.GetProperty(PW_SERIALIZE_MAPID).c_str());
+
+		if (ini.ExistProperty(PW_SERIALIZE_MAPSIZE))
+			Settings.Size = static_cast<MapSize>(atoi(ini.GetProperty(PW_SERIALIZE_MAPSIZE).c_str()));
 	}
 	catch (CException& /*ex*/) {
-		//Unable to load
-		return false;
 	}
-	return true;
 }
 
 
-bool CSerializer::Save(const unsigned int mapId, const char* mapState)
+void CSettings::Save()
 {
-	assert(mapState);
-
 	const string fileName = GetFileName();
 
 	try {
 		CIniFile ini;
 
-		ini.SetProperty(PW_SERIALIZE_MAPID, mapId);
-		ini.SetProperty(PW_SERIALIZE_MAPSTATE, mapState);
+		ini.SetProperty(PW_SERIALIZE_MAPID, Settings.Id);
+		ini.SetProperty(PW_SERIALIZE_MAPSTATE, Settings.State.c_str());
+		ini.SetProperty(PW_SERIALIZE_MAPSIZE, Settings.Size);
 
 		ini.Save(fileName.c_str());
 	}
 	catch (CException& /*ex*/) {
-		//Unable to save
-		return false;
 	}
-	return true;
 }
 
 
-string CSerializer::GetFileName()
+string CSettings::GetFileName()
 {
 	string loadFileName = getenv(
 #ifdef WIN32
@@ -161,7 +167,14 @@ void CIniFile::SetProperty(const char* name, const char* value)
 string CIniFile::GetProperty(const char* name) const
 {
 	assert(name);
-	
+
 	map<string, string>::const_iterator it = m_Ini.find(name);
 	return (it == m_Ini.end() ? string() : it->second);
+}
+
+
+bool CIniFile::ExistProperty(const char* name) const
+{
+	assert(name);
+	return m_Ini.find(name) != m_Ini.end();
 }

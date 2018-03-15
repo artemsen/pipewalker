@@ -28,8 +28,6 @@ class CBuffer
 public:
 	//! Default constructor
 	CBuffer();
-	//! Default destructor
-	~CBuffer();
 
 	/**
 	 * Create buffer

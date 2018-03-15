@@ -26,11 +26,6 @@ CBuffer::CBuffer()
 }
 
 
-CBuffer::~CBuffer()
-{
-}
-
-
 void CBuffer::Free()
 {
 	m_Data.clear();
@@ -110,7 +105,7 @@ bool CBuffer::SetOffset(const size_t offset)
 void CBuffer::PutData(const void* data, const size_t size)
 {
 	assert(data);
-	
+
 	m_Data.resize(m_Data.size() + size);
 	memcpy(&m_Data[m_Offset], data, size);
 	m_Offset += size;

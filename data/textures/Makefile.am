@@ -1,10 +1,13 @@
 pkgtexturedatadir = $(datadir)/games/$(PACKAGE)/textures
 pkgtexturedata_DATA = \
-	btn_info.tga \
+	btn_sett.tga \
 	btn_next.tga \
 	btn_ok.tga \
+	btn_cancel.tga \
 	btn_prev.tga \
 	btn_reset.tga \
+	btn_radon.tga \
+	btn_radoff.tga \
 	cell_bkg.tga \
 	cell_lock.tga \
 	cell_pc_a.tga \
@@ -19,7 +22,7 @@ pkgtexturedata_DATA = \
 	cell_rcv_p.tga \
 	cell_sender.tga \
 	env_bkgr.tga \
-	env_info.tga \
+	env_sett.tga \
 	env_title.tga \
 	expl_part.tga \
 	num_0.tga \
@@ -35,4 +38,4 @@ pkgtexturedata_DATA = \
 
 EXTRA_DIST = \
 	$(pkgtexturedata_DATA) \
-	env_info.xcf
+	env_sett.xcf

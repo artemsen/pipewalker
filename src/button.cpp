@@ -20,50 +20,68 @@
 
 
 CButton::CButton()
-:	m_x(0.0f),
-	m_y(0.0f),
-	m_width(0.0f),
-	m_height(0.0f),
-	m_tex(0),
-	m_id(0)
+:	m_X(0.0f),
+	m_Y(0.0f),
+	m_Width(0.0f),
+	m_Height(0.0f),
+	m_TexId(0),
+	m_BtnId(0)
 {
 }
 
 
-void CButton::Create(const float x, const float y, const float witdh, const float height, const GLuint tex, const int id)
+CButton::CButton(const float x, const float y, const float width, const float height, const GLuint tex, const int id)
+:	m_X(x),
+	m_Y(y),
+	m_Width(width),
+	m_Height(height),
+	m_TexId(tex),
+	m_BtnId(id)
 {
-	m_x = x;
-	m_y = y;
-	m_width = witdh;
-	m_height = height;
-	m_tex = tex;
-	m_id = id;
 }
 
 
 bool CButton::IsMouseOver(const float x, const float y) const
 {
-	return  x >= m_x && x <= m_x + m_width &&
-			y <= m_y && y >= m_y - m_height;
+	return  x >= m_X && x <= m_X + m_Width &&
+			y <= m_Y && y >= m_Y - m_Height;
 }
 
 
 void CButton::Render(const float x, const float y) const
 {
+	RenderButton(x, y, m_TexId);
+}
+
+
+void CButton::RenderButton(const float x, const float y, const GLuint texture) const
+{
 	const float coeff = IsMouseOver(x, y) ? 0.05f : 0.0f;
 
 	//Button vertex coordinates
 	const float Vertex[] = {
-		m_x - coeff, m_y + coeff,
-		m_x - coeff, m_y - m_height - coeff,
-		m_x + m_width + coeff, m_y - m_height - coeff,
-		m_x + m_width + coeff, m_y + coeff };
+		m_X - coeff, m_Y + coeff,
+		m_X - coeff, m_Y - m_Height - coeff,
+		m_X + m_Width + coeff, m_Y - m_Height - coeff,
+		m_X + m_Width + coeff, m_Y + coeff };
 
 	static const short Tex[] =			{ 0, 1, 0, 0, 1, 0, 1, 1 };	//Texture coordinates
 	static const unsigned int Ind[] =	{ 0, 1, 2, 0, 2, 3 };		//Indices
 
-	glBindTexture(GL_TEXTURE_2D, m_tex);
+	glBindTexture(GL_TEXTURE_2D, texture);
 	glVertexPointer(2, GL_FLOAT, 0, Vertex);
 	glTexCoordPointer(2, GL_SHORT, 0, Tex);
 	glDrawElements(GL_TRIANGLES, (sizeof(Ind) / sizeof(Ind[0])), GL_UNSIGNED_INT, Ind);
+}
+
+
+CRadioButton::CRadioButton(const bool state, const float x, const float y, const float width, const float height, const GLuint texOn, const GLuint texOff, const int id)
+: CButton(x, y, width, height, texOn, id), m_State(state), m_TexOff(texOff)
+{
+}
+
+
+void CRadioButton::Render(const float x, const float y) const
+{
+	RenderButton(x, y, m_State ? m_TexId : m_TexOff);
 }

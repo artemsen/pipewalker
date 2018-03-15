@@ -20,6 +20,13 @@
 
 #include "cell.h"
 
+//! Map sizes
+enum MapSize {
+	MapSizeNormal = 10,
+	MapSizeBig = 14,
+	MapSizeParanoid = 20
+};
+
 
 class CMap
 {
@@ -27,14 +34,26 @@ public:
 	//! Default constructor
 	CMap();
 
-	//! Default destructor
-	~CMap();
-
 	/**
 	 * Initialize new random map
+	 * \param mapSize map size (in cell)
 	 * \param mapId map ID (begin value for srand())
 	 */
-	void New(const unsigned int mapId);
+	void New(const MapSize mapSize, const unsigned int mapId);
+
+	/**
+	 * Load map state from string
+	 * \param mapSize map size (in cell)
+	 * \param mapId map Id
+	 * \param descr map state description
+	 */
+	void LoadMap(const MapSize mapSize, const unsigned int mapId, const string& descr);
+
+	/**
+	 * Save map state as text
+	 * \return map state
+	 */
+	string SaveMap() const;
 
 	/**
 	 * Reset by rotate current map
@@ -72,7 +91,7 @@ public:
 	 * Get current map size
 	 * \return current map size
 	 */
-	unsigned short GetMapSize() const	{ return m_MapSize; }
+	MapSize GetMapSize() const	{ return static_cast<MapSize>(m_MapSize); }
 
 	/**
 	 * Get current map ID
@@ -80,18 +99,6 @@ public:
 	 */
 	unsigned int GetMapID() const		{ return m_MapID; }
 
-	/**
-	 * Save map state as text
-	 * \return map state
-	 */
-	string SaveMap() const;
-
-	/**
-	 * Load map state from string
-	 * \param mapId map Id
-	 * \param descr map state description
-	 */
-	void LoadMap(const unsigned int mapId, const string& descr);
 
 private:
 	/**
@@ -123,8 +130,8 @@ private:
 	 * Make connection between two cell
 	 * \param currX an X coordinate of source cell
 	 * \param currY an Y coordinate of source cell
-	 * \param nextX an X coordinate of destination cell 
-	 * \param nextY an Y coordinate of destination cell 
+	 * \param nextX an X coordinate of destination cell
+	 * \param nextY an Y coordinate of destination cell
 	 */
 	void MakeConnection(const unsigned short currX, const unsigned short currY, const unsigned short nextX, const unsigned short nextY);
 

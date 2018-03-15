@@ -16,45 +16,61 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>. *
  **************************************************************************/
 
-#include "src\PipeWalkerRes.h"
+#pragma once
+
+#include "common.h"
+#include "map.h"
+#include "explosion.h"
+#include "texture.h"
 
 
-//Version
+class CModePuzzle
+{
+public:
+	//! Default constructor
+	CModePuzzle(CMap* gameMap) : m_Map(gameMap) {}
 
-IDR_VERSION VERSIONINFO
- FILEVERSION 0,6,1,0
- PRODUCTVERSION 0,6,1,0
- FILEFLAGSMASK 0x17L
-#ifdef _DEBUG
- FILEFLAGS 0x1L
-#else
- FILEFLAGS 0x0L
-#endif
- FILEOS 0x4L
- FILETYPE 0x0L
- FILESUBTYPE 0x0L
-BEGIN
-    BLOCK "StringFileInfo"
-    BEGIN
-        BLOCK "000004b0"
-        BEGIN
-            VALUE "FileDescription", "PipeWalker game"
-            VALUE "FileVersion", "0, 6, 1, 0"
-            VALUE "InternalName", "PipeWalker"
-            VALUE "LegalCopyright", "Copyright (C) 2009 Artem A. Senichev"
-            VALUE "OriginalFilename", "PipeWalker.exe"
-            VALUE "ProductName", "PipeWalker game"
-            VALUE "ProductVersion", "0, 6, 1, 0"
-        END
-    END
-    BLOCK "VarFileInfo"
-    BEGIN
-        VALUE "Translation", 0x0, 1200
-    END
-END
+	/**
+	 * Render scene
+	 * \param transition transition phase [0...1]
+	 * \return true if redraw is needed
+	 */
+	bool Render(const float transition);
 
+	/**
+	 * Mouse click handler
+	 * \param button mouse button identifier
+	 * \param mouseX world mouse X coordinate
+	 * \param mouseY world mouse Y coordinate
+	 */
+	void OnMouseClick(const Uint8 button, const float mouseX, const float mouseY);
 
-//Icon
+	/**
+	 * Reset explosions
+	 */
+	void ResetExplosions()	{ m_Explosions.clear(); }
 
-IDI_PIPEWALKER          ICON                    "extra\\pipewalker.ico"
+private:
+	/**
+	 * Render puzzle
+	 * \param transition transition phase [0...1]
+	 * \return true if redraw is needed
+	 */
+	bool RenderPuzzle(const float transition);
 
+	/**
+	 * Render cell
+	 * \param type texture type
+	 */
+	void RenderCell(const CTextureBank::TextureType type) const;
+
+	/**
+	 * Get map scale factor
+	 * \return map scale factor
+	 */
+	float GetMapScaleFactor() const				{ return (10.0f / static_cast<float>(m_Map->GetMapSize())); }
+
+private:
+	vector<CExplosion>	m_Explosions;	///< Winner explosions
+	CMap*				m_Map;			///< Game map
+};

@@ -21,36 +21,44 @@
 #include "common.h"
 #include "map.h"
 #include "button.h"
-#include "explosion.h"
-#include "texture.h"
+#include "modepuzzle.h"
+#include "modesettings.h"
 
 
 class CGame
 {
 public:
-	/**
-	 * Start the game!
-	 */
-	static void StartGame();
-
-private:
 	//! Default constructor
 	CGame();
-	//! Default destructor
-	~CGame() {}
 
 	/**
 	 * Do main game loop
 	 */
 	void DoMainLoop();
 
+private:
+	//! Render modes
+	enum Mode {
+		Puzzle,				///< Puzzle (Play) mode
+		Puzzle2Puzzle,		///< Puzzle to puzzle transition mode
+		Puzzle2Settings,	///< Puzzle to settings transition mode
+		Settings,			///< Settings mode
+		Settings2Puzzle		///< Settings to puzzle transition mode
+	};
+
+	//! Transition phase
+	enum Phase {
+		FirstPhase,			///< First transition phase
+		SecondPhase			///< Second transition phase
+	};
+
 	/**
 	 * Get mouse position in world coordinates
-	 * \param posX returned X world mouse coordinate
-	 * \param posY returned Y world mouse coordinate
+	 * \param mouseX returned X world mouse coordinate
+	 * \param mouseY returned Y world mouse coordinate
 	 * \return false if coordinates is out of the window
 	 */
-	static bool GetMousePosition(float& posX, float& posY);
+	static bool GetMousePosition(float& mouseX, float& mouseY);
 
 	/**
 	 * Post redraw event
@@ -64,28 +72,8 @@ private:
 
 	/**
 	 * Render environment
-	 * \param mouseX world mouse X coordinate
-	 * \param mouseY world mouse Y coordinate
-	 * \return true if redraw is needed
 	 */
-	bool RenderEnvironment(const float mouseX, const float mouseY);
-
-	/**
-	 * Render puzzle
-	 * \return true if redraw is needed
-	 */
-	bool RenderPuzzle();
-
-	/**
-	 * Render cell
-	 * \param type texture type
-	 */
-	void RenderCell(const CTextureBank::TextureType type) const;
-
-	/**
-	 * Render information window
-	 */
-	void RenderInfo();
+	void RenderEnvironment();
 
 	/**
 	 * Mouse click handler
@@ -93,26 +81,23 @@ private:
 	 */
 	void OnMouseClick(const Uint8 button);
 
-	//! Render modes
-	enum Mode {
-		InfoToPlay,	///< Transition from Info pane to play mode
-		Play,		///< Play mode
-		PlayToPlay,	///< Transition play to play (new game)
-		PlayToInfo,	///< Transition from play mode to info pane
-		Info		///< Info pane
-	};
+	/**
+	 * Begin new transition
+	 * \param nextMode next expected mode
+	 */
+	void BeginTransition(const Mode nextMode);
 
 private:	//Class variables
-	CMap					m_Map;			///< Game map
-	CButton					m_BtnNext;
-	CButton					m_BtnPrev;
-	CButton					m_BtnReset;
-	CButton					m_BtnInfo;
-	CButton					m_BtnOk;
-	list<CExplosion>		m_Explosions;
+	Mode			m_Mode;				///< Currently active mode
+	Phase			m_TrnPhase;			///< Transition phase (first=true, second=false)
+	unsigned int	m_TrnStartTime;		///< Transition (mode changing) start time (zero if transition is not in active mode)
 
-	unsigned int			m_NextMapId;
+	CMap			m_Map;				///< Game map
+	unsigned int	m_NextMapId;		///< Next map id (for next new game level)
 
-	Mode					m_Mode;
-	unsigned int			m_ModeStartTime;
+	CModePuzzle		m_ModePuzzle;		///< Renderer/handler (game mode)
+	vector<CButton>	m_BtnPuzzle;		///< Buttons array (game mode)
+
+	CModeSettings	m_ModeSettings;		///< Renderer/handler (settings mode)
+	vector<CButton>	m_BtnSettings;		///< Buttons array (settings mode)
 };

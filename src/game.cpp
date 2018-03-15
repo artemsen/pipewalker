@@ -17,63 +17,64 @@
  **************************************************************************/
 
 #include "game.h"
-#include "sound.h"
+#include "texture.h"
 #include "synchro.h"
-#include "serializer.h"
+#include "settings.h"
 
 //Button identifiers
-#define PW_BTN_NEXT		1
-#define PW_BTN_PREV		2
-#define PW_BTN_RESET	3
-#define PW_BTN_INFO		4
-#define PW_BTN_OK		5
+#define PW_BUTTONID_NEXT		1
+#define PW_BUTTONID_PREV		2
+#define PW_BUTTONID_RESET		3
+#define PW_BUTTONID_SETT		4
+#define PW_BUTTONID_OK			5
+#define PW_BUTTONID_CANCEL		6
 
-//! Plain texture coordinates
-static const short PlainTex[] =			{ 0, 1, 0, 0, 1, 0, 1, 1 };
-//! Plain indices
-static const unsigned int PlainInd[] =	{ 0, 1, 2, 0, 2, 3 };
+//Common button properties
+#define PW_BUTTON_TOP		-5.2f
+#define PW_BUTTON_WIDTH		 1.0f
+#define PW_BUTTON_HEIGHT	 1.0f
+#define PW_BUTTON_LEFT		-5.0f
+#define PW_BUTTON_RIGHT		 4.0f
 
 
 CGame::CGame()
-: m_NextMapId(1), m_Mode(InfoToPlay), m_ModeStartTime(0)
+: m_Mode(Puzzle), m_TrnPhase(FirstPhase), m_TrnStartTime(0), m_NextMapId(1), m_ModePuzzle(&m_Map)
 {
-}
-
-
-void CGame::StartGame()
-{
-	CGame game;
-
-	const float btnY = -5.2f;
-	const float btnW = 1.0f;
-	const float btnH = 1.0f;
-	game.m_BtnNext.Create( 2.0f, btnY, btnW, btnH, CTextureBank::Get(CTextureBank::TexButtonNext), PW_BTN_NEXT);
-	game.m_BtnPrev.Create(-3.0f, btnY, btnW, btnH, CTextureBank::Get(CTextureBank::TexButtonPrev), PW_BTN_PREV);
-	game.m_BtnReset.Create(-5.0f, btnY, btnW, btnH, CTextureBank::Get(CTextureBank::TexButtonReset), PW_BTN_RESET);
-	game.m_BtnInfo.Create(4.0f, btnY, btnW, btnH, CTextureBank::Get(CTextureBank::TexButtonInfo), PW_BTN_INFO);
-	game.m_BtnOk.Create(4.0f, btnY, btnW, btnH, CTextureBank::Get(CTextureBank::TexButtonOK), PW_BTN_OK);
-	game.DoMainLoop();
 }
 
 
 void CGame::DoMainLoop()
 {
-	//Load last saved map
-	string mapDescr;
-	if (CSerializer::Load(m_NextMapId, mapDescr))
-		m_Map.LoadMap(m_NextMapId, mapDescr.c_str());
+	//Configure buttons
+	m_BtnPuzzle.reserve(4);
+	m_BtnPuzzle.push_back(CButton( 2.0f, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::Get(CTextureBank::TexButtonNext), PW_BUTTONID_NEXT));
+	m_BtnPuzzle.push_back(CButton(-3.0f, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::Get(CTextureBank::TexButtonPrev), PW_BUTTONID_PREV));
+	m_BtnPuzzle.push_back(CButton(PW_BUTTON_LEFT, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::Get(CTextureBank::TexButtonReset), PW_BUTTONID_RESET));
+	m_BtnPuzzle.push_back(CButton(PW_BUTTON_RIGHT, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::Get(CTextureBank::TexButtonSett), PW_BUTTONID_SETT));
+
+	m_BtnSettings.reserve(2);
+	m_BtnSettings.push_back(CButton(PW_BUTTON_RIGHT, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::Get(CTextureBank::TexButtonOK), PW_BUTTONID_OK));
+	m_BtnSettings.push_back(CButton(PW_BUTTON_LEFT, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::Get(CTextureBank::TexButtonCancel), PW_BUTTONID_CANCEL));
+
+	//Initialize game map
+	if (CSettings::Settings.Id && !CSettings::Settings.State.empty())
+		m_Map.LoadMap(CSettings::Settings.Size, CSettings::Settings.Id, CSettings::Settings.State.c_str());
 	else
-		m_Map.New(m_NextMapId);
+		m_Map.New(CSettings::Settings.Size, 1);
+	m_NextMapId = m_Map.GetMapID();
+
+	m_ModeSettings.Initialize();
 
 	//First launch - make first transition (to make a new map)
-	m_ModeStartTime = CSynchro::GetTick();
+	BeginTransition(Puzzle);
+	m_TrnPhase = SecondPhase;
 
 	bool exitProgram = false;
 
 	while (!exitProgram) {
 		SDL_Event event;
 		if (SDL_WaitEvent(&event) == 0)
-			throw string("SDL_WaitEvent failed: ") + SDL_GetError();
+			throw CException("SDL_WaitEvent failed: ", SDL_GetError());
 		switch (event.type) {
 			case SDL_MOUSEBUTTONDOWN:
 				OnMouseClick(event.button.button);
@@ -81,20 +82,6 @@ void CGame::DoMainLoop()
 			case SDL_KEYDOWN:
 				if (event.key.keysym.sym == SDLK_ESCAPE)
 					exitProgram = true;
-				else if (event.key.keysym.sym == SDLK_n) {
-					if (m_NextMapId < 99999999) {
-						++m_NextMapId;
-						m_Explosions.clear();
-						m_Mode = PlayToPlay;
-						m_ModeStartTime = CSynchro::GetTick();
-					}
-					PostRedrawEvent();
-				}
-				else if (event.key.keysym.sym == SDLK_r) {
-					m_Map.ResetByRotate();
-					m_Explosions.clear();
-					PostRedrawEvent();
-				}
 				break;
 			case SDL_MOUSEMOTION:
 			case SDL_VIDEOEXPOSE:
@@ -108,16 +95,18 @@ void CGame::DoMainLoop()
 		}
 	}
 
-	//Save state
-	CSerializer::Save(m_Map.GetMapID(), m_Map.SaveMap().c_str());
+	//Save map state to settings
+	CSettings::Settings.Id = m_Map.GetMapID();
+	CSettings::Settings.Size = static_cast<MapSize>(m_Map.GetMapSize());
+	CSettings::Settings.State = m_Map.SaveMap();
 }
 
 
-bool CGame::GetMousePosition(float& posX, float& posY)
+bool CGame::GetMousePosition(float& mouseX, float& mouseY)
 {
 	//Get current mouse pointer position
-	int mouseX, mouseY;
-	SDL_GetMouseState(&mouseX, &mouseY);
+	int mousePosX, mousePosY;
+	SDL_GetMouseState(&mousePosX, &mousePosY);
 
 	GLint glViewport[4];
 	glGetIntegerv(GL_VIEWPORT, glViewport);
@@ -132,22 +121,30 @@ bool CGame::GetMousePosition(float& posX, float& posY)
 	glGetDoublev(GL_MODELVIEW_MATRIX, glModelView);
 
 	GLfloat depth;
-	glReadPixels(mouseX, glViewport[3] - mouseY, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depth);
+	glReadPixels(mousePosX, glViewport[3] - mousePosY, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depth);
 
 	GLdouble worldX, worldY, worldZ;
-	gluUnProject(static_cast<GLdouble>(mouseX), static_cast<GLdouble>(glViewport[3] - mouseY), depth, glModelView, glProjection, glViewport, &worldX, &worldY,& worldZ);
+	gluUnProject(static_cast<GLdouble>(mousePosX), static_cast<GLdouble>(glViewport[3] - mousePosY), depth, glModelView, glProjection, glViewport, &worldX, &worldY,& worldZ);
 
-	posX = static_cast<float>(worldX);
-	posY = static_cast<float>(worldY);
+	mouseX = static_cast<float>(worldX);
+	mouseY = static_cast<float>(worldY);
 	return true;
 }
 
 
 void CGame::PostRedrawEvent()
 {
-	SDL_Event event;
-	event.type = SDL_VIDEOEXPOSE;
-	SDL_PushEvent(&event);
+	const int exposeEventNum = SDL_PeepEvents(NULL, 0, SDL_PEEKEVENT, SDL_VIDEOEXPOSEMASK);
+	if (exposeEventNum <= 0) {
+		static int lastRedraw = CSynchro::GetTick();
+		if (CSynchro::GetTick() - lastRedraw < 10)
+			SDL_Delay(10);
+		lastRedraw = CSynchro::GetTick();
+
+		SDL_Event event;
+		event.type = SDL_VIDEOEXPOSE;
+		SDL_PushEvent(&event);
+	}
 }
 
 
@@ -157,116 +154,69 @@ void CGame::RenderScene()
 
 	float mouseX = 0.0f, mouseY = 0.0f;
 	GetMousePosition(mouseX, mouseY);
+
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glLoadIdentity();
 
-	redarawIsNeeded |= RenderEnvironment(mouseX, mouseY);
+	RenderEnvironment();
 
 	//Transition calculate
-	float modeChanging = 1.0f;
-	if (m_Mode != Info && m_Mode != Play) {
-		if (!CSynchro::GetPhase(m_ModeStartTime, 1000, modeChanging)) {
-			//Transition complete
-			if (m_Mode == InfoToPlay || m_Mode == PlayToPlay)
-				m_Mode = Play;
-			else if (m_Mode == PlayToInfo)
-				m_Mode = Info;
-			redarawIsNeeded = true;
-		}
-	}
+	float trnPhase = 1.0f;
+ 	if (m_Mode != Puzzle && m_Mode != Settings) {
+ 		if (!CSynchro::GetPhase(m_TrnStartTime, 500, trnPhase)) {
+ 			//Transition phase complete
+			if (m_TrnPhase == FirstPhase) {
+				trnPhase = 0.0f;
+				m_TrnPhase = SecondPhase;
 
-	if (m_Mode != Info /*any except info*/) {
-		float scale = 1.0f;
-		float rotate = 0.0f;
-		if (m_Mode == InfoToPlay) {
-			scale += 20.0f * (1.0f - modeChanging);
-			rotate = (1.0f - modeChanging) * -360.0f;
-		}
-		else if (m_Mode == PlayToInfo) {
-			scale += 20.0f * modeChanging;
-			rotate = modeChanging * 360.0f;
-		}
-		else if (m_Mode == PlayToPlay) {
-			if (modeChanging < 0.5f) {
-				scale += 20.0f * modeChanging;
-				rotate = modeChanging * 360.0f;
+				if (m_Mode == Puzzle2Puzzle || CSettings::Settings.Size != m_Map.GetMapSize())
+					m_Map.New(CSettings::Settings.Size, m_NextMapId);
+
+				m_TrnStartTime = CSynchro::GetTick();	//second phase begin
 			}
 			else {
-				if (m_NextMapId != m_Map.GetMapID())
-					m_Map.New(m_NextMapId);
-				scale += 20.0f * (1.0f - modeChanging);
-				rotate = (1.0f - modeChanging) * -360.0f;
+				if (m_Mode == Puzzle2Settings)
+					m_Mode = Settings;
+				else
+					m_Mode = Puzzle;
 			}
-		}
+ 		}
+		else if (m_TrnPhase == FirstPhase)
+			trnPhase = 1.0f - trnPhase;	//Invert phase
 
-		glPushMatrix();
-			if (m_Mode == InfoToPlay || m_Mode == PlayToInfo || m_Mode == PlayToPlay) {
-				glScalef(scale, scale, 1.0f);
-				glRotatef(rotate, 0.0f, 0.0f, 1.0f);
-			}
-			redarawIsNeeded |= RenderPuzzle();
-		glPopMatrix();
+		redarawIsNeeded = true;
+ 	}
+	const vector<CButton>* activeBtns = NULL;
 
-		if (m_Map.IsGameOver()) {
-			if (m_Explosions.empty()) {
-				//Create explosions
-				const unsigned short mapSize = m_Map.GetMapSize();
-				for (unsigned short y = 0; y < mapSize; y++) {
-					const GLfloat pozY = -(mapSize / 2) + 0.5f + y;
-					for (unsigned short x = 0; x < mapSize; x++) {
-						const GLfloat posX = -(mapSize / 2) + 0.5f + x;
-						const CCell& cell = m_Map.GetCell(x, y);
-						if (cell.GetCellType() == CCell::CTReceiver)
-							m_Explosions.push_back(CExplosion(posX, -pozY));
-					}
-				}
-			}
-
-			//Render winner explosions
-			for (list<CExplosion>::iterator itExpl = m_Explosions.begin(); itExpl != m_Explosions.end(); ++itExpl)
-				itExpl->Render();
-
-			redarawIsNeeded = true;
-		}
+	if (m_Mode == Puzzle || m_Mode == Puzzle2Puzzle ||
+		(m_TrnPhase == FirstPhase && m_Mode == Puzzle2Settings) ||
+		(m_TrnPhase == SecondPhase && m_Mode == Settings2Puzzle)) {
+			redarawIsNeeded |= m_ModePuzzle.Render(trnPhase);
+			activeBtns = &m_BtnPuzzle;
+	}
+ 	else if (m_Mode == Settings ||
+		(m_TrnPhase == FirstPhase && m_Mode == Settings2Puzzle) ||
+		(m_TrnPhase == SecondPhase && m_Mode == Puzzle2Settings)) {
+			redarawIsNeeded |= m_ModeSettings.Render(mouseX, mouseY, trnPhase);
+			activeBtns = &m_BtnSettings;
 	}
 
-	if (m_Mode == InfoToPlay || m_Mode == PlayToInfo || m_Mode == Info) {
-		float scale = 1.0f;
-		float rotate = 0.0f;
-		if (m_Mode == InfoToPlay) {
-			scale += 20.0f * modeChanging;
-			rotate = modeChanging * -360.0f;
-		}
-		else if (m_Mode == PlayToInfo) {
-			scale += 20.0f * (1.0f - modeChanging);
-			rotate = (1.0f - modeChanging) * -360.0f;
-		}
+	//Buttons
+	assert(activeBtns != NULL);
+	glColor4f(1.0f, 1.0, 1.0f, trnPhase);
+	for (vector<CButton>::const_iterator itBtn = activeBtns->begin(); itBtn != activeBtns->end(); ++itBtn)
+		itBtn->Render(mouseX, mouseY);
+	glColor4f(1.0f, 1.0, 1.0f, 1.0f);
 
-		//Draw info pane
-		static const float CellVertex[] = { -5.0f, 5.0f, -5.0f, -5.0f, 5.0f, -5.0f, 5.0f, 5.0f };
-		glPushMatrix();
-			if (m_Mode == InfoToPlay || m_Mode == PlayToInfo) {
-				glScalef(scale, scale, 1.0f);
-				glRotatef(rotate, 0.0f, 0.0f, 1.0f);
-			}
-			glBindTexture(GL_TEXTURE_2D, CTextureBank::Get(CTextureBank::TexEnvInfo));
-			glVertexPointer(2, GL_FLOAT, 0, CellVertex);
-			glTexCoordPointer(2, GL_SHORT, 0, PlainTex);
-			glDrawElements(GL_TRIANGLES, (sizeof(PlainInd) / sizeof(PlainInd[0])), GL_UNSIGNED_INT, PlainInd);
-		glPopMatrix();
-
-	}
 
 	SDL_GL_SwapBuffers();
-
-	redarawIsNeeded |= (m_Mode != Info && m_Mode != Play);
 
 	if (redarawIsNeeded)
 		PostRedrawEvent();
 }
 
 
-bool CGame::RenderEnvironment(const float mouseX, const float mouseY)
+void CGame::RenderEnvironment()
 {
 	//Render environment background
 	glDisable(GL_DEPTH_TEST);
@@ -275,8 +225,9 @@ bool CGame::RenderEnvironment(const float mouseX, const float mouseY)
 	const float wndWidth = static_cast<float>(glViewport[2]);
 	const float wndHeight = static_cast<float>(glViewport[3]);
 	const float vertBkgr[] = { 0.0f, wndHeight, 0.0f, 0.0f, wndWidth, 0.0f, wndWidth, wndHeight };
-	static const short texBkgr[] =	{ 0, 5, 0, 0, 3, 0, 3, 5 };
-	
+	static const short texBkgr[] =	{ 0, 4, 0, 0, 3, 0, 3, 4 };
+	static const unsigned int plainInd[] =	{ 0, 1, 2, 0, 2, 3 };
+
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
 		glLoadIdentity();
@@ -287,13 +238,14 @@ bool CGame::RenderEnvironment(const float mouseX, const float mouseY)
 			glBindTexture(GL_TEXTURE_2D, CTextureBank::Get(CTextureBank::TexEnvBkgr));
 			glVertexPointer(2, GL_FLOAT, 0, vertBkgr);
 			glTexCoordPointer(2, GL_SHORT, 0, texBkgr);
-			glDrawElements(GL_TRIANGLES, (sizeof(PlainInd) / sizeof(PlainInd[0])), GL_UNSIGNED_INT, PlainInd);
+			glDrawElements(GL_TRIANGLES, (sizeof(plainInd) / sizeof(plainInd[0])), GL_UNSIGNED_INT, plainInd);
 
-			const float vertTitle[] = { 10.0f, wndHeight - 5.0f, 10.0f, wndHeight - 50.0f, wndWidth - 10.0f, wndHeight - 50.0f, wndWidth - 10.0f, wndHeight - 5.0f };
+			const float vertTitle[] =		{ 10.0f, wndHeight - 5.0f, 10.0f, wndHeight - 55.0f, wndWidth - 10.0f, wndHeight - 55.0f, wndWidth - 10.0f, wndHeight - 5.0f };
+			static const short texTitle[] =	{ 0, 1, 0, 0, 1, 0, 1, 1 };
 			glBindTexture(GL_TEXTURE_2D, CTextureBank::Get(CTextureBank::TexEnvTitle));
 			glVertexPointer(2, GL_FLOAT, 0, vertTitle);
-			glTexCoordPointer(2, GL_SHORT, 0, PlainTex);
-			glDrawElements(GL_TRIANGLES, (sizeof(PlainInd) / sizeof(PlainInd[0])), GL_UNSIGNED_INT, PlainInd);
+			glTexCoordPointer(2, GL_SHORT, 0, texTitle);
+			glDrawElements(GL_TRIANGLES, (sizeof(plainInd) / sizeof(plainInd[0])), GL_UNSIGNED_INT, plainInd);
 
 			glMatrixMode(GL_PROJECTION);
 		glPopMatrix();
@@ -301,227 +253,75 @@ bool CGame::RenderEnvironment(const float mouseX, const float mouseY)
 	glPopMatrix();
 	glEnable(GL_DEPTH_TEST);
 
-	//Render map ID
-	if (m_Mode == Play || m_Mode == PlayToPlay) {
-		static const float MapIdVertex[] = { -0.2f, 0.4f, -0.2f, -0.4f, 0.2f, -0.4f, 0.2f, 0.4f };
-		glPushMatrix();
-			glTranslatef(-2.25f, -5.7f, 0.0f);
-			char szMapId[64];
-			sprintf(szMapId, "%i", m_Map.GetMapID());
-			string mapIdAsString(szMapId);
-			while (mapIdAsString.length() < 8)
-				mapIdAsString = '0' + mapIdAsString;
-			for (size_t i = 0; i < 8; ++i) {
-				glTranslatef(0.5f, 0.0f, 0.0f);
-				glBindTexture(GL_TEXTURE_2D, CTextureBank::Get(static_cast<CTextureBank::TextureType>(CTextureBank::TexNum0 + (mapIdAsString[i] - '0'))));
-				glVertexPointer(2, GL_FLOAT, 0, MapIdVertex);
-				glTexCoordPointer(2, GL_SHORT, 0, PlainTex);
-				glDrawElements(GL_TRIANGLES, (sizeof(PlainInd) / sizeof(PlainInd[0])), GL_UNSIGNED_INT, PlainInd);
-			}
-		glPopMatrix();
-	}
-
-	//Buttons
-	if (m_Mode == Play) {
-		m_BtnNext.Render(mouseX, mouseY);
-		m_BtnPrev.Render(mouseX, mouseY);
-		m_BtnReset.Render(mouseX, mouseY);
-		m_BtnInfo.Render(mouseX, mouseY);
-	}
-	else if (m_Mode == Info) {
-		m_BtnOk.Render(mouseX, mouseY);
-	}
-
 	//Draw cell's background
-	const unsigned short mapSize = m_Map.GetMapSize();
-	//Set scale
-	glPushMatrix();
-	float scale = 10.0f / static_cast<float>(mapSize);
-	glScalef(scale, scale, scale);
-	for (unsigned short y = 0; y < mapSize; ++y) {
-		const float pozY = -(mapSize / 2) + 0.5f + y;
-		for (unsigned short x = 0; x < mapSize; ++x) {
-			const GLfloat posX = -(mapSize / 2) + 0.5f + x;
-			glPushMatrix();
-				glTranslatef(posX, -pozY, 0.0f);
-				RenderCell(CTextureBank::TexCellBackground);
-			glPopMatrix();
-		}
-	}
-	glPopMatrix();
-
-	return false;
-}
-
-
-bool CGame::RenderPuzzle()
-{
-	const unsigned short mapSize = m_Map.GetMapSize();
-
-	//Set scale
-	glPushMatrix();
-	float scale = 10.0f / static_cast<float>(mapSize);
-	glScalef(scale, scale, scale);
-
-	bool redarawIsNeeded = false;
-
-	for (unsigned short y = 0; y < mapSize; ++y) {
-		const float pozY = -(mapSize / 2) + 0.5f + y;
-		for (unsigned short x = 0; x < mapSize; ++x) {
-			const float posX = -(mapSize / 2) + 0.5f + x;
-			CCell& cell = m_Map.GetCell(x, y);
-			const bool activeState = cell.IsActive();
-			glPushMatrix();
-				glTranslatef(posX, -pozY, 0.0f);
-
-				//Draw tube
-				if (cell.GetCellType() != CCell::CTFree) {
-					for (char shadow = 1; shadow >= 0; --shadow) {
-						glPushMatrix();
-							if (!shadow)
-								glColor4f(1.0f, 1.0, 1.0f, 1.0f);
-							else {
-								glColor4f(0.0f, 0.0, 0.0f, 0.6f);
-								glTranslatef(0.05f, -0.05f, 0.0f);
-							}
-							//redarawIsNeeded |= cell.ProcessRotation();
-							if (cell.ProcessRotation()) {
-								redarawIsNeeded = true;
-								CSoundBank::Play(CSoundBank::SndClatz);
-							}
-							glRotatef(cell.GetAngle(), 0.0f, 0.0f, 1.0f);
-
-							CTextureBank::TextureType texType = CTextureBank::TexCounter;
-							switch (cell.GetTubeType()) {
-								case CCell::TTHalf:		texType = (activeState ? CTextureBank::TexTubeHalfActive : CTextureBank::TexTubeHalfPassive);	break;
-								case CCell::TTStraight:	texType = (activeState ? CTextureBank::TexTubeStrActive : CTextureBank::TexTubeStrPassive);	break;
-								case CCell::TTCurved:	texType = (activeState ? CTextureBank::TexTubeCrvActive : CTextureBank::TexTubeCrvPassive);	break;
-								case CCell::TTJoiner:	texType = (activeState ? CTextureBank::TexTubeJnrActive : CTextureBank::TexTubeJnrPassive);	break;
-								default:
-									assert(false && "Unknown tube type");
-									break;
-							}
-							RenderCell(texType);
-							redarawIsNeeded |= cell.IsRotationInProgress();
-						glPopMatrix();
-					}
-				}
-
-				//Draw objects
-				switch (cell.GetCellType()) {
-					case CCell::CTFree:	//Free cell
-					case CCell::CTTube:	//Will be drawn later
-						break;	
-					case CCell::CTSender:
-						RenderCell(CTextureBank::TexSender);
-						break;
-					case CCell::CTReceiver:
-						RenderCell(activeState ? CTextureBank::TexReceiverActive : CTextureBank::TexReceiverPassive);
-						break;
-					default:
-						assert(false && "Unknown object type");
-						break;
-				}
-
-				//Draw lock
-				if (cell.IsLocked()) {
-					glDisable(GL_DEPTH_TEST);
-						RenderCell(CTextureBank::TexLock);
-					glEnable(GL_DEPTH_TEST);
-				}
-			glPopMatrix();
-		}
-	}
-
-	glPopMatrix();
-
-	if (redarawIsNeeded)
-		m_Map.DefineConnectStatus();
-
-	return redarawIsNeeded;
-}
-
-
-void CGame::RenderCell(const CTextureBank::TextureType type) const
-{
- 	//Single cell vertex coordinates
- 	static const float CellVertex[] = { -0.5f, 0.5f, -0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f };
- 
- 	glBindTexture(GL_TEXTURE_2D, CTextureBank::Get(type));
- 	glVertexPointer(2, GL_FLOAT, 0, CellVertex);
- 	glTexCoordPointer(2, GL_SHORT, 0, PlainTex);
- 	glDrawElements(GL_TRIANGLES, (sizeof(PlainInd) / sizeof(PlainInd[0])), GL_UNSIGNED_INT, PlainInd);
+	const unsigned short mapSize = static_cast<const unsigned short>(m_Map.GetMapSize());
+	static const float cellVertex[] = { -5.0f, 5.0f, -5.0f, -5.0f, 5.0f, -5.0f, 5.0f, 5.0f };
+	glBindTexture(GL_TEXTURE_2D, CTextureBank::Get(CTextureBank::TexCellBackground));
+	glVertexPointer(2, GL_FLOAT, 0, cellVertex);
+	const short cellTexture[] =	{ 0, mapSize, 0, 0, mapSize, 0, mapSize, mapSize };
+	glTexCoordPointer(2, GL_SHORT, 0, cellTexture);
+	glDrawElements(GL_TRIANGLES, (sizeof(plainInd) / sizeof(plainInd[0])), GL_UNSIGNED_INT, plainInd);
 }
 
 
 void CGame::OnMouseClick(const Uint8 button)
 {
-	float posX = 0.0f, posY = 0.0f;
-	if (!GetMousePosition(posX, posY))
+	float mouseX = 0.0f, mouseY = 0.0f;
+	if (!GetMousePosition(mouseX, mouseY))
 		return;
 
-	if (button == SDL_BUTTON_LEFT) {
-		if (m_Mode == Play) {
-			if (m_BtnNext.IsMouseOver(posX, posY)) {
-				m_Explosions.clear();
-				if (m_NextMapId < 99999999) {
-					++m_NextMapId;
-					m_Explosions.clear();
-					m_Mode = PlayToPlay;
-					m_ModeStartTime = CSynchro::GetTick();
+	if (button == SDL_BUTTON_LEFT && (m_Mode == Puzzle || m_Mode == Settings)) {
+		const vector<CButton>& btns = (m_Mode == Puzzle ? m_BtnPuzzle : m_BtnSettings);
+		for (vector<CButton>::const_iterator itBtn = btns.begin(); itBtn != btns.end(); ++itBtn) {
+			if (itBtn->IsMouseOver(mouseX, mouseY)) {
+				switch (itBtn->GetId()) {
+					case PW_BUTTONID_NEXT:
+					case PW_BUTTONID_PREV:
+						m_NextMapId += (itBtn->GetId() == PW_BUTTONID_NEXT ? 1 : -1);
+						if (m_NextMapId == 0 || m_NextMapId > 99999999)
+							m_NextMapId = 1;
+						m_ModePuzzle.ResetExplosions();
+						BeginTransition(Puzzle);
+						break;
+					case PW_BUTTONID_RESET:
+						m_ModePuzzle.ResetExplosions();
+						m_Map.ResetByRotate();
+						break;
+					case PW_BUTTONID_SETT:
+						m_ModeSettings.SetMapSize(CSettings::Settings.Size);
+						BeginTransition(Settings);
+						break;
+					case PW_BUTTONID_OK:
+						CSettings::Settings.Size = m_ModeSettings.GetMapSize();
+						if (CSettings::Settings.Size != m_Map.GetMapSize())
+							m_ModePuzzle.ResetExplosions();
+						BeginTransition(Puzzle);
+						break;
+					case PW_BUTTONID_CANCEL:
+						BeginTransition(Puzzle);
+						break;
+					default:
+						assert(false && "Unhandled button id");
 				}
-			}
-			else if (m_BtnPrev.IsMouseOver(posX, posY)) {
-				if (m_NextMapId > 1) {
-					--m_NextMapId;
-					m_Explosions.clear();
-					m_Mode = PlayToPlay;
-					m_ModeStartTime = CSynchro::GetTick();
-				}
-			}
-			else if (m_BtnReset.IsMouseOver(posX, posY)) {
-				m_Explosions.clear();
-				m_Map.ResetByRotate();
-			}
-			else if (m_BtnInfo.IsMouseOver(posX, posY)) {
-				m_Mode = PlayToInfo;
-				m_ModeStartTime = CSynchro::GetTick();
-			}
-		}
-		else if (m_Mode == Info) {
-			if (m_BtnOk.IsMouseOver(posX, posY)) {
-				m_Mode = InfoToPlay;
-				m_ModeStartTime = CSynchro::GetTick();
 			}
 		}
 	}
 
-	if (m_Mode == Play && !m_Map.IsGameOver() && posX > -5.0f && posX < 5.0f && posY > -5.0f && posY < 5.0f) {	//point in game field
-		const float scale = 10.0f / static_cast<float>(m_Map.GetMapSize());
-		const unsigned short x = static_cast<unsigned short>((posX + 5.0f) / scale);
-		const unsigned short y = m_Map.GetMapSize() - 1 - static_cast<unsigned short>((posY + 5.0f) / scale);
-		
-		CCell& cell = m_Map.GetCell(x, y);
-		if (cell.GetCellType() != CCell::CTFree) {
-			switch (button) {
-				case SDL_BUTTON_MIDDLE:
-					cell.ReverseLock();
-					break;
-				case SDL_BUTTON_LEFT:
-				case SDL_BUTTON_RIGHT:
-					cell.Rotate(button != SDL_BUTTON_LEFT);
-					m_Map.DefineConnectStatus();
-					break;
-				default:
-					break;
-			}
-		}
-	}		
+	if (m_Mode == Puzzle)
+		m_ModePuzzle.OnMouseClick(button, mouseX, mouseY);
+	else if (m_Mode == Settings)
+		m_ModeSettings.OnMouseClick(button, mouseX, mouseY);
+
 	PostRedrawEvent();
 }
 
 
-void CGame::RenderInfo()
+void CGame::BeginTransition(const Mode newMode)
 {
-
+	if (newMode == Puzzle)
+		m_Mode = (m_Mode == Puzzle ? Puzzle2Puzzle : Settings2Puzzle);
+	else if (newMode == Settings)
+		m_Mode = Puzzle2Settings;
+	m_TrnPhase = FirstPhase;
+	m_TrnStartTime = CSynchro::GetTick();
 }

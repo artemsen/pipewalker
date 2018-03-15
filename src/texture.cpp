@@ -28,7 +28,7 @@ struct TexFile {
 static const TexFile TextureFiles[] = {
 	{ CTextureBank::TexEnvBkgr,			"env_bkgr.tga"		},
 	{ CTextureBank::TexEnvTitle,		"env_title.tga"		},
-	{ CTextureBank::TexEnvInfo,			"env_info.tga"		},
+	{ CTextureBank::TexEnvSett,			"env_sett.tga"		},
 	{ CTextureBank::TexCellBackground,	"cell_bkg.tga"		},
 	{ CTextureBank::TexSender,			"cell_sender.tga"	},
 	{ CTextureBank::TexReceiverActive,	"cell_rcv_a.tga"	},
@@ -37,7 +37,7 @@ static const TexFile TextureFiles[] = {
 	{ CTextureBank::TexTubeHalfPassive,	"cell_ph_p.tga"		},
 	{ CTextureBank::TexTubeHalfActive,	"cell_ph_a.tga"		},
 	{ CTextureBank::TexTubeCrvPassive,	"cell_pc_p.tga"		},
-	{ CTextureBank::TexTubeCrvActive,	"cell_pc_a.tga"		},	
+	{ CTextureBank::TexTubeCrvActive,	"cell_pc_a.tga"		},
 	{ CTextureBank::TexTubeStrPassive,	"cell_ps_p.tga"		},
 	{ CTextureBank::TexTubeStrActive,	"cell_ps_a.tga"		},
 	{ CTextureBank::TexTubeJnrPassive,	"cell_pj_p.tga"		},
@@ -56,8 +56,11 @@ static const TexFile TextureFiles[] = {
 	{ CTextureBank::TexButtonNext,		"btn_next.tga"		},
 	{ CTextureBank::TexButtonPrev,		"btn_prev.tga"		},
 	{ CTextureBank::TexButtonReset,		"btn_reset.tga"		},
-	{ CTextureBank::TexButtonInfo,		"btn_info.tga"		},
+	{ CTextureBank::TexButtonSett,		"btn_sett.tga"		},
 	{ CTextureBank::TexButtonOK,		"btn_ok.tga"		},
+	{ CTextureBank::TexButtonCancel,	"btn_cancel.tga"	},
+	{ CTextureBank::TexRadBtnOn,		"btn_radon.tga"		},
+	{ CTextureBank::TexRadBtnOff,		"btn_radoff.tga"	},
 };
 
 
@@ -72,7 +75,7 @@ void CTexture::Free()
 }
 
 
-void CTexture::Load(const char* fileName)
+void CTexture::Load(const char* fileName, const int modeWrap /*= GL_CLAMP*/)
 {
 	assert(fileName);
 
@@ -81,24 +84,19 @@ void CTexture::Load(const char* fileName)
 	CImage img;
 	img.Load(fileName);
 
+	assert(!(img.GetWidth() & img.GetWidth() - 1));		//Pow of 2
+	assert(!(img.GetHeight() & img.GetHeight() - 1));	//Pow of 2
+
 	glGenTextures(1, &m_Id);
 
 	glBindTexture(GL_TEXTURE_2D, m_Id);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
-#if 0	//best
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	gluBuild2DMipmaps(GL_TEXTURE_2D, img.GetMode(), img.GetWidth(), img.GetHeight(), img.GetMode(), GL_UNSIGNED_BYTE, img.GetData());
-#else	//worst, but fast
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, modeWrap);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, modeWrap);
 	glTexImage2D(GL_TEXTURE_2D, 0, img.GetMode(), img.GetWidth(), img.GetHeight(), 0, img.GetMode(), GL_UNSIGNED_BYTE, img.GetData());
-#endif
 }
 
 
@@ -114,7 +112,10 @@ void CTextureBank::Initialize()
 		strcpy(fileName, DIR_TEXTURES);
 		strcat(fileName, TextureFiles[i].FileName);
 
-		m_Texture[i].Load(fileName);
+		if (i == CTextureBank::TexEnvBkgr || i == CTextureBank::TexCellBackground)
+			m_Texture[i].Load(fileName, GL_REPEAT);
+		else
+			m_Texture[i].Load(fileName);
 	}
 }
 

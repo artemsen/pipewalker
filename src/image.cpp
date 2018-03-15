@@ -144,7 +144,7 @@ void CImage::LoadTarga(CBuffer* buf)
 	//Read the data
 	m_Data = new unsigned char[sizeInBytes];
 	if (header->ImageType == IMAGE_TGA_RGB)
-		memcpy(m_Data, buf->GetData(sizeInBytes), sizeInBytes); 
+		memcpy(m_Data, buf->GetData(sizeInBytes), sizeInBytes);
 	else {
 		//Create new own buffer to store image data
 		size_t bufPos = 0;
@@ -216,7 +216,7 @@ void CImage::LoadBitmap(CBuffer* buf)
 	if (!buf->SetOffset(pBMPFileHeader->OffBits))
 		throw CException("incorrect format");
 	m_Data = new unsigned char[ulSize];
-	memcpy(m_Data, buf->GetData(ulSize), ulSize); 
+	memcpy(m_Data, buf->GetData(ulSize), ulSize);
 
 	ConvertBGRtoRGB();
 }

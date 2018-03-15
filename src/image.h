@@ -61,7 +61,7 @@ public:
 	 * \return image mode
 	 */
 	inline GLint GetMode() const				{ return m_ImgMode; }
-	
+
 	/**
 	 * Image properties: Get image size in bytes
 	 * \return image format

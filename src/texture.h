@@ -44,8 +44,9 @@ public:
 	/**
 	 * Load texture from file
 	 * \param fileName texture file name
+	 * \param modeWrap default wrap texture mode
 	 */
-	void Load(const char* fileName);
+	void Load(const char* fileName, const int modeWrap = GL_CLAMP);
 
 private:
 	GLuint	m_Id;				///< Texture identifier
@@ -62,7 +63,7 @@ public:
 	enum TextureType {
 		TexEnvBkgr = 0,			///< Main environment background
 		TexEnvTitle,			///< Main environment title
-		TexEnvInfo,				///< Environment info window
+		TexEnvSett,				///< Environment settings window
 		TexCellBackground,		///< Cell background
 		TexSender,				///< Sender
 		TexReceiverActive,		///< Active receiver
@@ -90,8 +91,11 @@ public:
 		TexButtonNext,			///< Button 'next' (new game)
 		TexButtonPrev,			///< Button 'previus'
 		TexButtonReset,			///< Button 'reset'
-		TexButtonInfo,			///< Button 'info'
+		TexButtonSett,			///< Button 'settings'
 		TexButtonOK,			///< Button 'OK'
+		TexButtonCancel,		///< Button 'Cancel'
+		TexRadBtnOn,			///< Radio button 'On'
+		TexRadBtnOff,			///< Radio button 'Off'
 		TexCounter				///< texture counter
 	};
 

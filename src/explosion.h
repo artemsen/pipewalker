@@ -26,7 +26,7 @@ private:
 
 private:
 	//! Particles description
-	struct EXPL_PARTICLE {
+	struct PARTICLE {
 		float	Life;		///< Life value
 		float	FadeSpeed;	///< Fade speed
 		float	PosX;		///< Position by X axis
@@ -35,8 +35,8 @@ private:
 		float	SpeedY;		///< Speed by Y axis
 	};
 
-	vector<EXPL_PARTICLE>	m_Particles;	///< Particle Array
-	float						m_X;			///< Initial X explosion position
-	float						m_Y;			///< Initial Y explosion position
-	float						m_Force;		///< Explosion force
+	vector<PARTICLE>	m_Particles;	///< Particle Array
+	float				m_X;			///< Initial X explosion position
+	float				m_Y;			///< Initial Y explosion position
+	float				m_Force;		///< Explosion force
 };

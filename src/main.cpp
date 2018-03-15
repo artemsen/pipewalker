@@ -22,6 +22,14 @@
 #include "sound.h"
 #include "game.h"
 #include "texture.h"
+#include "settings.h"
+
+#ifdef WIN32
+#include "PipeWalkerRes.h"
+#endif // WIN32
+
+#define SCREEN_WIDTH	490		///< Initial screen (main window) width
+#define SCREEN_HEIGHT	580		///< Initial screen (main window) height
 
 
 /****************************************************************/
@@ -47,7 +55,16 @@ extern "C" int main(int /*argc*/, char** /*argv*/)
 		CSoundBank::Initialize();
 
 		SDL_WM_SetCaption(PACKAGE_STRING, PACKAGE_STRING);
+#ifdef WIN32
+		HINSTANCE handle = ::GetModuleHandle(NULL);
+		HICON icon = ::LoadIcon(handle, MAKEINTRESOURCE(IDI_PIPEWALKER));
+		SDL_SysWMinfo wminfo;
+		SDL_VERSION(&wminfo.version);
+		if (SDL_GetWMInfo(&wminfo) == 1)
+			::SetClassLong(wminfo.window, GCL_HICON, reinterpret_cast<LONG>(icon));
+#else
 		SDL_WM_SetIcon(SDL_LoadBMP(DIR_GAMEDATA "PipeWalker.bmp"), NULL);
+#endif // WIN32
 
 		//GL attributes
 		SDL_GL_SetAttribute(SDL_GL_RED_SIZE,     5);
@@ -98,13 +115,20 @@ extern "C" int main(int /*argc*/, char** /*argv*/)
 		fprintf(stdout, "GL vendor:   %s\n", glGetString(GL_VENDOR));
 #endif // _NDEBUG
 
-		srand(static_cast<unsigned int>(time(NULL)));
 		CSynchro::Start();
 		CTextureBank::Initialize();
+		CSettings::Load();
 
-		CGame::StartGame();
+		CGame game;
+		game.DoMainLoop();
 
 		CTextureBank::Free();
+		CSettings::Save();
+
+#ifdef WIN32
+		::DestroyIcon(icon);
+#endif	//WIN32
+
 	}
 	catch (const CException& ex) {
 		fprintf(stderr, "Error: %s\n", ex.what());

@@ -15,7 +15,8 @@ void CExplosion::Render()
 
 	bool explosionActive = false;
 
-	for (size_t i = 0; i < m_Particles.size(); ++i) {
+	const size_t sz = m_Particles.size();
+	for (size_t i = 0; i < sz; ++i) {
 		if (m_Particles[i].Life > 0.0f) {
 
 			explosionActive = true;
@@ -23,7 +24,7 @@ void CExplosion::Render()
 			const float radius = (m_Force / 2.0f) * (1.0f - m_Particles[i].Life);
 
 			glColor4f(1.0f, 1.0f, 1.0f, m_Particles[i].Life > 0.1f ? m_Particles[i].Life : 0.1f);
- 
+
  			const float vertex[] = {
 				 m_Particles[i].PosX - radius, m_Particles[i].PosY + radius,
 				 m_Particles[i].PosX - radius, m_Particles[i].PosY - radius,
@@ -32,7 +33,7 @@ void CExplosion::Render()
 			};
  			static const short texture[] =			{ 0, 1, 0, 0, 1, 0, 1, 1 };
  			static const unsigned int indices[] =	{ 0, 1, 2, 0, 2, 3 };
- 
+
   			glBindTexture(GL_TEXTURE_2D, CTextureBank::Get(CTextureBank::TexExplosionPart));
  			glVertexPointer(2, GL_FLOAT, 0, vertex);
  			glTexCoordPointer(2, GL_SHORT, 0, texture);

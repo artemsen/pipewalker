@@ -27,9 +27,6 @@ public:
 	//! Default constructor
 	CCell();
 
-	//! Destructor
-	~CCell();
-
 	//! Tube type
 	enum TubeType {
 		TTNone,			///< Free cell

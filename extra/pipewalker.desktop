@@ -9,5 +9,5 @@ Comment[fr]=Connectez tous les ordinateurs au réseau!
 TryExec=pipewalker
 Exec=pipewalker
 Categories=Game;LogicGame;
-Icon=PipeWalker.xpm
+Icon=pipewalker.xpm
 MimeType=

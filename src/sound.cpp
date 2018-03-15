@@ -88,7 +88,7 @@ void CSoundBank::Play(const SoundType /*type*/)
 }
 
 
-void CSoundBank::OnFillBuffer(void* /*userdata*/, Uint8* stream, int len) 
+void CSoundBank::OnFillBuffer(void* /*userdata*/, Uint8* stream, int len)
 {
 	const size_t i = SndClatz;
 	Uint32 amount = (m_Sound[i].m_Length - m_Sound[i].m_Pos);

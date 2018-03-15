@@ -20,19 +20,15 @@
 
 
 CMap::CMap()
-: m_GameOver(false), m_SenderX(0), m_SenderY(0), m_ZeroX(0), m_ZeroY(0), m_MapSize(10), m_MapID(0xffffffff)
+: m_GameOver(false), m_SenderX(0), m_SenderY(0), m_ZeroX(0), m_ZeroY(0), m_MapSize(10), m_MapID(0)
 {
 	m_CellMap.resize(m_MapSize * m_MapSize);
 }
 
 
-CMap::~CMap()
+void CMap::New(const MapSize mapSize, const unsigned int mapId)
 {
-}
-
-
-void CMap::New(const unsigned int mapId)
-{
+	m_MapSize = static_cast<unsigned short>(mapSize);
 	m_CellMap.resize(m_MapSize * m_MapSize);
 
 	//Initialize random sequence
@@ -65,6 +61,53 @@ void CMap::New(const unsigned int mapId)
 }
 
 
+void CMap::LoadMap(const MapSize mapSize, const unsigned int mapId, const string& descr)
+{
+	m_MapSize = static_cast<unsigned short>(mapSize);
+	m_CellMap.resize(m_MapSize * m_MapSize);
+	m_MapID = mapId;
+
+	size_t pos = 0;
+
+	for (unsigned short x = 0; x < m_MapSize; ++x) {
+		for (unsigned short y = 0; y < m_MapSize; ++y) {
+
+			string val;
+			val.reserve(32);
+			while (pos < descr.size()) {
+				const char c = descr[pos++];
+				if (c != '|')
+					val += c;
+				else
+					break;
+			}
+
+			GetCell(x, y).Load(val);
+			if (GetCell(x, y).GetCellType() == CCell::CTSender) {
+				m_SenderX = x;
+				m_SenderY = y;
+			}
+		}
+	}
+	DefineConnectStatus();
+}
+
+
+string CMap::SaveMap() const
+{
+	string res;
+
+	for (unsigned short x = 0; x < m_MapSize; ++x) {
+		for (unsigned short y = 0; y < m_MapSize; ++y) {
+			res += GetCell(x, y).Save();
+			res += "|";
+		}
+	}
+
+	return res;
+}
+
+
 bool CMap::CheckForGameOver()
 {
 	m_GameOver = true;
@@ -78,7 +121,7 @@ void CMap::ResetByRotate()
 {
 	m_GameOver = false;
 	for (unsigned short i = 0; i < m_MapSize * m_MapSize; ++i) {
-		if (m_CellMap[i].GetCellType() != CCell::CTFree && !m_CellMap[i].IsLocked() && (rand() % 10) > 0) {
+		if (m_CellMap[i].GetCellType() != CCell::CTFree && !m_CellMap[i].IsLocked() && (rand() % 10) > 1) {
 			m_CellMap[i].Rotate((rand() % 10) > 5);
 			if ((rand() % 10) > 5) //Twice rotation
 				m_CellMap[i].Rotate(true);
@@ -179,7 +222,7 @@ bool CMap::MakeRoute(const unsigned short x, const unsigned short y)
 	unsigned short nextX = 0, nextY = 0;	//Next coordinates
 
 	bool result = false;
-	
+
 	int tryCounter(5);
 	while (tryCounter && !result) {
 		short i, j;
@@ -310,49 +353,4 @@ void CMap::DefineConnectStatus()
 
 	DefineConnectStatus(m_SenderX, m_SenderY);
 	CheckForGameOver();
-}
-
-
-string CMap::SaveMap() const
-{
-	string res;
-
-	for (unsigned short x = 0; x < m_MapSize; ++x) {
-		for (unsigned short y = 0; y < m_MapSize; ++y) {
-			res += GetCell(x, y).Save();
-			res += "|";
-		}
-	}
-
-	return res;
-}
-
-
-void CMap::LoadMap(const unsigned int mapId, const string& descr)
-{
-	m_MapID = mapId;
-
-	size_t pos = 0;
-
-	for (unsigned short x = 0; x < m_MapSize; ++x) {
-		for (unsigned short y = 0; y < m_MapSize; ++y) {
-
-			string val;
-			val.reserve(32);
-			while (pos < descr.size()) {
-				const char c = descr[pos++];
-				if (c != '|')
-					val += c;
-				else
-					break;
-			}
-
-			GetCell(x, y).Load(val);
-			if (GetCell(x, y).GetCellType() == CCell::CTSender) {
-				m_SenderX = x;
-				m_SenderY = y;
-			}
-		}
-	}
-	DefineConnectStatus();
 }
