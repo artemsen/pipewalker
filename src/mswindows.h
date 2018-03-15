@@ -16,39 +16,47 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>. * 
  **************************************************************************/
 
+#ifdef PWTARGET_WINNT	//Only for MS Windows
+
+#pragma once
+
+#include "base.h"
 #include "common.h"
-#include "opengl.h"
+#include "PipeWalkerRes.h"
 
 
-/**
- * Main routine (OS independent)
- * @return result
- */
-int PipeWalkerMain(void)
+class CMSWindows : public CWinSubsystem
 {
-	return COpenGL::Run();
-}
+public:
+	//! Default constructor
+	CMSWindows(CEventHandler* pEventHandler) : CWinSubsystem(pEventHandler), m_hWnd(NULL), m_hDC(NULL)	{}
+	//! Default destructor
+	~CMSWindows(void)	{}
 
+public:	//From CWinSubsystem
+	bool Initialize(void);
+	int DoMainLoop(void);
+	void PostExit(void);
+	void PostRedisplay(void);
 
-#ifdef PWTARGET_WINNT
-/****************************************************************/
-/*                  MS Windows main routine                     */
-/****************************************************************/
-int APIENTRY WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR /*lpCmdLine*/, int /*nCmdShow*/)
-{
-	#ifndef NDEBUG
-	//Create console for debug session
-	AllocConsole();
-	freopen("CONOUT$", "wb", stdout);
-	freopen("CONOUT$", "wb", stderr);
-	#endif
-#else
-/****************************************************************/
-/*                      ANSI C main routine                     */
-/****************************************************************/
-int main(int /*argc*/, char** /*argv*/)
-{
+private:
+	HWND	m_hWnd;		///< Holds Our Window Handle
+	HDC		m_hDC;		///< Private GDI Device Context
+
+	/**
+	 * Destroy window and post exit message
+	 */
+	void DestroyAndQuit(void);
+
+	/**
+	 * The WindowProc function (for more information see MSDN)
+	 * @param hWnd Handle to the window
+	 * @param uMsg Specifies the message
+	 * @param wParam Specifies additional message information
+	 * @param lParam Specifies additional message information
+	 * @return result of the message processing, depends on the message sent
+	 */
+	static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+};
+
 #endif
-	
-	return PipeWalkerMain();
-}

@@ -1,12 +1,26 @@
+Installation Instructions (Linux)
+*********************************
+
 The simplest way to compile this package is:
 
-  1. Running `qmake` for create makefile.
-  
+  1. `cd` to the directory containing the package's source code and type
+     `./configure` to configure the package for your system.
+
+     Running `configure` might take a while.  While running, it prints
+     some messages telling which features it is checking for.
+
   2. Type `make` to compile the package.
 
-  3. Binary file now in the directory ./bin.
-     If you want to install programm type `make install`.
-     For uninstall type `make uninstall`.
+  3. You can remove the program binaries and object files from the
+     source code directory by typing `make clean`.
 
-  4. You can remove the program binaries and object files from the
-     source code directory by typing `make clean`.  
+P.S. There are no `make install` command, so you have to copy binary file
+     `pipewalker` and `texture` folder to some directory you wish.
+
+
+Installation Instructions (MS Windows)
+**************************************
+
+     Use PipeWalker.dsp/PipeWalker.dsw to open or compile project
+     with MS Visual Studio (6.0 or later).
+

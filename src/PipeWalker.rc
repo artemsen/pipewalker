@@ -1,0 +1,104 @@
+//Microsoft Developer Studio generated resource script.
+//
+#include "PipeWalkerRes.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// Neutral resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_NEU)
+#ifdef _WIN32
+LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
+#pragma code_page(1251)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_PIPEWALKER          ICON    DISCARDABLE     "PipeWalker.ico"
+#endif    // Neutral resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// Russian resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_RUS)
+#ifdef _WIN32
+LANGUAGE LANG_RUSSIAN, SUBLANG_DEFAULT
+#pragma code_page(1251)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTURES
+//
+
+IDTEX_BKGR              TEXTURES DISCARDABLE    "textures\\bkgr.tga"
+IDTEX_BTNNEW            TEXTURES DISCARDABLE    "textures\\btn_new.tga"
+IDTEX_BTNRSET           TEXTURES DISCARDABLE    "textures\\btn_reset.tga"
+IDTEX_CELLBKGR          TEXTURES DISCARDABLE    "textures\\cellbkg.tga"
+IDTEX_CONGR             TEXTURES DISCARDABLE    "textures\\congr.tga"
+IDTEX_DISPACT           TEXTURES DISCARDABLE    "textures\\display_act.tga"
+IDTEX_DISPPSV           TEXTURES DISCARDABLE    "textures\\display_psv.tga"
+IDTEX_RECV              TEXTURES DISCARDABLE    "textures\\recv.tga"
+IDTEX_SENDER            TEXTURES DISCARDABLE    "textures\\sender.tga"
+IDTEX_TITLE             TEXTURES DISCARDABLE    "textures\\title.tga"
+IDTEX_TUBEACT           TEXTURES DISCARDABLE    "textures\\tube_act.tga"
+IDTEX_TUBEPSV           TEXTURES DISCARDABLE    "textures\\tube_psv.tga"
+IDTEX_WEBLINK           TEXTURES DISCARDABLE    "textures\\weblink.tga"
+
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "PipeWalkerRes.h\0"
+END
+
+2 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+#endif    // Russian resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+
