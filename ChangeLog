@@ -1,4 +1,9 @@
-PipeWalker 0.8.2 2010-05-06
+PipeWalker 0.8.3 2010-06-08
+---------------------------
+ * fixed bug: missing file in windows installer
+ * graphics update
+
+PipeWalker 0.8.2 2010-05-09
 ---------------------------
  * fixed bug: broken texture after changing theme on some OS
  * fixed bug: sound on mass rotation

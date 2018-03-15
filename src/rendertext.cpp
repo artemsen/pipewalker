@@ -20,13 +20,9 @@
 #include "image.h"
 
 #define FONT_INT_TEXTURE_FILENAME	"font.tga"
-#define FONT_BASE_WIDTH				0.7f
-#define FONT_BASE_HEIGHT			1.0f
-
 #define CHARACTERS_NUM				96
 #define TEXT_TEX_COL				16
-#define TEXT_TEX_ROW				6
-
+#define TEXT_TEX_ROW				8
 
 CTexture CRenderText::m_Texture;
 
@@ -50,14 +46,14 @@ void CRenderText::Print(const float x, const float y, const float scale, const f
 	assert(text);
 
 	//Draw fake shadow
-	const float shadowColor[4] = { 0.0f, 0.0f, 0.0f, color[3] };
+	const float shadowColor[4] = { 0.1f, 0.1f, 0.1f, color[3] };
 	if (shadow)
-		Print(x + scale / 30.0f, y - scale / 30.0f, scale, shadowColor, false, text);
+		Print(x + scale / 10.0f, y - scale / 10.0f, scale, shadowColor, false, text);
 
 	static const float symbolWidth =  1.0f / TEXT_TEX_COL;
 	static const float symbolHeight = 1.0f / TEXT_TEX_ROW;
 
-	static const float textVertex[] =			{ 0.0f, 0.0f, 0.0f, -FONT_BASE_HEIGHT, FONT_BASE_WIDTH, -FONT_BASE_HEIGHT, FONT_BASE_WIDTH, 0.0f };
+	static const float textVertex[] =			{ 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, -1.0f, 1.0f, 0.0f };
 	static const unsigned short textIndices[] =	{ 0, 1, 2, 0, 2, 3 };
 
 	glColor4f(color[0], color[1], color[2], color[3]);
@@ -89,7 +85,7 @@ void CRenderText::Print(const float x, const float y, const float scale, const f
 			glDrawElements(GL_TRIANGLES, (sizeof(textIndices) / sizeof(textIndices[0])), GL_UNSIGNED_SHORT, textIndices);
 
 			++text;
-			glTranslatef(FONT_BASE_WIDTH - FONT_BASE_WIDTH / 5.0f, 0.0f, 0.0f);
+			glTranslatef(1.0f + scale / 20.0f, 0.0f, 0.0f);
 		}
 
 	glPopMatrix();

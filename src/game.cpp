@@ -63,8 +63,8 @@ void CGame::Initialize(CWinManager& winMgr)
 
 	//Configure buttons
 	m_BtnPuzzle.reserve(4);
-	m_BtnPuzzle.push_back(CButton( 2.0f, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT,CTextureBank::TexButtonNext, PW_BUTTONID_NEXT));
-	m_BtnPuzzle.push_back(CButton(-3.0f, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::TexButtonPrev, PW_BUTTONID_PREV));
+	m_BtnPuzzle.push_back(CButton( 2.2f, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT,CTextureBank::TexButtonNext, PW_BUTTONID_NEXT));
+	m_BtnPuzzle.push_back(CButton(-3.2f, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::TexButtonPrev, PW_BUTTONID_PREV));
 	m_BtnPuzzle.push_back(CButton(PW_BUTTON_LEFT, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::TexButtonReset, PW_BUTTONID_RESET));
 	m_BtnPuzzle.push_back(CButton(PW_BUTTON_RIGHT, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::TexButtonSett, PW_BUTTONID_SETT));
 

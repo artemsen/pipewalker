@@ -130,8 +130,10 @@ void CImage::LoadXPM(char* data[], const size_t strNum)
 	m_ImgMode = GL_RGBA;
 
 	//Read image properties
-	int colorMapSize = 0, bytePerPixel = 0;
-	sscanf(data[0], "%i %i %i %i", &m_ImgWidth, &m_ImgHeight, &colorMapSize, &bytePerPixel);
+	int colorMapSize = 0, bytePerPixel = 0, imgWidth = 0, imgHeight = 0;
+	sscanf(data[0], "%i %i %i %i", &imgWidth, &imgHeight, &colorMapSize, &bytePerPixel);
+	m_ImgWidth = static_cast<size_t>(imgWidth);
+	m_ImgHeight = static_cast<size_t>(imgHeight);
 
 	//Read the color map
 	map< string, vector<unsigned char> > colorMap;

@@ -75,8 +75,11 @@ Section "Dummy Section" SecDummy
 
   SetOutPath "$INSTDIR"
   File PipeWalker.exe
+  File ChangeLog
+  File README
   SetOutPath "$INSTDIR\Data"
   File data\clatz.wav
+  File data\complete.wav
   File data\font.tga
   File data\network.tga
   File data\plumbing.tga

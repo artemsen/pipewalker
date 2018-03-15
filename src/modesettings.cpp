@@ -25,22 +25,22 @@
 
 void CModeSettings::Initialize()
 {
-	const float btnSize = 0.6f;
-	const float btnLeft = -0.5f;
+	const float btnSize = 0.5f;
+	const float btnLeft = -0.25f;
 
-	m_MapSize.AddButton(CCheckBoxButton(false, btnLeft, 4.0f, btnSize, btnSize, CTextureBank::TexRadBtnOn, CTextureBank::TexRadBtnOff, MapSizeSmall));
-	m_MapSize.AddButton(CCheckBoxButton(false, btnLeft, 3.3f, btnSize, btnSize, CTextureBank::TexRadBtnOn, CTextureBank::TexRadBtnOff, MapSizeNormal));
-	m_MapSize.AddButton(CCheckBoxButton(false, btnLeft, 2.6f, btnSize, btnSize, CTextureBank::TexRadBtnOn, CTextureBank::TexRadBtnOff, MapSizeBig));
-	m_MapSize.AddButton(CCheckBoxButton(false, btnLeft, 1.9f, btnSize, btnSize, CTextureBank::TexRadBtnOn, CTextureBank::TexRadBtnOff, MapSizeExtra));
+	m_MapSize.AddButton(CCheckBoxButton(false, btnLeft, 3.8f, btnSize, btnSize, CTextureBank::TexRadBtnOn, CTextureBank::TexRadBtnOff, MapSizeSmall));
+	m_MapSize.AddButton(CCheckBoxButton(false, btnLeft, 3.1f, btnSize, btnSize, CTextureBank::TexRadBtnOn, CTextureBank::TexRadBtnOff, MapSizeNormal));
+	m_MapSize.AddButton(CCheckBoxButton(false, btnLeft, 2.4f, btnSize, btnSize, CTextureBank::TexRadBtnOn, CTextureBank::TexRadBtnOff, MapSizeBig));
+	m_MapSize.AddButton(CCheckBoxButton(false, btnLeft, 1.7f, btnSize, btnSize, CTextureBank::TexRadBtnOn, CTextureBank::TexRadBtnOff, MapSizeExtra));
 
-	m_WrapMode.AddButton(CCheckBoxButton(false, btnLeft, 0.8f, btnSize, btnSize, CTextureBank::TexRadBtnOn, CTextureBank::TexRadBtnOff, 1));
-	m_WrapMode.AddButton(CCheckBoxButton(false, btnLeft, 0.1f, btnSize, btnSize, CTextureBank::TexRadBtnOn, CTextureBank::TexRadBtnOff, 0));
+	m_WrapMode.AddButton(CCheckBoxButton(false, btnLeft, 0.6f, btnSize, btnSize, CTextureBank::TexRadBtnOn, CTextureBank::TexRadBtnOff, 1));
+	m_WrapMode.AddButton(CCheckBoxButton(false, btnLeft, -0.1f, btnSize, btnSize, CTextureBank::TexRadBtnOn, CTextureBank::TexRadBtnOff, 0));
 
-	m_Sound.AddButton(CCheckBoxButton(false, btnLeft, -1.0f, btnSize, btnSize, CTextureBank::TexRadBtnOn, CTextureBank::TexRadBtnOff, 1));
-	m_Sound.AddButton(CCheckBoxButton(false, btnLeft, -1.7f, btnSize, btnSize, CTextureBank::TexRadBtnOn, CTextureBank::TexRadBtnOff, 0));
+	m_Sound.AddButton(CCheckBoxButton(false, btnLeft, -1.2f, btnSize, btnSize, CTextureBank::TexRadBtnOn, CTextureBank::TexRadBtnOff, 1));
+	m_Sound.AddButton(CCheckBoxButton(false, btnLeft, -1.9f, btnSize, btnSize, CTextureBank::TexRadBtnOn, CTextureBank::TexRadBtnOff, 0));
 	
-	m_PrevTheme.Init(btnLeft, -2.8f, btnSize, btnSize, CTextureBank::TexButtonPrev, 0);
-	m_NextTheme.Init(4.0f, -2.8f, btnSize, btnSize, CTextureBank::TexButtonNext, 0);
+	m_PrevTheme.Init(btnLeft, -3.0f, btnSize, btnSize, CTextureBank::TexButtonPrev, 0);
+	m_NextTheme.Init(4.0f, -3.0f, btnSize, btnSize, CTextureBank::TexButtonNext, 0);
 
 	Reset();
 }
@@ -56,31 +56,51 @@ void CModeSettings::Reset()
 
 void CModeSettings::Render(const float mouseX, const float mouseY, const float transition)
 {
-	//Draw text
-	const float colorText[4] = { 0.0f, 0.5f, 1.0f, transition };
-	const float colorTitle[4] = { 0.0f, 0.3f, 1.0f, transition };
+	const float titleSize = 0.5f;
+	const float choiceSize = 0.4f;
 
-	CRenderText::Print(-4.4f, 4.0f, 0.7f, colorTitle, true, "Map size:");
-	CRenderText::Print(0.2f, 4.0f, 0.6f, colorText, true, "Small  [10x10]");
-	CRenderText::Print(0.2f, 3.3f, 0.6f, colorText, true, "Normal [14x14]");
-	CRenderText::Print(0.2f, 2.6f, 0.6f, colorText, true, "Big    [20x20]");
-	CRenderText::Print(0.2f, 1.9f, 0.6f, colorText, true, "Extra  [30x30]");
+	float colorText[4] = { 0.0f, 0.0f, 0.0f, transition };
+	float colorTitle[4] = { 0.0f, 0.0f, 0.0f, transition };
 
- 	CRenderText::Print(-4.8f, 0.8f, 0.7f, colorTitle, true, "Wrap mode:");
-	CRenderText::Print(0.2f, 0.8f, 0.6f, colorText, true, "On");
-	CRenderText::Print(0.2f, 0.1f, 0.6f, colorText, true, "Off");
+	switch (m_Game.Settings().Theme) {
+		case ThemePlumbing: 
+			colorText[0] = 0.3f;
+			colorText[1] = 0.4f;
+			colorText[2] = 0.5f;
+			colorTitle[0] = 0.2f;
+			colorTitle[1] = 0.3f;
+			colorTitle[2] = 0.4f;
+			break;
+		case ThemeNetwork: 
+		default:
+			colorText[1] = 0.6f;
+			colorTitle[1] = 0.5f;
+			colorText[2] = 0.9f;
+			colorTitle[2] = 0.8f;
+	}
 
-	CRenderText::Print(-3.2f, -1.0f, 0.7f, colorTitle, true, "Sound:");
-	CRenderText::Print(0.2f, -1.0f, 0.6f, colorText, true, "On");
-	CRenderText::Print(0.2f, -1.7f, 0.6f, colorText, true, "Off");
+	CRenderText::Print(-4.0f, 4.8f, 0.6f, colorTitle, true, "O P T I O N S");
 
-	CRenderText::Print(-3.2f, -2.7f, 0.7f, colorTitle, true, "Theme:");
+	CRenderText::Print(-2.4f, 3.8f, titleSize, colorTitle, true, "Map:");
+	CRenderText::Print(0.3f, 3.75f, choiceSize, colorText, true, "Small");
+	CRenderText::Print(0.3f, 3.05f, choiceSize, colorText, true, "Normal");
+	CRenderText::Print(0.3f, 2.35f, choiceSize, colorText, true, "Big");
+	CRenderText::Print(0.3f, 1.65f, choiceSize, colorText, true, "Extra");
+
+ 	CRenderText::Print(-2.9f, 0.6f, titleSize, colorTitle, true, "Wrap:");
+	CRenderText::Print(0.3f, 0.55f, choiceSize, colorText, true, "On");
+	CRenderText::Print(0.3f, -0.15f, choiceSize, colorText, true, "Off");
+
+	CRenderText::Print(-3.4f, -1.2f, titleSize, colorTitle, true, "Sound:");
+	CRenderText::Print(0.3f, -1.25f, choiceSize, colorText, true, "On");
+	CRenderText::Print(0.3f, -1.95f, choiceSize, colorText, true, "Off");
+
+	CRenderText::Print(-3.4f, -2.9f, titleSize, colorTitle, true, "Theme:");
 	const char* themeName = (m_Game.Settings().Theme == ThemeNetwork ? "Network" : "Plumbing");
-	CRenderText::Print(0.8f, -2.8f, 0.6f, colorText, true, themeName);
+	CRenderText::Print(0.3f, -3.05f, choiceSize, colorText, true, themeName);
 
-	const float colorInfo[4] = { 0.0f, 0.3f, 0.8f, transition };
-	CRenderText::Print(-4.8f, -4.2f, 0.52f, colorInfo, true, "http://pipewalker.sourceforge.net");
-	CRenderText::Print(-4.78f, -4.7f, 0.3f, colorInfo, true, "Copyright (C) 2007-2010 Artem A. Senichev, Moscow, Russia");
+	CRenderText::Print(-4.9f, -4.2f, 0.33f, colorTitle, true, "& 2007-2010 Artem A. Senichev");
+	CRenderText::Print(-1.8f, -4.6f, 0.28f, colorTitle, true, "Moscow, Russia");
 
 	//Draw buttons
 	glColor4f(1.0f, 1.0, 1.0f, transition);
