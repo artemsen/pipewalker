@@ -1,0 +1,20 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+   <file>res/img/background.png</file>
+   <file>res/img/server.png</file>
+   <file>res/img/workstation.png</file>
+   <file>res/img/hub.png</file>
+   <file>res/img/corner.png</file>
+   <file>res/img/line.png</file>
+   <file>res/img/hline.png</file>
+   <file>res/lockon.png</file>
+   <file>res/lockoff.png</file>
+   <file>res/btn_new.png</file>
+   <file>res/btn_exit.png</file>
+   <file>res/btn_reset.png</file>
+   <file>res/btn_load.png</file>
+   <file>res/btn_save.png</file>
+   <file>res/mainicon.png</file>
+   <file>res/sound.wav</file>
+</qresource>
+</RCC>
