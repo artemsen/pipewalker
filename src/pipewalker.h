@@ -55,13 +55,16 @@ private:	//Class variables
 	QVector<CPipeWidget*> m_vObjectMap;	//Object's map
 	
 private:	//Internal class helper functions
-	
+		
 	//Get object at position
 	CPipeWidget* getObject(int nXPoint, int nYPoint);
-	
+
 	//Clear map
 	void clearMap(void) { for (QVector<CPipeWidget*>::iterator iter = m_vObjectMap.begin(); iter != m_vObjectMap.end(); iter++) (*iter)->clear(); }
 	
+	//Clear Used flag for map
+	void clearUsed(void) { for (QVector<CPipeWidget*>::iterator iter = m_vObjectMap.begin(); iter != m_vObjectMap.end(); iter++) (*iter)->setUsed(false); }
+
 	//Install workstation on map
 	bool installWorkstation(void);
 	
@@ -72,8 +75,12 @@ private:	//Internal class helper functions
 	void fillMapWeight(int nXPoint = 0, int nYPoint = 0, int nWeight = 1);
 	
 	//Test and make route from workstation to server
-	bool makeRoute(int nXPoint, int nYPoint, int nWeight, bool fTestOnly);
-
+	bool makeMinRoute(int nXPoint, int nYPoint, int nWeight, bool fTestOnly);
+	bool makeMaxRoute(int nXPoint, int nYPoint, int nWeight, bool fTestOnly);
+	
+	//Set connection side status
+	void setConnectStatus(int nPrevXPoint, int nPrevYPoint, int nCurrXPoint, int nCurrYPoint);
+	
 	//Define connection status for lines/hubs/wks
 	void defineConnectStatus(int nXPoint, int nYPoint);
 };

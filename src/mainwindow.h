@@ -32,8 +32,8 @@
 	@author Artem A. Senichev <artemsen@gmail.com>
 */
 
-#define HORIZONTAL_MARGIN	10	//Margin for top and bottom fields
-#define VERTICAL_MARGIN		10	//Margin for left and rigth fields
+#define HORIZONTAL_MARGIN	10	//Margin for left and rigth fields
+#define VERTICAL_MARGIN		10	//Margin for top and bottom fields
 
 
 class CMainWindow : public QMainWindow
@@ -43,7 +43,6 @@ class CMainWindow : public QMainWindow
 		CMainWindow();
 
 	protected:
-		void closeEvent(QCloseEvent* pEvent);
 		void customEvent(QEvent* pEvent);
 
 	private slots:
@@ -51,46 +50,24 @@ class CMainWindow : public QMainWindow
 		void newRndGameEvent(void);
 		void resetGameEvent(void);
 		void aboutEvent(void);
-		void setGameMode(QAction* pAction);
-		void newLevelGameEvent(int nLevel);
-		void loadMap(void);
-		void saveMap(void);
+		void changeSkinEvent(int nSkinId);
 
 	private:
 		//Load images
-		bool loadImages(void);
+		bool loadImages(int nSkinId = 0);
 		bool loadImage(const QString& strFileName, QImage* pNormal, QImage* pGrayscale = 0);
-	
-		//Work with settings
-		bool loadSettings(void);
-		bool saveSettings(void);
-		
-		//Load maps for defined level
-		void loadLevel(const QVector<int>& vLevelDesc);
-		
-		//Forming combobox
-		void formingLevelComboBox(void);
 
 	private:
+		QAction*	m_pActionNewRandom;
+		QAction*	m_pActionReset;
+		QAction*	m_pActionUseSound;
+		QAction*	m_pActionAbout;
+		
 		QToolBar*		m_pToolBar;
-		QComboBox*		m_pLevelComboBox;
+		QComboBox*		m_pSkinComboBox;
 		
 		QDialog*		m_pCongratulationDlg;
 		
-		struct {
-			QAction*	NewRandom;
-			QAction*	Reset;
-			QAction*	ModeRandom;
-			QAction*	ModeLevel;
-			QAction*	ModeEdit;
-			QAction*	LoadMap;
-			QAction*	SaveMap;
-		} Menu;
-
-		
-		enum Mode { Random, Level, Edit };
-		Mode			m_enuMode;
-
 		CPipeWalker		m_objPipe;
 		QVector<CPipeWidget*>	m_vPipeWidgets;
 		QSound*			m_pClatzSound;
@@ -118,7 +95,6 @@ class CMainWindow : public QMainWindow
 			unsigned int MapWidth;
 			unsigned int MapHeight;
 			unsigned int WksNum;
-			unsigned int CurrentLevel;
 		} Settings;
 	
 };

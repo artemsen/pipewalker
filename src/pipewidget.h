@@ -37,7 +37,7 @@
 #define CONNECT_LEFT	0x8
 
 #define ROTATE_ANGLE		90.0	//Angle of rotate step
-#define ROTATE_STEP		1	//Step of angle of rotate
+#define ROTATE_STEP		0.5	//Step of angle of rotate
 #define MAX_WEIGHT		0xFFFFF	//Maximum weight of cell
 
 class CPipeWidget : public QWidget
@@ -68,7 +68,8 @@ public:
 	void setAngleBySide(void);
 	
 	//Clear state of cell
-	void clear(void) { m_dRotateAngle = 0; m_bConnFlag = false; m_enuType = None; m_nConnSide = CONNECT_UNDEF; m_nWeight = MAX_WEIGHT; }
+	void clear(void) { m_dRotateAngle = 0; m_fConnFlag = false; m_fUsed = false; m_enuType = None; m_nConnSide = CONNECT_UNDEF; m_nWeight = MAX_WEIGHT; }
+	
 
 protected:
 	void paintEvent(QPaintEvent* pEvent);
@@ -92,25 +93,25 @@ private:
 	bool	m_fRotateClockWise;	//Rotate directions
 	double	m_dRotateAngle;		//Rotate angle
 	
-	bool	m_bConnFlag;
+	bool	m_fConnFlag;
 	Type	m_enuType;
 	int	m_nConnSide;
 	int	m_nWeight;
-	
-	bool	m_fEditMode;
+	bool	m_fUsed;
 	
 
 public:
 	inline bool rotateInProgress(void) const{ return fmod(fabs(m_dRotateAngle), ROTATE_ANGLE) != 0; }
-	inline bool getConnFlag(void) const	{ return m_bConnFlag; }
-	inline void setConnFlag(bool fFlag)	{ m_bConnFlag = fFlag; }
+	inline bool getConnFlag(void) const	{ return m_fConnFlag; }
+	inline void setConnFlag(bool fFlag)	{ m_fConnFlag = fFlag; }
 	inline Type getType(void) const		{ return m_enuType; }
 	inline void setType(Type enuType)	{ m_enuType = enuType; }
 	inline int getConnSide(void) const	{ return m_nConnSide; }
 	inline void setConnSide(int nSide)	{ m_nConnSide = nSide; }
 	inline int getWeight(void) const	{ return m_nWeight; }
 	inline void setWeight(int nWeight)	{ m_nWeight = nWeight; }
-	inline void setEditMode(bool fFlag)	{ m_fEditMode = fFlag; }
+	inline bool getUsed() const		{ return m_fUsed; }
+	inline void setUsed(bool fFlag)		{ m_fUsed = fFlag; }
 };
 
 #endif

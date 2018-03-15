@@ -142,7 +142,6 @@ bool CPipeWalker::installWorkstation(void)
 {
 	int nTryCounter(9);
 	while (nTryCounter--) {
-	
 		//Get free cells
 		QVector< QPair<int, int> > vFreeCells;
 		for (int i = 0; i < m_nXNumSquare; i++) {
@@ -160,10 +159,20 @@ bool CPipeWalker::installWorkstation(void)
 	
 		//qDebug("Install workstation to %i:%i", pairWksPos.first, pairWksPos.second);
 		
-		if (!makeRoute(pairWksPos.first, pairWksPos.second, MAX_WEIGHT, true))
+		bool fUseMaxRoute = (getRandom(10) < 5);
+		
+		bool fRouteExist = fUseMaxRoute ?
+				makeMaxRoute(pairWksPos.first, pairWksPos.second, 0, true) :
+				makeMinRoute(pairWksPos.first, pairWksPos.second, MAX_WEIGHT, true);
+		
+		//Clear Used flag
+		clearUsed();
+		
+		if (!fRouteExist)
 			pWks->setType(CPipeWidget::None);
-		else
-			return makeRoute(pairWksPos.first, pairWksPos.second, MAX_WEIGHT, false);
+		else return fUseMaxRoute ?
+				makeMaxRoute(pairWksPos.first, pairWksPos.second, 0, false) :
+				makeMinRoute(pairWksPos.first, pairWksPos.second, MAX_WEIGHT, false);
 	}
 	return false;
 }
@@ -205,30 +214,38 @@ void CPipeWalker::defineConnectStatus(int nXPoint, int nYPoint)
 	
 	//to up
 	if (pObj->getConnSide() & CONNECT_UP) {
-		CPipeWidget* pNextObj = getObject(nXPoint, nYPoint - 1);
-		if (pNextObj && (pNextObj->getConnSide() & CONNECT_DOWN) && (!pNextObj->rotateInProgress()))
-			defineConnectStatus(nXPoint, nYPoint - 1);
+		int nCheckXPoint = nXPoint;
+		int nCheckYPoint = (nYPoint - 1 < 0) ? m_nYNumSquare - 1 : nYPoint - 1;
+		CPipeWidget* pNextObj = getObject(nCheckXPoint, nCheckYPoint);
+		if ((pNextObj->getConnSide() & CONNECT_DOWN) && (!pNextObj->rotateInProgress()))
+			defineConnectStatus(nCheckXPoint, nCheckYPoint);
 	}
 	
 	//to down
 	if (pObj->getConnSide() & CONNECT_DOWN) {
-		CPipeWidget* pNextObj = getObject(nXPoint, nYPoint + 1);
-		if (pNextObj && (pNextObj->getConnSide() & CONNECT_UP) && (!pNextObj->rotateInProgress()))
-			defineConnectStatus(nXPoint, nYPoint + 1);
+		int nCheckXPoint = nXPoint;
+		int nCheckYPoint = (nYPoint + 1 >= m_nYNumSquare) ? 0 : nYPoint + 1;
+		CPipeWidget* pNextObj = getObject(nCheckXPoint, nCheckYPoint);
+		if ((pNextObj->getConnSide() & CONNECT_UP) && (!pNextObj->rotateInProgress()))
+			defineConnectStatus(nCheckXPoint, nCheckYPoint);
 	}
 
 	//to left
 	if (pObj->getConnSide() & CONNECT_LEFT) {
-		CPipeWidget* pNextObj = getObject(nXPoint - 1, nYPoint);
-		if (pNextObj && (pNextObj->getConnSide() & CONNECT_RIGHT) && (!pNextObj->rotateInProgress()))
-			defineConnectStatus(nXPoint - 1, nYPoint);
+		int nCheckXPoint = (nXPoint - 1 < 0) ? m_nXNumSquare - 1 : nXPoint - 1;
+		int nCheckYPoint = nYPoint;
+		CPipeWidget* pNextObj = getObject(nCheckXPoint, nCheckYPoint);
+		if ((pNextObj->getConnSide() & CONNECT_RIGHT) && (!pNextObj->rotateInProgress()))
+			defineConnectStatus(nCheckXPoint, nCheckYPoint);
 	}
 	
 	//to right
 	if (pObj->getConnSide() & CONNECT_RIGHT) {
-		CPipeWidget* pNextObj = getObject(nXPoint + 1, nYPoint);
-		if (pNextObj && (pNextObj->getConnSide() & CONNECT_LEFT) && (!pNextObj->rotateInProgress()))
-			defineConnectStatus(nXPoint + 1, nYPoint);
+		int nCheckXPoint = (nXPoint + 1 >= m_nXNumSquare) ? 0 : nXPoint + 1;
+		int nCheckYPoint = nYPoint;
+		CPipeWidget* pNextObj = getObject(nCheckXPoint, nCheckYPoint);
+		if ((pNextObj->getConnSide() & CONNECT_LEFT) && (!pNextObj->rotateInProgress()))
+			defineConnectStatus(nCheckXPoint, nCheckYPoint);
 	}
 }
 
@@ -267,75 +284,192 @@ void CPipeWalker::fillMapWeight(int nXPoint /*= 0*/, int nYPoint /*= 0*/, int nW
 
 
 /**
- * Test and make route from workstation to server
+ * Test and make route from workstation to server (min to max)
+ * @param nXPoint X coordinate of cell
+ * @param nYPoint Y coordinate of cell
+ * @param nWeight maximal weight
+ * @param fTestOnly test route flag (true = only check if route exist)
+ * @return result (true = route found)
+ */
+bool CPipeWalker::makeMaxRoute(int nXPoint, int nYPoint, int nWeight, bool fTestOnly)
+{
+	int nMaxWeight(nWeight);	//Maximal weight
+	int nXMax(0), nYMax(0);		//Coordinates of maximal point
+	
+	for (int i = -1; i <= 1; i++) {
+		for (int j = -1; j <= 1; j++) {
+			//Searching for maximal weigth in neighbouring cell's
+			if ((i && j) || (!i && !j)) continue;	//Diagonal
+			int nCheckXPoint = nXPoint + i;
+			int nCheckYPoint = nYPoint + j;
+			if (nCheckXPoint < 0)
+				nCheckXPoint = m_nXNumSquare;
+			if (nCheckXPoint >= m_nXNumSquare)
+				nCheckXPoint = 0;
+			if (nCheckYPoint < 0)
+				nCheckYPoint = m_nYNumSquare;
+			if (nCheckYPoint >= m_nYNumSquare)
+				nCheckYPoint = 0;
+
+			CPipeWidget* pObj = getObject(nCheckXPoint, nCheckYPoint);
+			if (pObj->getWeight() < nMaxWeight)
+				continue;
+			if (pObj->getUsed())
+				continue;
+			if (pObj->getType() == CPipeWidget::None || pObj->getType() == CPipeWidget::Line) {
+				nXMax = nCheckXPoint;
+				nYMax = nCheckYPoint;
+				nMaxWeight = pObj->getWeight();
+			}
+		}
+	}
+	
+	if (nMaxWeight == nWeight)	//Riched max point - no more points large than last
+		return makeMinRoute(nXPoint, nYPoint, MAX_WEIGHT, fTestOnly);
+
+	CPipeWidget* pCurrObj = getObject(nXMax, nYMax);
+	
+	if (pCurrObj->getType() == CPipeWidget::Line && fTestOnly)
+		return true;	//We can install hub at this point
+
+	//Set Used flag
+	pCurrObj->setUsed(true);
+			
+	if (!fTestOnly) {
+		
+		//Define current way direction (output for previos object)
+		setConnectStatus(nXPoint, nYPoint, nXMax, nYMax);
+		
+		if (pCurrObj->getType() == CPipeWidget::Line) {
+			pCurrObj->setType(CPipeWidget::Hub);
+			return true;	//This is the end point for route
+		}
+		else
+			pCurrObj->setType(CPipeWidget::Line);
+	}
+	
+	return makeMaxRoute(nXMax, nYMax, nMaxWeight, fTestOnly);
+
+}
+
+
+/**
+ * Test and make route from workstation to server (max to min)
  * @param nXPoint X coordinate of cell
  * @param nYPoint Y coordinate of cell
  * @param nWeight minimal weight
- * @param fTestOnly test route flag (true = onle check route exist)
+ * @param fTestOnly test route flag (true = only check if route exist)
  * @return result (true = route found)
  */
-bool CPipeWalker::makeRoute(int nXPoint, int nYPoint, int nWeight, bool fTestOnly)
+bool CPipeWalker::makeMinRoute(int nXPoint, int nYPoint, int nWeight, bool fTestOnly)
 {
-	int nMinWeight(MAX_WEIGHT);	//Minimal weight
+	int nMinWeight(nWeight);	//Minimal weight
 	int nXMin(0), nYMin(0);		//Coordinates of minimal point
 	
 	for (int i = -1; i <= 1; i++) {
 		for (int j = -1; j <= 1; j++) {
 			//Searching for minimal weigth in neighbouring cell's
 			if ((i && j) || (!i && !j)) continue;	//Diagonal
-			CPipeWidget* pObj = getObject(nXPoint + i, nYPoint + j);
-			if (!pObj)
-				continue;	//Outside the map
-			if (pObj->getWeight() > nWeight)
+			int nCheckXPoint = nXPoint + i;
+			int nCheckYPoint = nYPoint + j;
+			if (nCheckXPoint < 0)
+				nCheckXPoint = m_nXNumSquare;
+			if (nCheckXPoint >= m_nXNumSquare)
+				nCheckXPoint = 0;
+			if (nCheckYPoint < 0)
+				nCheckYPoint = m_nYNumSquare;
+			if (nCheckYPoint >= m_nYNumSquare)
+				nCheckYPoint = 0;
+
+			CPipeWidget* pObj = getObject(nCheckXPoint, nCheckYPoint);
+			if (pObj->getWeight() >= nMinWeight)
+				continue;
+			if (pObj->getUsed())
 				continue;
 			if (pObj->getType() == CPipeWidget::None || pObj->getType() == CPipeWidget::Line) {
-				nXMin = nXPoint + i;
-				nYMin = nYPoint + j;
+				nXMin = nCheckXPoint;
+				nYMin = nCheckYPoint;
 				nMinWeight = pObj->getWeight();
 			}
 		}
 	}
 	
-	//qDebug("Min weight found: %i:%i (%i) from  %i:%i", nXMin, nYMin, nMinWeight, x, y);
+	//qDebug("Min weight found: %i:%i (%i) from  %i:%i", nXMin, nYMin, nMinWeight, nXPoint, nYPoint);
 	
-	if (nMinWeight == MAX_WEIGHT)
+	if (nMinWeight == nWeight)
 		return false;	//No route
 
 	CPipeWidget* pCurrObj = getObject(nXMin, nYMin);
 	
+	//Set Used flag
+	pCurrObj->setUsed(true);
+
 	if (pCurrObj->getType() == CPipeWidget::Line && fTestOnly)
 		return true;	//We can install hub at this point
 
 	if (!fTestOnly) {
 		
 		//Define current way direction (output for previos object)
-		CPipeWidget* pPrevObj = getObject(nXPoint, nYPoint);
-		if (nXMin < nXPoint) {
-			pPrevObj->setConnSide(pPrevObj->getConnSide() | CONNECT_LEFT);
-			pCurrObj->setConnSide(pCurrObj->getConnSide() | CONNECT_RIGHT);
-		}
-		else if (nXMin > nXPoint) {
-			pPrevObj->setConnSide(pPrevObj->getConnSide() | CONNECT_RIGHT);
-			pCurrObj->setConnSide(pCurrObj->getConnSide() | CONNECT_LEFT);
-		}
-		else if (nYMin < nYPoint) {
-			pPrevObj->setConnSide(pPrevObj->getConnSide() | CONNECT_UP);
-			pCurrObj->setConnSide(pCurrObj->getConnSide() | CONNECT_DOWN);
-		}
-		else if (nYMin > nYPoint) {
-			pPrevObj->setConnSide(pPrevObj->getConnSide() | CONNECT_DOWN);
-			pCurrObj->setConnSide(pCurrObj->getConnSide() | CONNECT_UP);
-		}
+		setConnectStatus(nXPoint, nYPoint, nXMin, nYMin);
 		
 		if (pCurrObj->getType() == CPipeWidget::Line) {
 			pCurrObj->setType(CPipeWidget::Hub);
-			nMinWeight = 0;	//This is the end point for route
+			return true;	//This is the end point for route
 		}
 		else
 			pCurrObj->setType(CPipeWidget::Line);
 	}
 	
 	//if its no end - requrs
-	return (nMinWeight == 0 ? true : makeRoute(nXMin, nYMin, nMinWeight, fTestOnly));
+	return (nMinWeight == 0 ? true : makeMinRoute(nXMin, nYMin, nMinWeight, fTestOnly));
+}
+
+
+/**
+ * Set connection side status
+ * @param nPrevXPoint Previous X point
+ * @param nPrevYPoint Previous Y point
+ * @param nCurrXPoint Current X point
+ * @param nCurrYPoint Current Y point
+ */
+void CPipeWalker::setConnectStatus(int nPrevXPoint, int nPrevYPoint, int nCurrXPoint, int nCurrYPoint)
+{
+	CPipeWidget* pCurrObj = getObject(nCurrXPoint, nCurrYPoint);
+	CPipeWidget* pPrevObj = getObject(nPrevXPoint, nPrevYPoint);
+	
+	//Crossover
+	if (nCurrXPoint == 0 && nPrevXPoint == m_nXNumSquare - 1) {
+		pPrevObj->setConnSide(pPrevObj->getConnSide() | CONNECT_RIGHT);
+		pCurrObj->setConnSide(pCurrObj->getConnSide() | CONNECT_LEFT);
+	}	
+	else if (nCurrXPoint == m_nXNumSquare -1 && nPrevXPoint == 0) {
+		pPrevObj->setConnSide(pPrevObj->getConnSide() | CONNECT_LEFT);
+		pCurrObj->setConnSide(pCurrObj->getConnSide() | CONNECT_RIGHT);
+	}
+	else if (nCurrYPoint == 0 && nPrevYPoint == m_nYNumSquare -1 ) {
+		pPrevObj->setConnSide(pPrevObj->getConnSide() | CONNECT_DOWN);
+		pCurrObj->setConnSide(pCurrObj->getConnSide() | CONNECT_UP);
+	}
+	else if (nCurrYPoint == m_nYNumSquare -1 && nPrevYPoint == 0) {
+		pPrevObj->setConnSide(pPrevObj->getConnSide() | CONNECT_UP);
+		pCurrObj->setConnSide(pCurrObj->getConnSide() | CONNECT_DOWN);
+	}
+	//Usualy
+	else if (nCurrXPoint < nPrevXPoint) {
+		pPrevObj->setConnSide(pPrevObj->getConnSide() | CONNECT_LEFT);
+		pCurrObj->setConnSide(pCurrObj->getConnSide() | CONNECT_RIGHT);
+	}
+	else if (nCurrXPoint > nPrevXPoint) {
+		pPrevObj->setConnSide(pPrevObj->getConnSide() | CONNECT_RIGHT);
+		pCurrObj->setConnSide(pCurrObj->getConnSide() | CONNECT_LEFT);
+	}
+	else if (nCurrYPoint < nPrevYPoint) {
+		pPrevObj->setConnSide(pPrevObj->getConnSide() | CONNECT_UP);
+		pCurrObj->setConnSide(pCurrObj->getConnSide() | CONNECT_DOWN);
+	}
+	else if (nCurrYPoint > nPrevYPoint) {
+		pPrevObj->setConnSide(pPrevObj->getConnSide() | CONNECT_DOWN);
+		pCurrObj->setConnSide(pCurrObj->getConnSide() | CONNECT_UP);
+	}
 }
 

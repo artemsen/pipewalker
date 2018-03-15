@@ -1,10 +1,12 @@
 The simplest way to compile this package is:
 
-  1. Running `qmake' for create makefile.
+  1. Running `qmake` for create makefile.
   
-  2. Type `make' to compile the package.
+  2. Type `make` to compile the package.
 
   3. Binary file now in the directory ./bin.
+     If you want to install programm type `make install`.
+     For uninstall type `make uninstall`.
 
   4. You can remove the program binaries and object files from the
-     source code directory by typing `make clean'.  
+     source code directory by typing `make clean`.  

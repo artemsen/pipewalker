@@ -1,20 +1,9 @@
-SOURCES +=   source/main.cpp \
-             source/mainwindow.cpp \
-             source/pipewalker.cpp \
-             source/pipewidget.cpp
-TEMPLATE =   app
-CONFIG +=    warn_on \
-	     thread \
-             qt
-TARGET =     ./bin/pipewalker
+SUBDIRS  += src
+TEMPLATE  = subdirs 
+CONFIG   += warn_on \
+	    thread \
+            qt
 
-QT +=        gui \
-             xml
-HEADERS +=   source/mainwindow.h \
-             source/pipewalker.h \
-             source/pipewidget.h \
-             source/levels.h
-
-RESOURCES += source/pipewalker.qrc
-
-TRANSLATIONS = source/pipewalker_ru.ts
+bintarget.path   = /usr/bin
+bintarget.files  = ./bin/pipewalker
+INSTALLS        += bintarget

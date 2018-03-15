@@ -1,0 +1,25 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+   <file>res/skin_std/background.png</file>
+   <file>res/skin_std/server.png</file>
+   <file>res/skin_std/workstation.png</file>
+   <file>res/skin_std/hub.png</file>
+   <file>res/skin_std/corner.png</file>
+   <file>res/skin_std/line.png</file>
+   <file>res/skin_std/hline.png</file>
+
+   <file>res/skin_small/background.png</file>
+   <file>res/skin_small/server.png</file>
+   <file>res/skin_small/workstation.png</file>
+   <file>res/skin_small/hub.png</file>
+   <file>res/skin_small/corner.png</file>
+   <file>res/skin_small/line.png</file>
+   <file>res/skin_small/hline.png</file>
+
+   <file>res/btn_new.png</file>
+   <file>res/btn_sound.png</file>
+   <file>res/btn_reset.png</file>
+   <file>res/mainicon.png</file>
+   <file>res/sound.wav</file>
+</qresource>
+</RCC>

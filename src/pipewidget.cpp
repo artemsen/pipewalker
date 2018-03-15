@@ -48,8 +48,7 @@ CPipeWidget::CPipeWidget(QWidget* wndParent,
 	  m_pHLineActive(pHLineActive),
 	  m_pHLinePassive(pHLinePassive),
 	  m_pCornerActive(pCornerActive),
-	  m_pCornerPassive(pCornerPassive),
-	  m_fEditMode(false)
+	  m_pCornerPassive(pCornerPassive)
 {
 	clear();
 }
@@ -65,6 +64,17 @@ void CPipeWidget::paintEvent(QPaintEvent* /*pEvent*/)
 	
 	painter.drawImage(0, 0, *m_pBackground);
 	
+	/*
+	//Debug
+	QString dbg; // = QString(tr("%1 ")).arg(m_nWeight);
+	if (m_nConnSide == CONNECT_UNDEF)	dbg += "-";
+	if (m_nConnSide & CONNECT_UP)		dbg += "U";
+	if (m_nConnSide & CONNECT_DOWN)		dbg += "D";
+	if (m_nConnSide & CONNECT_LEFT)		dbg += "L";
+	if (m_nConnSide & CONNECT_RIGHT)	dbg += "R";
+	painter.drawText(3, 13, dbg);
+	*/
+
 	if (getType() == CPipeWidget::None)
 		return;
 
@@ -117,17 +127,6 @@ void CPipeWidget::paintEvent(QPaintEvent* /*pEvent*/)
 		}
 		update();
 	}
-	
-	/*
-	//Debug
-	QString dbg ;//=  QString(tr("%1 ")).arg(m_enuType);
-	if (m_nConnSide == CONNECT_UNDEF)	dbg += "-";
-	if (m_nConnSide & CONNECT_UP)		dbg += "U";
-	if (m_nConnSide & CONNECT_DOWN)		dbg += "D";
-	if (m_nConnSide & CONNECT_LEFT)		dbg += "L";
-	if (m_nConnSide & CONNECT_RIGHT)	dbg += "R";
-	painter.drawText(3, 13, dbg);
-	*/	
 }
 
 
@@ -137,39 +136,8 @@ void CPipeWidget::paintEvent(QPaintEvent* /*pEvent*/)
  */
 void CPipeWidget::mousePressEvent(QMouseEvent* pEvent)
 {
-	if (!m_fEditMode) {
-		if (pEvent->button() == Qt::LeftButton || pEvent->button() == Qt::RightButton) {
-			rotate(pEvent->button() == Qt::RightButton, true);
-			update();
-		}
-	}
-	else {
-		if (pEvent->button() == Qt::LeftButton)
-			rotate(true, true);
-		else {
-			switch (m_enuType) {
-				case None:
-					clear(); m_enuType = Line; m_nConnSide = CONNECT_UP | CONNECT_DOWN;
-					break;
-				case Line:
-					if (m_nConnSide == (CONNECT_UP | CONNECT_DOWN) || m_nConnSide == (CONNECT_LEFT | CONNECT_RIGHT)) {
-						m_nConnSide = CONNECT_UP | CONNECT_RIGHT; m_dRotateAngle = 0;
-					}
-					else {
-						clear(); m_enuType = Hub; m_nConnSide = CONNECT_UP | CONNECT_DOWN | CONNECT_RIGHT;
-					}
-					break;
-				case Hub:
-					clear(); m_enuType = Workstation; m_nConnSide = CONNECT_UP;
-					break;
-				case Workstation:
-					clear(); m_enuType = Server; m_nConnSide = CONNECT_UP;
-					break;
-				case Server:
-					clear(); m_enuType = None; m_nConnSide = CONNECT_UNDEF;
-					break;
-			}
-		}
+	if (pEvent->button() == Qt::LeftButton || pEvent->button() == Qt::RightButton) {
+		rotate(pEvent->button() == Qt::RightButton, true);
 		update();
 	}
 }
