@@ -50,9 +50,8 @@ public:
 	 * \param wrap wrap mode
 	 * \param id last saved level id
 	 * \param state last saved level state
-	 * \return false if state undefined
 	 */
-	static bool get_state(const level::size sz, const bool wrap, unsigned long& id, string& state);
+	static void get_state(const level::size sz, const bool wrap, unsigned long& id, string& state);
 
 	/**
 	 * Set level state for specified id, size and mode
@@ -64,6 +63,10 @@ public:
 	static void set_state(const unsigned long id, const level::size sz, const bool wrap, const string& state);
 
 	//Accessors
+	static bool debug_mode()                 { return instance()._debug_mode; }
+	static void debug_mode(const bool mode)  { instance()._debug_mode = mode; }
+	static bool rndlvl_mode()                { return instance()._rnd_lvl; }
+	static void rndlvl_mode(const bool mode) { instance()._rnd_lvl = mode; }
 	static bool sound_mode()                 { return instance()._sound; }
 	static void sound_mode(const bool mode)  { instance()._sound = mode; }
 	static const char* theme()               { return instance()._theme.c_str(); }
@@ -82,7 +85,7 @@ private:
 
 private:
 	/**
-	 * Load / save game settungs
+	 * Load / save game settings
 	 */
 	class serializer
 	{
@@ -127,13 +130,15 @@ private:
 private:
 	//! Saved level description
 	struct level_state {
-		level_state() : id(0) {}
 		unsigned long id;    ///< Level id
 		string        state; ///< Level state
 	};
 
 	string      _sett_file;  ///< Full path to user settings file
 
+	bool        _debug_mode; ///< Using debug mode flag
+
+	bool        _rnd_lvl;    ///< Random level map flag
 	bool        _sound;      ///< Use sound flag
 	string      _theme;      ///< Default theme file
 	string      _last_level; ///< Last saved level name (one of PWS_SECT_LVL*)

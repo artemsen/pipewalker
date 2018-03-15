@@ -2,9 +2,9 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.64)
-AC_INIT(PipeWalker, 0.9.2, artemsen@gmail.com, [], http://pipewalker.sourceforge.net)
-AM_INIT_AUTOMAKE(-Wall -Werror)
-AC_CONFIG_SRCDIR(src/cell.cpp)
+AC_INIT([PipeWalker], [0.9.3], [artemsen@gmail.com], [], [http://pipewalker.sourceforge.net])
+AM_INIT_AUTOMAKE([-Wall -Werror])
+AC_CONFIG_SRCDIR([src/cell.cpp])
 
 # Check for some target-specific stuff
 test -z "${WIN32}" && WIN32="no"

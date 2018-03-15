@@ -80,77 +80,77 @@ public:
 	/**
 	 * Reverse lock state of the cell
 	 */
-	inline void reverse_lock()			{ _lock = !_lock; }
+	inline void reverse_lock()           { _lock = !_lock; }
 
 	/**
 	 * Get current lock state of the cell
 	 * \return true if cell is locked
 	 */
-	inline bool locked() const			{ return _lock; }
+	inline bool locked() const           { return _lock; }
 
 	/**
 	 * Get tube type of the cell
 	 * \return tube type
 	 */
-	inline ttype tube_type() const		{ assert(_cell_type != ct_free); return _tube_type; }
+	inline ttype tube_type() const       { assert(_cell_type != ct_free); return _tube_type; }
 
 	/**
 	 * Get cell type of the cell
 	 * \return cell type
 	 */
-	inline ctype cell_type() const		{ return _cell_type; }
+	inline ctype cell_type() const       { return _cell_type; }
 
 	/**
 	 * Get direction connection properties
 	 * \return true if connected
 	 */
-	inline bool top_connected() const	{ return _top_conn; }
+	inline bool top_connected() const    { return _top_conn; }
 
 	/**
 	 * Get direction connection properties
 	 * \return true if connected
 	 */
-	inline bool bottom_connected() const	{ return _bottom_conn; }
+	inline bool bottom_connected() const { return _bottom_conn; }
 
 	/**
 	 * Get direction connection properties
 	 * \return true if connected
 	 */
-	inline bool left_connected() const	{ return _left_conn; }
+	inline bool left_connected() const   { return _left_conn; }
 
 	/**
 	 * Get direction connection properties
 	 * \return true if connected
 	 */
-	inline bool right_connected() const	{ return _right_conn; }
+	inline bool right_connected() const  { return _right_conn; }
 
 	/**
 	 * Set Sender cell type of the cell
 	 */
-	inline void set_type_sender()		{ assert(_cell_type == ct_free); _cell_type = ct_sender; }
+	inline void set_type_sender()        { assert(_cell_type == ct_free); _cell_type = ct_sender; }
 
 	/**
 	 * Set Receiver cell type of the cell
 	 */
-	inline void set_type_receiver()		{ assert(_cell_type == ct_free); _cell_type = ct_receiver; }
+	inline void set_type_receiver()      { assert(_cell_type == ct_free); _cell_type = ct_receiver; }
 
 	/**
 	 * Get status of the cell
 	 * \return cell status (true if connected/active)
 	 */
-	inline bool active() const			{ return _state; }
+	inline bool active() const           { return _state; }
 
 	/**
 	 * Set status of the cell
 	 * \param type cell status (true if connected/active)
 	 */
-	inline void set_active(const bool type)	{ _state = type; }
+	inline void set_active(const bool type) { _state = type; }
 
 	/**
 	 * Get current angle of the cell
 	 * \return current angle of the cell in degrees
 	 */
-	inline float angle() const			{ return _angle; }
+	inline float angle() const           { return _angle; }
 
 	/**
 	 * Add tube to cell
@@ -168,13 +168,13 @@ public:
 	 * Get current use flag of the cell
 	 * \return current use flag of the cell
 	 */
-	inline bool is_used() const				{ return _used; }
+	inline bool is_used() const           { return _used; }
 
 	/**
 	 * Set current use flag of the cell
 	 * \param weight a new use flag of the cell
 	 */
-	inline void set_used(const bool used)	{ _used = used; }
+	inline void set_used(const bool used) { _used = used; }
 
 	/**
 	 * Start rotation
@@ -193,7 +193,7 @@ public:
 	 * Check if rotation in progress
 	 * \return true if rotation in progress
 	 */
-	inline bool rotation_in_progress() const	{ return _rotate.start_time != 0; }
+	inline bool rotation_in_progress() const { return _rotate.start_time != 0; }
 
 	/**
 	 * Calculate rotation angle

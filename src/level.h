@@ -20,6 +20,8 @@
 
 #include "cell.h"
 
+#define PW_MAX_LEVEL_NUMBER 99999999
+
 
 class level
 {
@@ -193,7 +195,7 @@ private:
 	size            _size_type;         ///< Map size (type)
 	unsigned short  _size_cell;         ///< Map size (cell count)
 	cells           _cells;             ///< Object's map
-	bool            _solved;            ///< State falag: true if all recievers connected
+	bool            _solved;            ///< State flag: true if all receivers connected
 	bool            _wrap_mode;         ///< Wrapping mode on/off flag
 	unsigned short  _senderX, _senderY; ///< Sender coordinates
 	unsigned short  _zeroX, _zeroY;     ///< Zero point coordinates (sender out)

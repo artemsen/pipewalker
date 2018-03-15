@@ -54,8 +54,8 @@ public:
 		tube_js,      ///< Shadow of joiner tube
 		tube_jp,      ///< Passive joiner tube
 		tube_ja,      ///< Active joiner tube
-		btn_prev,     ///< Button 'previus'
-		btn_prev_s,   ///< Shadow of button 'previus'
+		btn_prev,     ///< Button 'previous'
+		btn_prev_s,   ///< Shadow of button 'previous'
 		btn_next,     ///< Button 'next'
 		btn_next_s,   ///< Shadow of button 'next'
 		btn_ok,       ///< Button 'OK'

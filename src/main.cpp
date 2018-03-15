@@ -19,28 +19,28 @@
 #include "common.h"
 #include "game.h"
 #include "image.h"
+#include "settings.h"
 #include "../extra/pipewalker.xpm"
 #ifdef WIN32
 #include <SDL/SDL_syswm.h>
 #endif // WIN32
 
-//! Debug mode flag
-bool DEBUG_MODE = false;
+/**
+ * Parse command line parameters
+ * \param argc number of parameters
+ * \param argv parameters array
+ * \param lvl_id start level id
+ * \param lvl_sz start level map size
+ * \param lvl_wrap start level wrap mode
+ * \return true if we need to close application
+ */
+bool parse_cmd_params(int argc, char* argv[], unsigned long& lvl_id, level::size& lvl_sz, bool& lvl_wrap);
 
 
 /**
  * SDL timer callback
  */
-Uint32 timer_callback(Uint32 interval)
-{
-	if (game::instance().need_redisplay()) {
-		//draw_scene();
-		SDL_Event expose_event;
-		expose_event.type = SDL_VIDEOEXPOSE;
-		SDL_PushEvent(&expose_event);
-	}
-	return interval;
-}
+Uint32 timer_callback(Uint32 interval);
 
 
 /**
@@ -48,12 +48,11 @@ Uint32 timer_callback(Uint32 interval)
  */
 int main(int argc, char* argv[])
 {
-	if (argc > 0 && strcmp(argv[argc - 1], "--version") == 0) {
-		printf("%s version %s\n", PACKAGE_NAME, PACKAGE_VERSION);
-		return 0;
-	}
-	if (argc > 0 && strcmp(argv[argc - 1], "--debug") == 0)
-		DEBUG_MODE = true;
+	unsigned long lvl_id;
+	level::size lvl_sz;
+	bool lvl_wrap;
+	if (parse_cmd_params(argc, argv, lvl_id, lvl_sz, lvl_wrap))
+		return 0;	//Help or version was shown
 
 	//Initialization
 	if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO) != 0) {
@@ -86,7 +85,7 @@ int main(int argc, char* argv[])
 		SDL_WM_SetIcon(wnd_icon.get_surface(), NULL);
 
 	game& game_instance = game::instance();
-	if (!game_instance.initialize())
+	if (!game_instance.initialize(lvl_id, lvl_sz, lvl_wrap))
 		return 1;
 
 	//Timer - about 25 fps
@@ -186,11 +185,94 @@ int APIENTRY WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR
 {
 #ifndef NDEBUG
 	//Create console for debug session
-	AllocConsole();
+	if (!AttachConsole(ATTACH_PARENT_PROCESS))
+		AllocConsole();
 	freopen("CONOUT$", "wb", stdout);
 	freopen("CONOUT$", "wb", stderr);
 #endif	//NDEBUG
 
-	return main(__argc, __argv);
+	const int rc = main(__argc, __argv);
+
+#ifndef NDEBUG
+	FreeConsole();
+#endif	//NDEBUG
+
+	return rc;
 }
 #endif // WIN32
+
+
+bool parse_cmd_params(int argc, char* argv[], unsigned long& lvl_id, level::size& lvl_sz, bool& lvl_wrap)
+{
+	bool app_exit = false;
+
+	lvl_id = 0;
+	lvl_sz = level::sz_normal;
+	lvl_wrap = true;
+
+	for (int i = 1 /* skip executable file name */; !app_exit && i < argc; ++i) {
+		const char* param_val = argv[i];
+		while (*param_val && (*param_val == '-' || *param_val == '/'))
+			++param_val;
+		if (strcmp(param_val, "help") == 0 || strcmp(param_val, "?") == 0) {
+			const char* msg =
+				"Command line parameters:\n"
+				" -help:    this help\n"
+				" -version: show information about version\n"
+				" -id:      start level with specified id (number from 1 to 99999999)\n"
+				" -wrap:    set wrap mode (0: disable, 1: enable (default))\n"
+				" -size:    set level map size (small, normal (default), big or extra)\n"
+				"\nUsage example:\n"
+				" pipewalker -id=1234 -wrap=0 -size=big\n";
+#ifdef WIN32
+			MessageBoxA(NULL, msg, "PipeWalker " PACKAGE_VERSION, MB_OK | MB_ICONINFORMATION);
+#else
+			printf("PipeWalker version " PACKAGE_VERSION "\n");
+			printf(msg);
+#endif // WIN32
+			app_exit = true;
+		}
+		else if (strcmp(param_val, "version") == 0) {
+#ifdef WIN32
+			MessageBoxA(NULL, "PipeWalker version " PACKAGE_VERSION, "PipeWalker " PACKAGE_VERSION, MB_OK | MB_ICONINFORMATION);
+#else
+			printf("PipeWalker version " PACKAGE_VERSION "\n");
+#endif // WIN32
+			app_exit = true;
+		}
+		else if (strcmp(param_val, "debug") == 0)
+			settings::debug_mode(true);
+		else if (strncmp(param_val, "id=", sizeof("id=") - 1) == 0) {
+			lvl_id = static_cast<unsigned long>(atoi(param_val + sizeof("id=") - 1));
+			if (lvl_id > PW_MAX_LEVEL_NUMBER)
+				lvl_id = 0;
+		}
+		else if (strncmp(param_val, "wrap=", sizeof("wrap=") - 1) == 0)
+			lvl_wrap = *(param_val + sizeof("id=") - 1) && atoi(param_val + sizeof("id=") - 1) != 0;
+		else if (strncmp(param_val, "size=", sizeof("size=") - 1) == 0) {
+			const char* level_size = param_val + sizeof("size=") - 1;
+			if (strcmp(level_size, "small") == 0)
+				lvl_sz = level::sz_small;
+			else if (strcmp(level_size, "normal") == 0)
+				lvl_sz = level::sz_normal;
+			else if (strcmp(level_size, "big") == 0)
+				lvl_sz = level::sz_big;
+			else if (strcmp(level_size, "extra") == 0)
+				lvl_sz = level::sz_extra;
+		}
+	}
+
+	return app_exit;
+}
+
+
+Uint32 timer_callback(Uint32 interval)
+{
+	if (game::instance().need_redisplay()) {
+		//draw_scene();
+		SDL_Event expose_event;
+		expose_event.type = SDL_VIDEOEXPOSE;
+		SDL_PushEvent(&expose_event);
+	}
+	return interval;
+}

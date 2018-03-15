@@ -2,7 +2,7 @@
 ; MS Windows NSIS Installer script
 ;
 ; Use
-;   makensis.exe /DVERSION=0.9.2 PipeWalker.nsi
+;   makensis.exe /DVERSION=[version] PipeWalker.nsi
 ;
 ;----------------------------------------------------
 
@@ -58,12 +58,12 @@
 
 ;--------------------------------
 ;Installer Sections
-Section "Dummy Section" SecDummy
+Section "Install"
   SetOutPath "$INSTDIR"
-  File PipeWalker.exe
+  File /oname=PipeWalker.exe src\pipewalker.exe
   File SDL.dll
   File ChangeLog
-  File README
+  File /oname=ReadMe.txt README
   SetOutPath "$INSTDIR\data"
   File data\clatz.wav
   File data\complete.wav
@@ -80,8 +80,9 @@ Section "Dummy Section" SecDummy
   SetOutPath "$INSTDIR"
   !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
     CreateDirectory "$SMPROGRAMS\$StartMenuFolder"
-    CreateShortCut  "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
     CreateShortCut  "$SMPROGRAMS\$StartMenuFolder\PipeWalker.lnk" "$INSTDIR\PipeWalker.exe"
+    CreateShortCut  "$SMPROGRAMS\$StartMenuFolder\Read me.lnk" "$INSTDIR\ReadMe.txt"
+    CreateShortCut  "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
   !insertmacro MUI_STARTMENU_WRITE_END
 
 SectionEnd
@@ -91,7 +92,8 @@ SectionEnd
 Section "Uninstall"
   RMDir /r "$INSTDIR"
   !insertmacro MUI_STARTMENU_GETFOLDER Application $StartMenuFolder
-  Delete "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk"
+  Delete "$SMPROGRAMS\$StartMenuFolder\Read me.lnk"
   Delete "$SMPROGRAMS\$StartMenuFolder\PipeWalker.lnk"
+  Delete "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk"
   RMDir "$SMPROGRAMS\$StartMenuFolder"
 SectionEnd

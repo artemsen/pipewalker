@@ -38,9 +38,12 @@ public:
 
 	/**
 	 * Initialization
+	 * \param lvl_id start level id (0 to use settings file)
+	 * \param lvl_sz start level map size (if lvl_id > 0)
+	 * \param lvl_wrap start level wrap mode (if lvl_id > 0)
 	 * \return false on error
 	 */
-	bool initialize();
+	bool initialize(const unsigned long lvl_id, const level::size lvl_sz, const bool lvl_wrap);
 
 	/**
 	 * Finalization
@@ -88,7 +91,7 @@ public:
 	/**
 	 * Load next theme
 	 * \param direction true to next, false to previous theme file
-	 * \return false if no one theme avialable
+	 * \return false if no one theme available
 	 */
 	static bool load_next_theme(const bool direction);
 

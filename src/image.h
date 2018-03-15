@@ -24,7 +24,6 @@
 class image
 {
 public:
-	//! Default constructor
 	image();
 	~image();
 
@@ -118,7 +117,7 @@ public:
 
 	/**
 	 * Add transparency
-	 * \param val added alpha valie in range [0.0f...1.0f]
+	 * \param val added alpha value in range [0.0f...1.0f]
 	 */
 	void add_transparency(const float val);
 

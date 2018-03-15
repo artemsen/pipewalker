@@ -18,6 +18,7 @@
 
 #include "mode_puzzle.h"
 #include "sound.h"
+#include "mtrandom.h"
 #include "settings.h"
 
 #define PW_SWAP_MAP_SPEED 500
@@ -118,7 +119,7 @@ bool mode_puzzle::on_mouse_click(const float x, const float y, const Uint8 btn)
 		const unsigned short xc = static_cast<unsigned short>((x + 5.0f) / scale);
 		const unsigned short yc = _curr_level->get_csize() - 1 - static_cast<unsigned short>((y + 5.0f) / scale);
 		if ((btn & SDL_BUTTON(SDL_BUTTON_LEFT)) || (btn & SDL_BUTTON(SDL_BUTTON_RIGHT)))
-			_curr_level->rotate(xc, yc, btn & SDL_BUTTON(SDL_BUTTON_LEFT));
+			_curr_level->rotate(xc, yc, (btn & SDL_BUTTON(SDL_BUTTON_RIGHT)) != 0);
 		else if (btn & SDL_BUTTON(SDL_BUTTON_MIDDLE))
 			_curr_level->reverse_lock(xc, yc);
 	}
@@ -135,8 +136,13 @@ bool mode_puzzle::on_mouse_click(const float x, const float y, const Uint8 btn)
 			const bool next_btn = _btn_next.cross(x, y);
 			if (prev_btn || next_btn) {
 				unsigned long new_map_id = _curr_level->id();
-				new_map_id += (prev_btn ? -1 : 1);
-				if (new_map_id != 0 && new_map_id < 99999999)
+				if (!settings::rndlvl_mode())
+					new_map_id += (prev_btn ? -1 : 1);
+				else {
+					mtrandom::seed(SDL_GetTicks());
+					new_map_id = static_cast<unsigned long>(mtrandom::random(1, PW_MAX_LEVEL_NUMBER));
+				}
+				if (new_map_id != 0 && new_map_id < PW_MAX_LEVEL_NUMBER)
 					switch_to_level(new_map_id, _curr_level->get_tsize(), _curr_level->wrap_mode());
 			}
 		}
@@ -156,8 +162,9 @@ void mode_puzzle::initialize()
 	string state;
 	const level::size sz = settings::last_size();
 	const bool wm = settings::last_wrap();
-	if (!settings::get_state(sz, wm, id, state) || !_curr_level->load(id, sz, wm, state))
-		_curr_level->create(1, sz, wm);
+	settings::get_state(sz, wm, id, state);
+	if (!_curr_level->load(id, sz, wm, state))
+		_curr_level->create(id, sz, wm);
 }
 
 
@@ -259,7 +266,8 @@ void mode_puzzle::switch_to_level(const unsigned long id, const level::size sz, 
 		//Try to load last saved state
 		unsigned long id;
 		string state;
-		if (!settings::get_state(sz, wrap_mode, id, state) || !_curr_level->load(id, sz, wrap_mode, state))
-			_curr_level->create(1, sz, wrap_mode);
+		settings::get_state(sz, wrap_mode, id, state);
+		if (!_curr_level->load(id, sz, wrap_mode, state))
+			_curr_level->create(id, sz, wrap_mode);
 	}
 }

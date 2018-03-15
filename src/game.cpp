@@ -26,6 +26,7 @@
 #endif //WIN32
 
 #define PW_SWAP_MODE_SPEED     500
+#define PW_THEME_FILE_EXT      ".png"
 
 
 game::game()
@@ -45,9 +46,11 @@ game& game::instance()
 }
 
 
-bool game::initialize()
+bool game::initialize(const unsigned long lvl_id, const level::size lvl_sz, const bool lvl_wrap)
 {
 	settings::load();
+	if (lvl_id)
+		settings::set_state(lvl_id, lvl_sz, lvl_wrap, "Dummy");
 
 	//Initialize render subsystem
 	render& renderer = render::instance();
@@ -56,16 +59,16 @@ bool game::initialize()
 	//Load texture image
 	string file_name = PW_GAMEDATADIR;
 	file_name += settings::theme();
-	file_name += ".png";
+	file_name += PW_THEME_FILE_EXT;
 	if (!renderer.load(file_name.c_str())) {
-		//Try to load first avialable theme
+		//Try to load first available theme
 		if (!load_next_theme(true)) {
-			fprintf(stderr, "Critical error\nNo one avialable themes found\n");
+			fprintf(stderr, "Critical error\nNo one available themes found\n");
 			return false;
 		}
 	}
 
-	//Initialize randowmizer
+	//Initialize randomizer
 	mtrandom::seed(0xabcdef);
 
 	//Initialize sound subsystem
@@ -73,7 +76,8 @@ bool game::initialize()
 
 	//Initialize modes
 	_mode_puzzle.initialize();
-	_mode_sett.initialize(_mode_puzzle.current_level_size(), _mode_puzzle.current_wrap_mode(), settings::sound_mode());
+	_mode_sett.initialize(_mode_puzzle.current_level_size(), _mode_puzzle.current_wrap_mode(),
+		settings::rndlvl_mode(), settings::sound_mode());
 	_curr_mode = &_mode_puzzle;
 
 	return true;
@@ -177,7 +181,7 @@ bool game::load_next_theme(const bool direction)
 
 #ifdef WIN32
 	string find_path = PW_GAMEDATADIR;
-	find_path += "*.png";
+	find_path += "*" PW_THEME_FILE_EXT;
 	WIN32_FIND_DATAA find_data;
 	HANDLE find_handle = FindFirstFileA(find_path.c_str(), &find_data);
 	if (find_handle != INVALID_HANDLE_VALUE) {
@@ -194,7 +198,7 @@ bool game::load_next_theme(const bool direction)
 	if (dir) {
 		dirent* ent = NULL;
 		while ((ent = readdir(dir))) {
-			if (strstr(ent->d_name, ".png"))
+			if (strstr(ent->d_name, PW_THEME_FILE_EXT))
 				themes.push_back(ent->d_name);
 		}
 		closedir(dir);
@@ -206,14 +210,14 @@ bool game::load_next_theme(const bool direction)
 		return false;	//Not themes found?
 
 	//Find current position
-	const string curr_theme_file = string(settings::theme()) +  + ".png";
+	const string curr_theme_file = string(settings::theme()) + PW_THEME_FILE_EXT;
 	int curr_theme_id = -1;
 	for (size_t i = 0; curr_theme_id  < 0 && i < themes_sz; ++i) {
 		if (themes[i].compare(curr_theme_file) == 0)
 			curr_theme_id = static_cast<int>(i);
 	}
 
-	//Try to load next avialable theme
+	//Try to load next available theme
 	int try_count = static_cast<int>(themes_sz);
 	while (--try_count >= 0) {
 		string new_theme_file = PW_GAMEDATADIR;
@@ -248,6 +252,7 @@ void game::swap_mode()
 		//May be we need change size/mode
 		_mode_puzzle.on_settings_changed(_mode_sett.level_size(), _mode_sett.wrap_mode());
 		settings::sound_mode(_mode_sett.sound_mode());
+		settings::rndlvl_mode(_mode_sett.random_mode());
 		_next_mode = &_mode_puzzle;
 	}
 	else {

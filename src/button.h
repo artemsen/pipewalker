@@ -70,7 +70,7 @@ public:
 	 * Mouse move handler
 	 * \param x position of the mouse cursor on the X axis
 	 * \param y position of the mouse cursor on the Y axis
-	 * \return true if cursor enter or leave button's area (ussualy we have to redraw button)
+	 * \return true if cursor enter or leave button's area (usually we have to redraw button)
 	 */
 	bool on_mouse_move(const float x, const float y);
 
@@ -89,7 +89,7 @@ protected:
 	float            _scale;      ///< Button scale
 	int              _id;         ///< Button Id
 	unsigned long    _shadow_tr;  ///< Shadow drawing transition start time
-	bool             _mouse_over; ///< Mouse cursot over button flag
+	bool             _mouse_over; ///< Mouse cursor over button flag
 };
 
 
@@ -170,7 +170,7 @@ public:
 	 * Mouse move handler
 	 * \param x position of the mouse cursor on the X axis
 	 * \param y position of the mouse cursor on the Y axis
-	 * \return true if cursor enter or leave button's area (ussualy we have to redraw button)
+	 * \return true if cursor enter or leave button's area (usually we have to redraw button)
 	 */
 	bool on_mouse_move(const float x, const float y)
 	{
@@ -234,7 +234,7 @@ public:
 			_buttons[i].set_state(_buttons[i].id() == id);
 	}
 
-	//Accessor
+	//Accessors
 	button_chbox& operator [] (size_t i)
 	{
 		assert(i < N);

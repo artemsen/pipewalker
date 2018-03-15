@@ -215,10 +215,12 @@ SUBDIRS = src data extra
 pkgdocdatadir = $(datadir)/doc/$(PACKAGE)
 pkgdocdata_DATA = README
 EXTRA_DIST = $(pkgdocdata_DATA) \
-	make_dist_win32.cmd PipeWalker.nsi \
-	PipeWalker.sln PipeWalker.vcxproj
+	PipeWalker.sln PipeWalker.vcxproj \
+	PipeWalker.nsi
 
-all: all-recursive
+@WIN32_TRUE@BUILT_SOURCES = win32_make_dist.cmd
+all: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
 .SUFFIXES:
 am--refresh:
@@ -587,14 +589,16 @@ distcleancheck: distclean
 	       $(distcleancheck_listfiles) ; \
 	       exit 1; } >&2
 check-am: all-am
-check: check-recursive
+check: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) check-recursive
 all-am: Makefile $(DATA)
 installdirs: installdirs-recursive
 installdirs-am:
 	for dir in "$(DESTDIR)$(pkgdocdatadir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
-install: install-recursive
+install: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) install-recursive
 install-exec: install-exec-recursive
 install-data: install-data-recursive
 uninstall: uninstall-recursive
@@ -619,6 +623,7 @@ distclean-generic:
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
+	-test -z "$(BUILT_SOURCES)" || rm -f $(BUILT_SOURCES)
 clean: clean-recursive
 
 clean-am: clean-generic mostlyclean-am
@@ -688,8 +693,9 @@ ps-am:
 
 uninstall-am: uninstall-pkgdocdataDATA
 
-.MAKE: $(RECURSIVE_CLEAN_TARGETS) $(RECURSIVE_TARGETS) ctags-recursive \
-	install-am install-strip tags-recursive
+.MAKE: $(RECURSIVE_CLEAN_TARGETS) $(RECURSIVE_TARGETS) all check \
+	ctags-recursive install install-am install-strip \
+	tags-recursive
 
 .PHONY: $(RECURSIVE_CLEAN_TARGETS) $(RECURSIVE_TARGETS) CTAGS GTAGS \
 	all all-am am--refresh check check-am clean clean-generic \
@@ -707,6 +713,23 @@ uninstall-am: uninstall-pkgdocdataDATA
 	pdf-am ps ps-am tags tags-recursive uninstall uninstall-am \
 	uninstall-pkgdocdataDATA
 
+
+win32_make_dist.cmd:
+	@echo "set ZIPTOOL=\"C:\Program Files\7-Zip\7z.exe\" a -tzip -r" > win32_make_dist.cmd
+	@echo "set NSITOOL=\"C:\soft_dev\nsis\makensis.exe\"" >> win32_make_dist.cmd
+	@echo "if exist PipeWalker rmdir /S /Q PipeWalker" >> win32_make_dist.cmd
+	@echo "mkdir PipeWalker" >> win32_make_dist.cmd
+	@echo "echo # This is the user settings file of the PipeWalker game > PipeWalker\.pipewalker" >> win32_make_dist.cmd
+	@echo "copy ChangeLog PipeWalker\ChangeLog" >> win32_make_dist.cmd
+	@echo "copy README PipeWalker\ReadMe.txt" >> win32_make_dist.cmd
+	@echo "copy src\pipewalker.exe PipeWalker\PipeWalker.exe" >> win32_make_dist.cmd
+	@echo "copy SDL.dll PipeWalker\SDL.dll" >> win32_make_dist.cmd
+	@echo "mkdir PipeWalker\data" >> win32_make_dist.cmd
+	@echo "copy data\*.wav PipeWalker\data" >> win32_make_dist.cmd
+	@echo "copy data\*.png PipeWalker\data" >> win32_make_dist.cmd
+	@echo "call %ZIPTOOL% pipewalker-$(VERSION)-win32-portable.zip PipeWalker\*" >> win32_make_dist.cmd
+	@echo "rmdir /S /Q PipeWalker" >> win32_make_dist.cmd
+	@echo "call %NSITOOL% /DVERSION=$(VERSION) PipeWalker.nsi" >> win32_make_dist.cmd
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

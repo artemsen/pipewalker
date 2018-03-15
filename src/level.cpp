@@ -18,8 +18,7 @@
 
 #include "level.h"
 #include "mtrandom.h"
-
-extern bool DEBUG_MODE;
+#include "settings.h"
 
 #define C2H(x) (x >= '0' && x <= '9' ? x - '0' : x >= 'A' && x <= 'F' ? x - ('A' - 10) : x - ('a' - 10))
 
@@ -37,7 +36,7 @@ level::level()
 
 void level::create(const unsigned long id, const size sz, const bool wrap_mode)
 {
- 	assert(id >= 1 && id <= 99999999);
+ 	assert(id >= 1 && id <= PW_MAX_LEVEL_NUMBER);
 
 	_id = id;
 	sprintf(_id_text, "%08u", static_cast<unsigned int>(_id));
@@ -65,7 +64,7 @@ void level::create(const unsigned long id, const size sz, const bool wrap_mode)
 			install_done &= install_receiver();
 	}
 
-	if (DEBUG_MODE)
+	if (settings::debug_mode())
 		_solved = false;
 	else {
 		//Reset map - still rotation
@@ -81,7 +80,7 @@ void level::create(const unsigned long id, const size sz, const bool wrap_mode)
 
 bool level::load(const unsigned long id, const size sz, const bool wrap_mode, const string& state)
 {
-	assert(id >= 1 && id <= 99999999);
+	assert(id >= 1 && id <= PW_MAX_LEVEL_NUMBER);
 	assert(!state.empty());
 
 	_id = id;
@@ -421,7 +420,7 @@ unsigned short level::size_from_type(const size sz)
 		case sz_extra:
 			return 30;
 		default:
-			assert(false && "Unhadled size");
+			assert(false && "Unknown size");
 	}
 	return 14;
 }

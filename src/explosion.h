@@ -28,7 +28,7 @@ class explosion
 public:
 	/**
 	 * Create winner animation
-	 * \param lvl curren level
+	 * \param lvl current level
 	 */
 	void create(const level& lvl);
 

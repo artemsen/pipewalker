@@ -30,6 +30,7 @@ const char* PWS_SECT_LVLEX_P =  "level_ep";    ///< Extra level map properties s
 const char* PWS_SECT_LVLEX_W =  "level_ew";    ///< Extra level map properties section name
 const char* PWS_CPROP_THEME =   "theme";       ///< Theme file name field
 const char* PWS_CPROP_SOUND =   "sound";       ///< Sound mode field
+const char* PWS_CPROP_RNDLVL =  "rndlvl";      ///< Random level map mode field
 const char* PWS_CPROP_LASTMAP = "last_lvl";    ///< Last map size
 const char* PWS_LEVEL_ID =      "id";          ///< Last level Id
 const char* PWS_LEVEL_STATE =   "state";       ///< Last level state
@@ -38,9 +39,14 @@ const char* PWS_FILENAME =      ".pipewalker"; ///< User settings file name
 
 
 settings::settings()
-:	_sound(true),
+:	_debug_mode(false),
+	_rnd_lvl(false),
+	_sound(true),
 	_theme("Simple")
 {
+#ifndef NDEBUG
+	_rnd_lvl = true;
+#endif	//NDEBUG
 }
 
 
@@ -57,6 +63,7 @@ void settings::load()
 
 	serializer sett;
 	if (sett.load(inst._sett_file)) {
+		inst._rnd_lvl = sett.get_value(PWS_SECT_COMMON, PWS_CPROP_RNDLVL, inst._rnd_lvl);
 		inst._sound = sett.get_value(PWS_SECT_COMMON, PWS_CPROP_SOUND, inst._sound);
 		inst._theme = sett.get_value(PWS_SECT_COMMON, PWS_CPROP_THEME, inst._theme);
 		inst._last_level = sett.get_value(PWS_SECT_COMMON, PWS_CPROP_LASTMAP, inst._last_level);
@@ -64,7 +71,7 @@ void settings::load()
 		for (size_t i = 0; i < 8; ++i) {
 			const char* section_name = inst.level_section_name(static_cast<level::size>(i / 2), (i % 2) != 0);
 			assert(section_name && *section_name);
-			inst._states[i].id = sett.get_value(section_name, PWS_LEVEL_ID, 0);
+			inst._states[i].id = sett.get_value(section_name, PWS_LEVEL_ID, 1);
 			inst._states[i].state = sett.get_value(section_name, PWS_LEVEL_STATE, string());
 		}
 	}
@@ -76,6 +83,7 @@ void settings::save()
 	settings& inst = instance();
 
 	serializer sett;
+	sett.set_value(PWS_SECT_COMMON, PWS_CPROP_RNDLVL, inst._rnd_lvl);
 	sett.set_value(PWS_SECT_COMMON, PWS_CPROP_SOUND, inst._sound);
 	sett.set_value(PWS_SECT_COMMON, PWS_CPROP_THEME, inst._theme);
 	sett.set_value(PWS_SECT_COMMON, PWS_CPROP_LASTMAP, inst._last_level);
@@ -91,12 +99,11 @@ void settings::save()
 }
 
 
-bool settings::get_state(const level::size sz, const bool wrap, unsigned long& id, string& state)
+void settings::get_state(const level::size sz, const bool wrap, unsigned long& id, string& state)
 {
 	const level_state& ls = instance()._states[static_cast<size_t>(sz) * 2 + (wrap ? 1 : 0)];
 	id = ls.id;
 	state = ls.state;
-	return (id > 0 && !state.empty());
 }
 
 
@@ -123,9 +130,9 @@ const char* settings::level_section_name(const level::size sz, const bool wrap) 
 		case level::sz_big:
 			return wrap ? PWS_SECT_LVLBG_W : PWS_SECT_LVLBG_P;
 		case level::sz_extra:
-			return wrap ? PWS_SECT_LVLEX_P : PWS_SECT_LVLEX_W;
+			return wrap ? PWS_SECT_LVLEX_W : PWS_SECT_LVLEX_P;
 		default:
-			assert(false && "Unhadled size");
+			assert(false && "Unknown size");
 	}
 	return "";
 }

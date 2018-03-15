@@ -24,8 +24,8 @@ Installing PipeWalker
   or
 
   Use MinGW32 with MSYS:
-	export CPPFLAGS="-I/usr/local/include"
-	export LDFLAGS="-L/usr/local/lib"
+    export CPPFLAGS="-I/usr/local/include"
+    export LDFLAGS="-L/usr/local/lib"
     ./configure --build=i586-mingw32
     make                    
     make install

@@ -38,9 +38,10 @@ public:
 	 * Initialize mode
 	 * \param sz showed level size
 	 * \param wrap wrap mode in/off
+	 * \param rndm random mode in/off
 	 * \param sound sound mode in/off
 	 */
-	void initialize(const level::size sz, const bool wrap, const bool sound);
+	void initialize(const level::size sz, const bool wrap, const bool rndm, const bool sound);
 
 	/**
 	 * Reset state before show
@@ -50,19 +51,22 @@ public:
 	//Settings accessors
 	level::size level_size() const { return _sett_size; }
 	bool wrap_mode() const         { return _sett_wrap; }
+	bool random_mode() const       { return _sett_rnd; }
 	bool sound_mode() const        { return _sett_sound; }
 
 private:
 	button          _btn_ok;     ///< OK button
 	button          _btn_cancel; ///< Cancel button
 	button_radio<4> _map_size;   ///< Map size radio buttons group
-	button_chbox    _wrap_mode;  ///< Wrapping mode on/off radio buttons group
-	button_chbox    _sound_mode; ///< Sound on/off radio buttons group
+	button_chbox    _wrap_mode;  ///< Wrapping mode on/off checkbox
+	button_chbox    _rnd_mode;   ///< Random on/off checkbox
+	button_chbox    _sound_mode; ///< Sound on/off checkbox
 	button          _prev_theme; ///< Previous theme button
 	button          _next_theme; ///< Next theme button
 	string          _theme_name; ///< Current theme name
 
 	level::size     _sett_size;  ///< Current settings: level size
 	bool            _sett_wrap;  ///< Current settings: wrap mode
+	bool            _sett_rnd;   ///< Current settings: random level mode
 	bool            _sett_sound; ///< Current settings: sound mode
 };

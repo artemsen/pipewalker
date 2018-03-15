@@ -122,7 +122,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>PACKAGE_NAME="PipeWalker";PACKAGE_VERSION="0.9.2";PW_GAMEDATADIR="./data/";WIN32;_CRT_SECURE_NO_WARNINGS;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PACKAGE_NAME="PipeWalker";PACKAGE_VERSION="0.9.3";PW_GAMEDATADIR="data/";WIN32;_CRT_SECURE_NO_WARNINGS;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>libs\libsdl\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -138,7 +138,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>PACKAGE_NAME="PipeWalker";PACKAGE_VERSION="0.9.2";PW_GAMEDATADIR="./data/";WIN32;_CRT_SECURE_NO_WARNINGS;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PACKAGE_NAME="PipeWalker";PACKAGE_VERSION="0.9.3";PW_GAMEDATADIR="data/";WIN32;_CRT_SECURE_NO_WARNINGS;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>libs\libsdl\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -156,7 +156,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>PACKAGE_NAME="PipeWalker";PACKAGE_VERSION="0.9.2";PW_GAMEDATADIR="./data/";WIN32;_CRT_SECURE_NO_WARNINGS;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PACKAGE_NAME="PipeWalker";PACKAGE_VERSION="0.9.3";PW_GAMEDATADIR="data/";WIN32;_CRT_SECURE_NO_WARNINGS;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>libs\libsdl\include</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
@@ -177,7 +177,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>PACKAGE_NAME="PipeWalker";PACKAGE_VERSION="0.9.2";PW_GAMEDATADIR="./data/";WIN32;_CRT_SECURE_NO_WARNINGS;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PACKAGE_NAME="PipeWalker";PACKAGE_VERSION="0.9.3";PW_GAMEDATADIR="data/";WIN32;_CRT_SECURE_NO_WARNINGS;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>libs\libsdl\include</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
