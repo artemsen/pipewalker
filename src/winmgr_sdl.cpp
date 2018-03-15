@@ -22,16 +22,14 @@
 #include "texture.h"
 #include "rendertext.h"
 #include "game.h"
+#include "image.h"
+#include "../extra/pipewalker.xpm"
 
 //SDL library
 #include <SDL/SDL.h>
 
 #ifdef WIN32
 	#include <SDL/SDL_syswm.h>
-	#include "PipeWalkerRes.h"
-#else
-	#include "image.h"
-	#include "../extra/pipewalker.xpm"
 #endif // WIN32
 
 
@@ -130,15 +128,6 @@ void CWinManagerSDL::CreateGLWindow(const int width, const int height)
 
 	SDL_WM_SetCaption(PACKAGE_STRING, PACKAGE_STRING);
 
-#ifdef WIN32
-	static HICON wndIcon = NULL;
-	if (!wndIcon)
-		wndIcon = ::LoadIcon(::GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_PIPEWALKER));
-	SDL_SysWMinfo wminfo;
-	SDL_VERSION(&wminfo.version);
-	if (SDL_GetWMInfo(&wminfo) == 1)
-		::SetClassLong(wminfo.window, GCL_HICON, reinterpret_cast<LONG>(wndIcon));
-#else
 	static SDL_Surface* srfIcon = NULL;
 	if (!srfIcon) {
 		static CImage wndIcon;
@@ -154,7 +143,6 @@ void CWinManagerSDL::CreateGLWindow(const int width, const int height)
 		srfIcon = SDL_CreateRGBSurfaceFrom(wndIcon.GetData(), wndIcon.GetWidth(), wndIcon.GetHeight(), wndIcon.BytesPerPixel() * 8, wndIcon.GetWidth() * wndIcon.BytesPerPixel(), mask[0], mask[1], mask[2], mask[3]);
 	}
 	SDL_WM_SetIcon(srfIcon, NULL);
-#endif // WIN32
 
 	//GL attributes
 	SDL_GL_SetAttribute(SDL_GL_RED_SIZE,     5);

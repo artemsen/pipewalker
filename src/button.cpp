@@ -24,19 +24,19 @@ CButton::CButton()
 	m_Y(0.0f),
 	m_Width(0.0f),
 	m_Height(0.0f),
-	m_TexId(0),
-	m_BtnId(0)
+	m_BtnId(0),
+	m_TexId(CTextureBank::TexCounter)
 {
 }
 
 
-CButton::CButton(const float x, const float y, const float width, const float height, const GLuint tex, const int id)
+CButton::CButton(const float x, const float y, const float width, const float height, const CTextureBank::TextureType tex, const int id)
 {
 	Init(x, y, width, height, tex, id);
 }
 
 
-void CButton::Init(const float x, const float y, const float width, const float height, const GLuint tex, const int id)
+void CButton::Init(const float x, const float y, const float width, const float height, const CTextureBank::TextureType tex, const int id)
 {
 	m_X = x;
 	m_Y = y;
@@ -60,7 +60,7 @@ void CButton::Render(const float x, const float y) const
 }
 
 
-void CButton::RenderButton(const float x, const float y, const GLuint texture) const
+void CButton::RenderButton(const float x, const float y, const CTextureBank::TextureType texture) const
 {
 	const float coeff = IsMouseOver(x, y) ? 0.05f : 0.0f;
 
@@ -74,14 +74,14 @@ void CButton::RenderButton(const float x, const float y, const GLuint texture) c
 	static const short Tex[] =			{ 0, 1, 0, 0, 1, 0, 1, 1 };	//Texture coordinates
 	static const unsigned short Ind[] =	{ 0, 1, 2, 0, 2, 3 };		//Indices
 
-	glBindTexture(GL_TEXTURE_2D, texture);
+	glBindTexture(GL_TEXTURE_2D, CTextureBank::Get(texture));
 	glVertexPointer(2, GL_FLOAT, 0, Vertex);
 	glTexCoordPointer(2, GL_SHORT, 0, Tex);
 	glDrawElements(GL_TRIANGLES, (sizeof(Ind) / sizeof(Ind[0])), GL_UNSIGNED_SHORT, Ind);
 }
 
 
-CCheckBoxButton::CCheckBoxButton(const bool state, const float x, const float y, const float width, const float height, const GLuint texOn, const GLuint texOff, const int id)
+CCheckBoxButton::CCheckBoxButton(const bool state, const float x, const float y, const float width, const float height, const CTextureBank::TextureType texOn, const CTextureBank::TextureType texOff, const int id)
 : CButton(x, y, width, height, texOn, id), m_State(state), m_TexOff(texOff)
 {
 }

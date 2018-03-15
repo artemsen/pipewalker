@@ -51,14 +51,16 @@ void CSettings::Load()
 	vector<KeyVal> sett;
 
 	//Try to open portable version settings file
+	bool usePortable = false;
 	try {
 		sett = LoadSettings(GetFileName().c_str());
+		usePortable = true;
 	}
 	catch (CException& /*ex*/) {
 	}
 
 	//Try to open non-portable version settings file
-	if (sett.empty() && m_UsePortable) {
+	if (!usePortable) {
 		m_UsePortable = false;
 		try {
 			sett = LoadSettings(GetFileName().c_str());

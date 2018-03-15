@@ -50,4 +50,5 @@ private:
 private:
 	static unsigned long	m_State[MTSTATE_ARRAY_SIZE];	///< State array
 	static unsigned long	m_Pos;							///< Position in state array
+	static bool				m_Initialized;					///< Initialization flag
 };

@@ -31,7 +31,7 @@ class CModePuzzle
 {
 public:
 	//! Default constructor
-	CModePuzzle(CGame& game) : m_Game(game) {}
+	CModePuzzle(CGame& game) : m_Game(game), m_UseSound(true) {}
 
 	/**
 	 * Renew map
@@ -65,7 +65,7 @@ public:
 	/**
 	 * Reset by rotate current map
 	 */
-	void ResetByRotate()		{ StopWinnerAnimation(); m_Map.ResetByRotate(); }
+	void ResetByRotate()		{ StopWinnerAnimation(); m_UseSound = false; m_Map.ResetByRotate(); }
 
 	/**
 	 * Get current map size
@@ -102,4 +102,5 @@ private:
 	CMap				m_Map;			///< Game map
 	vector<CExplosion>	m_Explosions;	///< Winner explosions
 	CGame&				m_Game;			///< Game instance
+	bool				m_UseSound;		///< Use sound flag (to prevent 'reset by rotate' sounds)
 };

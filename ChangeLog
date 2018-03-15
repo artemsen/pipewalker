@@ -1,3 +1,10 @@
+PipeWalker 0.8.2 2010-05-06
+---------------------------
+ * fixed bug: broken texture after changing theme on some OS
+ * fixed bug: sound on mass rotation
+ * fixed bug: unable to load user settings file on portable version
+ * added win sound
+
 PipeWalker 0.8.1 2010-05-05
 ---------------------------
  * added themes support

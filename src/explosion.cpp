@@ -48,7 +48,7 @@ void CExplosion::Render()
 
 			explosionActive = true;
 
-			const float radius = 1.5f - m_Particles[i].Life;
+			const float radius = 3.0f - m_Particles[i].Life * 3.0f;
 
 			const float rotateAngle = m_Particles[i].Life * 180.0f;
 

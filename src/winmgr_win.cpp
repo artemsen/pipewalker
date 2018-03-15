@@ -163,12 +163,10 @@ LRESULT CALLBACK CWinManagerWin::WndProc(HWND wnd, UINT msg, WPARAM wParam, LPAR
  		case WM_GETMINMAXINFO:
  			{
 				LPMINMAXINFO mmi = reinterpret_cast<LPMINMAXINFO>(lParam);
-				
 				const int maxSize = GetSystemMetrics(SM_CYMAXIMIZED);
 				static const float aspect = static_cast<float>(PW_SCREEN_WIDTH) / static_cast<float>(PW_SCREEN_HEIGHT);
-
-				mmi->ptMaxSize.x = static_cast<LONG>(static_cast<float>(maxSize) * aspect);
-				mmi->ptMaxSize.y = maxSize;
+				mmi->ptMaxSize.x = mmi->ptMaxTrackSize.x = static_cast<LONG>(static_cast<float>(maxSize) * aspect);
+				mmi->ptMaxSize.y = mmi->ptMaxTrackSize.y = maxSize;
  				mmi->ptMinTrackSize.x = PW_SCREEN_WIDTH / 3;
  				mmi->ptMinTrackSize.y = PW_SCREEN_HEIGHT / 3;
  			}

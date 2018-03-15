@@ -34,7 +34,7 @@ class CSound
 public:
 	//Constructor/destructor
 #if defined PW_USE_SDL
-	CSound() : m_Data(NULL), m_Pos(0), m_Length(0) 	{}
+	CSound() : m_Pos(0)	{}
 #endif //PW_USE_SDL
 	~CSound()										{ Free(); }
 
@@ -51,12 +51,9 @@ public:
 
 public:
 #if defined PW_USE_SDL		//SDL library
-	Uint8*	m_Data;
-	Uint32	m_Pos;
-	Uint32	m_Length;
-#elif defined PW_USE_WIN	//Microsoft Windows
-	vector<unsigned char> m_Data;
+	size_t	m_Pos;
 #endif
+	vector<unsigned char> m_Data;
 };
 
 
@@ -69,6 +66,7 @@ public:
 	//! Sound types
 	enum SoundType {
 		SndClatz = 0,			///< Simple 'Clatz' sound
+		SndComplete,			///< Level complete sound
 		SndCounter				///< sound counter
 	};
 
@@ -92,6 +90,7 @@ private:
 #ifdef PW_USE_SDL
 	//! SDL fill audio buffer callback (see SDL SDK for more info)
 	static void OnFillBuffer(void* userdata, Uint8* stream, int len);
+	static SoundType m_CurrentSnd;	///< Current played sound
 #endif // PW_USE_SDL
 
 private:

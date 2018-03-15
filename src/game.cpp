@@ -63,14 +63,14 @@ void CGame::Initialize(CWinManager& winMgr)
 
 	//Configure buttons
 	m_BtnPuzzle.reserve(4);
-	m_BtnPuzzle.push_back(CButton( 2.0f, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::Get(CTextureBank::TexButtonNext), PW_BUTTONID_NEXT));
-	m_BtnPuzzle.push_back(CButton(-3.0f, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::Get(CTextureBank::TexButtonPrev), PW_BUTTONID_PREV));
-	m_BtnPuzzle.push_back(CButton(PW_BUTTON_LEFT, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::Get(CTextureBank::TexButtonReset), PW_BUTTONID_RESET));
-	m_BtnPuzzle.push_back(CButton(PW_BUTTON_RIGHT, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::Get(CTextureBank::TexButtonSett), PW_BUTTONID_SETT));
+	m_BtnPuzzle.push_back(CButton( 2.0f, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT,CTextureBank::TexButtonNext, PW_BUTTONID_NEXT));
+	m_BtnPuzzle.push_back(CButton(-3.0f, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::TexButtonPrev, PW_BUTTONID_PREV));
+	m_BtnPuzzle.push_back(CButton(PW_BUTTON_LEFT, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::TexButtonReset, PW_BUTTONID_RESET));
+	m_BtnPuzzle.push_back(CButton(PW_BUTTON_RIGHT, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::TexButtonSett, PW_BUTTONID_SETT));
 
 	m_BtnSettings.reserve(2);
-	m_BtnSettings.push_back(CButton(PW_BUTTON_RIGHT, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::Get(CTextureBank::TexButtonOK), PW_BUTTONID_OK));
-	m_BtnSettings.push_back(CButton(PW_BUTTON_LEFT, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::Get(CTextureBank::TexButtonCancel), PW_BUTTONID_CANCEL));
+	m_BtnSettings.push_back(CButton(PW_BUTTON_RIGHT, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::TexButtonOK, PW_BUTTONID_OK));
+	m_BtnSettings.push_back(CButton(PW_BUTTON_LEFT, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::TexButtonCancel, PW_BUTTONID_CANCEL));
 
 	m_ModePuzzle.LoadMap();
 	m_ModeSettings.Initialize();
@@ -238,7 +238,7 @@ void CGame::OnMouseButtonDown(const float mouseX, const float mouseY, const Mous
 						BeginTransition(Puzzle);
 						break;
 					default:
-						assert(false && "Unhandled button id");
+						assert(false && "Unregistered button id");
 				}
 			}
 		}

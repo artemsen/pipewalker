@@ -19,6 +19,7 @@
 #pragma once
 
 #include "common.h"
+#include "texture.h"
 
 /**
  * CButton - Simple button
@@ -36,9 +37,9 @@ public:
 	 * \param width button width
 	 * \param height button height
 	 * \param tex button texture identifier
-	 * \param id button ID
+	 * \param id button texture ID
 	 */
-	CButton(const float x, const float y, const float width, const float height, const GLuint tex, const int id);
+	CButton(const float x, const float y, const float width, const float height, const CTextureBank::TextureType tex, const int id);
 
 	/**
 	 * Button initialization
@@ -49,7 +50,7 @@ public:
 	 * \param tex button texture identifier
 	 * \param id button ID
 	 */
-	void Init(const float x, const float y, const float width, const float height, const GLuint tex, const int id);
+	void Init(const float x, const float y, const float width, const float height, const CTextureBank::TextureType tex, const int id);
 
 	/**
 	 * Check for cross mouse and button coordinates
@@ -80,7 +81,7 @@ protected:
 	 * \param y mouse y coordinate
 	 * \param texture texture identifier
 	 */
-	void RenderButton(const float x, const float y, const GLuint texture) const;
+	void RenderButton(const float x, const float y, const CTextureBank::TextureType texture) const;
 
 
 protected:	//Class variables
@@ -88,8 +89,8 @@ protected:	//Class variables
 	float	m_Y;		///< Button y coordinate
 	float	m_Width;	///< Button width
 	float	m_Height;	///< Button height
-	GLuint	m_TexId;	///< Button texture identifier
 	int		m_BtnId;	///< Button ID
+	CTextureBank::TextureType	m_TexId;	///< Button texture identifier
 };
 
 
@@ -100,7 +101,7 @@ class CCheckBoxButton : public CButton
 {
 public:
 	//! Default constructor
-	CCheckBoxButton() : CButton(), m_State(false), m_TexOff(0) {}
+	CCheckBoxButton() : CButton(), m_State(false), m_TexOff(CTextureBank::TexCounter) {}
 
 	/**
 	 * Constructor
@@ -113,7 +114,7 @@ public:
 	 * \param texOff button off-state texture identifier
 	 * \param id button ID
 	 */
-	CCheckBoxButton(const bool state, const float x, const float y, const float width, const float height, const GLuint texOn, const GLuint texOff, const int id);
+	CCheckBoxButton(const bool state, const float x, const float y, const float width, const float height, const CTextureBank::TextureType texOn, const CTextureBank::TextureType texOff, const int id);
 
 	/**
 	 * Get button state
@@ -132,7 +133,7 @@ public:
 
 protected:
 	bool	m_State;	///< Button state (on/off)
-	GLuint	m_TexOff;	///< Button second texture identifier
+	CTextureBank::TextureType	m_TexOff;	///< Button second texture identifier
 };
 
 
@@ -176,5 +177,5 @@ public:
 	void SetChoice(const int choiceId);
 
 private:
-	vector<CCheckBoxButton>	m_Buttons;	///< Buttons groupe
+	vector<CCheckBoxButton>	m_Buttons;	///< Buttons group
 };

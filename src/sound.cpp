@@ -26,8 +26,10 @@ CSound CSoundBank::m_Sound[SndCounter];
 
 #ifdef PW_USE_SDL
 	#define PW_AUDIO_FORMAT		AUDIO_S16
-	#define PW_AUDIO_FREQ		22050
-	#define PW_AUDIO_CHANNELS	1
+	#define PW_AUDIO_FREQ		44100
+	#define PW_AUDIO_CHANNELS	2
+
+	CSoundBank::SoundType CSoundBank::m_CurrentSnd = CSoundBank::SndCounter;
 #endif //PW_USE_SDL
 
 //! Types and files of textures
@@ -37,7 +39,8 @@ struct SndFile {
 };
 
 static const SndFile SoundFiles[] = {
-	{ CSoundBank::SndClatz,	"clatz.wav"	},
+	{ CSoundBank::SndClatz,		"clatz.wav"		},
+	{ CSoundBank::SndComplete,	"complete.wav"	},
 };
 
 
@@ -84,14 +87,16 @@ void CSoundBank::Free()
 }
 
 
-void CSoundBank::Play(const SoundType /*type*/)
+void CSoundBank::Play(const SoundType type)
 {
-	//assert(type >= 0 && type < SndCounter);
+	assert(type >= 0 && type < SndCounter);
 #if defined PW_USE_SDL		//SDL library
-	if (m_SoundInitialized)
+	if (m_SoundInitialized) {
 		SDL_PauseAudio(0);
+		m_CurrentSnd = type;
+	}
 #elif defined PW_USE_WIN	//Microsoft Windows
-	PlaySound(reinterpret_cast<LPCTSTR>(&m_Sound[0].m_Data[0]), NULL, SND_MEMORY | SND_ASYNC);
+	PlaySound(reinterpret_cast<LPCTSTR>(&m_Sound[type].m_Data.front()), NULL, SND_MEMORY | SND_ASYNC);
 #endif
 }
 
@@ -99,19 +104,21 @@ void CSoundBank::Play(const SoundType /*type*/)
 #ifdef PW_USE_SDL
 void CSoundBank::OnFillBuffer(void* /*userdata*/, Uint8* stream, int len)
 {
-	const size_t i = SndClatz;
-	Uint32 amount = (m_Sound[i].m_Length - m_Sound[i].m_Pos);
+	if (m_CurrentSnd < 0 || m_CurrentSnd >= SndCounter)
+		return;
+	
+	Uint32 amount = (m_Sound[m_CurrentSnd].m_Data.size() - m_Sound[m_CurrentSnd].m_Pos);
 	if (amount > static_cast<Uint32>(len))
 		amount = len;
-	SDL_MixAudio(stream, &m_Sound[i].m_Data[m_Sound[i].m_Pos], amount, SDL_MIX_MAXVOLUME);
-	m_Sound[i].m_Pos += amount;
-	if (m_Sound[i].m_Pos >= m_Sound[i].m_Length) {
-		m_Sound[i].m_Pos = 0;
+	SDL_MixAudio(stream, &m_Sound[m_CurrentSnd].m_Data[m_Sound[m_CurrentSnd].m_Pos], amount, SDL_MIX_MAXVOLUME);
+	m_Sound[m_CurrentSnd].m_Pos += amount;
+	if (m_Sound[m_CurrentSnd].m_Pos >= m_Sound[m_CurrentSnd].m_Data.size()) {
+		m_Sound[m_CurrentSnd].m_Pos = 0;
+		m_CurrentSnd = SndCounter;
 		SDL_PauseAudio(1);
 	}
 }
 #endif //PW_USE_SDL
-
 
 
 void CSound::Load(const char* fileName)
@@ -124,18 +131,8 @@ void CSound::Load(const char* fileName)
 	Uint32 dlen;
 	if (SDL_LoadWAV(fileName, &wave, &data, &dlen) == NULL)
 		throw CException("Unable to load file ", fileName, ": ", SDL_GetError());
-
-	SDL_AudioCVT cvt;
-	SDL_BuildAudioCVT(&cvt, wave.format, wave.channels, wave.freq, PW_AUDIO_FORMAT, PW_AUDIO_CHANNELS, PW_AUDIO_FREQ);
-	cvt.buf = static_cast<Uint8*>(malloc(dlen * cvt.len_mult));
-	memcpy(cvt.buf, data, dlen);
-	cvt.len = dlen;
-	SDL_ConvertAudio(&cvt);
-	SDL_FreeWAV(data);
-
-	m_Data = cvt.buf;
+	copy(data, data + dlen, back_inserter(m_Data));
 	m_Pos = 0;
-	m_Length = cvt.len_cvt;
 #elif defined PW_USE_WIN	//Microsoft Windows
 	CBuffer buf;
 	buf.Load(fileName);
@@ -147,12 +144,7 @@ void CSound::Load(const char* fileName)
 void CSound::Free()
 {
 #if defined PW_USE_SDL		//SDL library
-	if (m_Data)
-		free(m_Data);
-	m_Data = NULL;
 	m_Pos = 0;
-	m_Length = 0;
-#elif defined PW_USE_WIN	//Microsoft Windows
-	m_Data.clear();
 #endif
+	m_Data.clear();
 }

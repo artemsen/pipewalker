@@ -20,6 +20,7 @@
 
 unsigned long	CMTRandom::m_State[MTSTATE_ARRAY_SIZE];
 unsigned long	CMTRandom::m_Pos = 0;
+bool			CMTRandom::m_Initialized = false;
 
 #define MTRAND	397
 
@@ -37,6 +38,11 @@ void CMTRandom::Seed(const unsigned long seed)
 
 unsigned long CMTRandom::Rand()
 {
+	if (!m_Initialized) {
+		Seed(0xabcdef);
+		m_Initialized = true;
+	}
+
 	if (m_Pos = MTSTATE_ARRAY_SIZE)
 		GenerateState(); // new state vector needed
 	unsigned long x = m_State[m_Pos++];

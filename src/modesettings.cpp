@@ -25,24 +25,22 @@
 
 void CModeSettings::Initialize()
 {
-	const GLuint texOn = CTextureBank::Get(CTextureBank::TexRadBtnOn);
-	const GLuint texOff = CTextureBank::Get(CTextureBank::TexRadBtnOff);
 	const float btnSize = 0.6f;
 	const float btnLeft = -0.5f;
 
-	m_MapSize.AddButton(CCheckBoxButton(false, btnLeft, 4.0f, btnSize, btnSize, texOn, texOff, MapSizeSmall));
-	m_MapSize.AddButton(CCheckBoxButton(false, btnLeft, 3.3f, btnSize, btnSize, texOn, texOff, MapSizeNormal));
-	m_MapSize.AddButton(CCheckBoxButton(false, btnLeft, 2.6f, btnSize, btnSize, texOn, texOff, MapSizeBig));
-	m_MapSize.AddButton(CCheckBoxButton(false, btnLeft, 1.9f, btnSize, btnSize, texOn, texOff, MapSizeExtra));
+	m_MapSize.AddButton(CCheckBoxButton(false, btnLeft, 4.0f, btnSize, btnSize, CTextureBank::TexRadBtnOn, CTextureBank::TexRadBtnOff, MapSizeSmall));
+	m_MapSize.AddButton(CCheckBoxButton(false, btnLeft, 3.3f, btnSize, btnSize, CTextureBank::TexRadBtnOn, CTextureBank::TexRadBtnOff, MapSizeNormal));
+	m_MapSize.AddButton(CCheckBoxButton(false, btnLeft, 2.6f, btnSize, btnSize, CTextureBank::TexRadBtnOn, CTextureBank::TexRadBtnOff, MapSizeBig));
+	m_MapSize.AddButton(CCheckBoxButton(false, btnLeft, 1.9f, btnSize, btnSize, CTextureBank::TexRadBtnOn, CTextureBank::TexRadBtnOff, MapSizeExtra));
 
-	m_WrapMode.AddButton(CCheckBoxButton(false, btnLeft, 0.8f, btnSize, btnSize, texOn, texOff, 1));
-	m_WrapMode.AddButton(CCheckBoxButton(false, btnLeft, 0.1f, btnSize, btnSize, texOn, texOff, 0));
+	m_WrapMode.AddButton(CCheckBoxButton(false, btnLeft, 0.8f, btnSize, btnSize, CTextureBank::TexRadBtnOn, CTextureBank::TexRadBtnOff, 1));
+	m_WrapMode.AddButton(CCheckBoxButton(false, btnLeft, 0.1f, btnSize, btnSize, CTextureBank::TexRadBtnOn, CTextureBank::TexRadBtnOff, 0));
 
-	m_Sound.AddButton(CCheckBoxButton(false, btnLeft, -1.0f, btnSize, btnSize, texOn, texOff, 1));
-	m_Sound.AddButton(CCheckBoxButton(false, btnLeft, -1.7f, btnSize, btnSize, texOn, texOff, 0));
+	m_Sound.AddButton(CCheckBoxButton(false, btnLeft, -1.0f, btnSize, btnSize, CTextureBank::TexRadBtnOn, CTextureBank::TexRadBtnOff, 1));
+	m_Sound.AddButton(CCheckBoxButton(false, btnLeft, -1.7f, btnSize, btnSize, CTextureBank::TexRadBtnOn, CTextureBank::TexRadBtnOff, 0));
 	
-	m_PrevTheme.Init(btnLeft, -2.8f, btnSize, btnSize, CTextureBank::Get(CTextureBank::TexButtonPrev), 0);
-	m_NextTheme.Init(4.0f, -2.8f, btnSize, btnSize, CTextureBank::Get(CTextureBank::TexButtonNext), 0);
+	m_PrevTheme.Init(btnLeft, -2.8f, btnSize, btnSize, CTextureBank::TexButtonPrev, 0);
+	m_NextTheme.Init(4.0f, -2.8f, btnSize, btnSize, CTextureBank::TexButtonNext, 0);
 
 	Reset();
 }

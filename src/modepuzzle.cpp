@@ -25,6 +25,7 @@
 void CModePuzzle::RenewMap()
 {
 	StopWinnerAnimation();
+	m_UseSound = false;
 	const CSettings& settings = m_Game.Settings();
 	m_Map.New(settings.Size, settings.GetCurrentMapId(), settings.Wrapping);
 }
@@ -172,7 +173,7 @@ bool CModePuzzle::RenderPuzzle(const float transition)
 							}
 							if (cell.ProcessRotation()) {
 								redarawIsNeeded = true;
-								if (m_Game.Settings().Sound)
+								if (m_UseSound && m_Game.Settings().Sound)
 									CSoundBank::Play(CSoundBank::SndClatz);
 							}
 							glRotatef(cell.GetAngle(), 0.0f, 0.0f, 1.0f);
@@ -221,8 +222,15 @@ bool CModePuzzle::RenderPuzzle(const float transition)
 
 	glPopMatrix();
 
-	if (redarawIsNeeded)
+	//Restore after 'reset by rotate'
+	if (!m_UseSound && !redarawIsNeeded)
+		m_UseSound = true;
+
+	if (redarawIsNeeded) {
 		m_Map.DefineConnectStatus();
+		if (m_Map.IsGameOver())
+			CSoundBank::Play(CSoundBank::SndComplete);
+	}
 
 	glColor4f(1.0f, 1.0, 1.0f, 1.0f);
 	return redarawIsNeeded;
