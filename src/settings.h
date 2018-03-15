@@ -24,13 +24,87 @@
 
 
 /**
- * CSettings - load / save game state
+ * CSettings - load / save game settungs
  */
 class CSettings
 {
+protected:
+	/**
+	 * Load state
+	 * \param fileName settings file name
+	 * \return map with settings values
+	 */
+	map<string, string> Load(const char* fileName) const;
+
+	/**
+	 * Save state
+	 * \param fileName settings file name
+	 * \param settings map with settings values
+	 * \param firstComment first string commentary
+	 */
+	void Save(const char* fileName, const map<string, string>& settings, const char* firstComment = NULL) const;
+
+	/**
+	 * Trim string (remove spaces at the end and begining the string)
+	 * \param val source string
+	 */
+	void Trim(string& val) const;
+
+	/**
+	 * Convert numeric to string value
+	 * \param num source numeric
+	 * \return string value
+	 */
+	inline string NumericToString(const int num) const
+	{
+		string r(12, 0);
+		sprintf(&r[0], "%i", num);
+		return r.c_str();
+	}
+};
+
+
+/**
+ * CGameSettings - game settings
+ */
+class CGameSettings : public CSettings
+{
+public:
+	/**
+	 * Load state
+	 */
+	void Load();
+
+	//! Theme description
+	struct Theme {
+		string Name;
+		string TextureFile;
+		float  TextColor[3];
+		float  TitleColor[3];
+	};
+
+private:
+	/**
+	 * Convert string to float values
+	 * \param src source string (0.1 0.2 0.3 for example)
+	 * \param val output values
+	 */
+	void ConvertToFloat(const string& src, float val[3]) const;
+
+public:
+	//Application properties
+	vector<Theme> Themes;	///< Avialable themes
+};
+
+
+/**
+ * CUserSettings - load / save user game settings
+ */
+class CUserSettings : public CSettings
+{
 public:
 	//! Default constructor
-	CSettings();
+	CUserSettings();
 
 	/**
 	 * Load state
@@ -67,60 +141,18 @@ public:
 	void SetCurrentMapState(const string& state);
 
 private:
-	//! Key-value structure
-	struct KeyVal {
-		KeyVal(const string k = string(), const string v = string()) : Key(k), Value(v) {}
-		string Key;
-		string Value;
-	};
-
 	/**
-	 * Get value from key-value array
-	 * \param key search key
-	 * \param val value
-	 * \param sett key-value array
-	 * \return false if not found
-	 */
-	bool GetVal(const string& key, string& val, const vector<KeyVal>& sett) const;
-
-	/**
-	 * Get file name
+	 * Get user settings file name
 	 * \return file name
 	 */
 	string GetFileName() const;
 
-	/**
-	 * Load settings
-	 * \param fileName file name for load settings
-	 * \return map with ini values
-	 */
-	vector<KeyVal> LoadSettings(const char* fileName) const;
-
-	/**
-	 * Save settings
-	 * \param sett map with ini values
-	 * \param fileName file name to save settings
-	 */
-	void SaveSettings(const vector<KeyVal>& sett, const char* fileName) const;
-
-	/**
-	 * Convert numeric to string value
-	 * \param num source numeric
-	 * \return string value
-	 */
-	inline string NumericToString(const int num) const
-	{
-		string r(12, 0);
-		sprintf(&r[0], "%i", num);
-		return r.c_str();
-	}
-
 public:
-	//Application properties
-	MapSize			Size;			///< Current map size (in cell)
-	DecorTheme		Theme;			///< Theme
-	bool			Wrapping;		///< Wrapping mode on/off flag
-	bool			Sound;			///< Sound on/off flag
+	//User settings
+	MapSize				Size;		///< Current map size (in cell)
+	size_t				ThemeId;	///< Current theme index
+	bool				Wrapping;	///< Wrapping mode on/off flag
+	bool				Sound;		///< Sound on/off flag
 
 private:
 	struct MapDescr {
@@ -129,11 +161,11 @@ private:
 		string State;		///< Map state
 	};
 	//Saved map properties
-	MapDescr		m_MapSmall;		///< Small map description
-	MapDescr		m_MapNormal;	///< Normal map description
-	MapDescr		m_MapBig;		///< Big map description
-	MapDescr		m_MapExtra;		///< Extra map description
+	MapDescr		_MapSmall;		///< Small map description
+	MapDescr		_MapNormal;		///< Normal map description
+	MapDescr		_MapBig;		///< Big map description
+	MapDescr		_MapExtra;		///< Extra map description
 
 private:
-	bool			m_UsePortable;	///< Type of used file path
+	bool			_UsePortable;	///< Type of used user settings file path
 };

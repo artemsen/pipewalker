@@ -53,7 +53,7 @@ private:
 	static unsigned int GetSystemTick();
 
 private:
-	static unsigned int	m_TickLast;		///< Last tick number
-	static unsigned int	m_TickDelta;	///< Delta tick number
-	static unsigned int	m_TickStop;		///< Stop time
+	static unsigned int	_TickLast;		///< Last tick number
+	static unsigned int	_TickDelta;	///< Delta tick number
+	static unsigned int	_TickStop;		///< Stop time
 };

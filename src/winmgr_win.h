@@ -26,8 +26,8 @@
 class CWinManagerWin : public CWinManager
 {
 public:
-	//! Default constructor
-	CWinManagerWin(CEventHandler& eventHandler) : CWinManager(eventHandler), m_Wnd(NULL), m_DC(NULL), m_AspectRatio(0.0f), m_Redisplay(false)  {}
+	//! Constructor
+	CWinManagerWin(CEventHandler& eventHandler);
 	~CWinManagerWin();
 
 public:
@@ -60,10 +60,10 @@ private:
 	static LRESULT CALLBACK WndProc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 private:
-	HWND	m_Wnd;			///< Holds Our Window Handle
-	HDC		m_DC;			///< Private GDI Device Context
-	float	m_AspectRatio;	///< Needed window aspect ration
-	bool	m_Redisplay;	///< Redisplay flag
+	HWND	_Wnd;			///< Holds Our Window Handle
+	HDC		_DC;			///< Private GDI Device Context
+	float	_AspectRatio;	///< Needed window aspect ration
+	bool	_Redisplay;		///< Redisplay flag
 };
 
 #endif	//PW_USE_WIN

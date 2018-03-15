@@ -24,24 +24,28 @@
 #define TEXT_TEX_COL				16
 #define TEXT_TEX_ROW				8
 
-CTexture CRenderText::m_Texture;
 
-
-void CRenderText::Free(void)
+CRenderText::~CRenderText()
 {
-	m_Texture.Free();
+	Free();
+}
+
+
+void CRenderText::Free()
+{
+	_Texture.Free();
 }
 
 
 void CRenderText::Load()
 {
-	CRenderText::Free();
+	Free();
 	//Load font texture
-	m_Texture.Load(DIR_GAMEDATA FONT_INT_TEXTURE_FILENAME);
+	_Texture.Load(DIR_GAMEDATA FONT_INT_TEXTURE_FILENAME);
 }
 
 
-void CRenderText::Print(const float x, const float y, const float scale, const float color[4], const bool shadow, const char* text)
+void CRenderText::Print(const float x, const float y, const float scale, const float color[4], const bool shadow, const char* text) const
 {
 	assert(text);
 
@@ -61,7 +65,7 @@ void CRenderText::Print(const float x, const float y, const float scale, const f
 	glPushMatrix();
 		glTranslatef(x, y, 0);
 		glScalef(scale, scale, scale);
-		glBindTexture(GL_TEXTURE_2D, m_Texture.GetId());
+		glBindTexture(GL_TEXTURE_2D, _Texture.GetId());
 		glVertexPointer(2, GL_FLOAT, 0, textVertex);
 	
 		while (*text) {

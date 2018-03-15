@@ -21,15 +21,15 @@
 
 
 CBuffer::CBuffer()
-:	m_Offset(0)
+:	_Offset(0)
 {
 }
 
 
 void CBuffer::Free()
 {
-	m_Data.clear();
-	m_Offset = 0;
+	_Data.clear();
+	_Offset = 0;
 }
 
 
@@ -52,15 +52,19 @@ void CBuffer::Load(const char* fileName)
 			throw errno;
 		fseek(file, 0, SEEK_SET);
 
-		m_Data.resize(static_cast<size_t>(size));
+		_Data.resize(static_cast<size_t>(size));
 
-		if (fread(&m_Data[0], 1, GetSize(), file) != static_cast<size_t>(size))
+		if (fread(&_Data[0], 1, GetSize(), file) != static_cast<size_t>(size))
 			throw errno;
 	}
 	catch(const int& ex) {
 		if (file)
 			fclose(file);
-		throw CException("Unable to load file ", fileName, ": ", strerror(ex));
+		string errDescr = "Unable to load file ";
+		errDescr += fileName;
+		errDescr += ": ";
+		errDescr += strerror(ex);
+		throw CException(errDescr.c_str());
 	}
 
 	if (file)
@@ -79,13 +83,17 @@ void CBuffer::Save(const char* fileName)
 		if (file == NULL)
 			throw errno;
 
-		if (fwrite(&m_Data[0], 1, m_Data.size(), file) != m_Data.size())
+		if (fwrite(&_Data[0], 1, _Data.size(), file) != _Data.size())
 			throw errno;
 	}
 	catch(const int& ex) {
 		if (file)
 			fclose(file);
-		throw CException("Unable to save file ", fileName, ": ", strerror(ex));
+		string errDescr = "Unable to save file ";
+		errDescr += fileName;
+		errDescr += ": ";
+		errDescr += strerror(ex);
+		throw CException(errDescr.c_str());
 	}
 
 	if (file)
@@ -95,9 +103,9 @@ void CBuffer::Save(const char* fileName)
 
 bool CBuffer::SetOffset(const size_t offset)
 {
-	const bool result = (offset < m_Data.size());
+	const bool result = (offset < _Data.size());
 	if (result)
-		m_Offset = offset;
+		_Offset = offset;
 	return result;
 }
 
@@ -107,19 +115,19 @@ void CBuffer::PutData(const void* data, const size_t size)
 	if (size != 0) {
 		assert(data);
 
-		m_Data.resize(m_Data.size() + size);
-		memcpy(&m_Data[m_Offset], data, size);
-		m_Offset += size;
+		_Data.resize(_Data.size() + size);
+		memcpy(&_Data[_Offset], data, size);
+		_Offset += size;
 	}
 }
 
 
 unsigned char* CBuffer::GetData(const size_t size)
 {
-	if (size + m_Offset > m_Data.size())
+	if (size + _Offset > _Data.size())
 		return NULL;
-	unsigned char* ptr = &m_Data[m_Offset];
-	m_Offset += size;
+	unsigned char* ptr = &_Data[_Offset];
+	_Offset += size;
 	return ptr;
 }
 

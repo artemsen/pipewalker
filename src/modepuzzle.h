@@ -26,12 +26,14 @@
 
 class CGame;
 
-
 class CModePuzzle
 {
 public:
-	//! Default constructor
-	CModePuzzle(CGame& game) : m_Game(game), m_UseSound(true) {}
+	/**
+	 * Constructor
+	 * \param game the game instance
+	 */
+	CModePuzzle(CGame& game) : _Game(game), _UseSound(true) {}
 
 	/**
 	 * Renew map
@@ -65,19 +67,19 @@ public:
 	/**
 	 * Reset by rotate current map
 	 */
-	void ResetByRotate()		{ StopWinnerAnimation(); m_UseSound = false; m_Map.ResetByRotate(); }
+	void ResetByRotate()		{ StopWinnerAnimation(); _UseSound = false; _Map.ResetByRotate(); }
 
 	/**
 	 * Get current map size
 	 * \return current map size
 	 */
-	MapSize GetMapSize() const	{ return m_Map.GetMapSize(); }
+	MapSize GetMapSize() const	{ return _Map.GetMapSize(); }
 
 private:
 	/**
 	 * Stop winner animation
 	 */
-	inline void StopWinnerAnimation()	{ m_Explosions.clear(); }
+	inline void StopWinnerAnimation()	{ _Explosions.clear(); }
 
 	/**
 	 * Render puzzle
@@ -96,11 +98,11 @@ private:
 	 * Get map scale factor
 	 * \return map scale factor
 	 */
-	inline float GetMapScaleFactor() const	{ return (10.0f / static_cast<float>(m_Map.GetMapSize())); }
+	inline float GetMapScaleFactor() const	{ return (10.0f / static_cast<float>(_Map.GetMapSize())); }
 
 private:
-	CMap				m_Map;			///< Game map
-	vector<CExplosion>	m_Explosions;	///< Winner explosions
-	CGame&				m_Game;			///< Game instance
-	bool				m_UseSound;		///< Use sound flag (to prevent 'reset by rotate' sounds)
+	CGame&				_Game;			///< Game instance
+	CMap				_Map;			///< Game map
+	list<CExplosion>	_Explosions;	///< Winner explosions
+	bool				_UseSound;		///< Use sound flag (to prevent 'reset by rotate' sounds)
 };

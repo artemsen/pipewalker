@@ -40,49 +40,49 @@ public:
 	 * \param data image data
 	 * \param strNum string number in image data
 	 */
-	void LoadXPM(char* data[], const size_t strNum);
+	void LoadXPM(const char* data[], const size_t strNum);
 
 	/**
 	 * Image properties: Get image width
 	 * \return image width
 	 */
-	inline size_t GetWidth() const				{ return m_ImgWidth; }
+	inline size_t GetWidth() const				{ return _ImgWidth; }
 
 	/**
 	 * Image properties: Get image height
 	 * \return image height
 	 */
-	inline size_t GetHeight() const				{ return m_ImgHeight; }
+	inline size_t GetHeight() const				{ return _ImgHeight; }
 
 	/**
 	 * Image properties: Get image mode (GL_RGB / GL_RGBA / ...)
 	 * \return image mode
 	 */
-	inline GLint GetMode() const				{ return m_ImgMode; }
+	inline GLint GetMode() const				{ return _ImgMode; }
 
 	/**
 	 * Image properties: Get image size in bytes
 	 * \return image format
 	 */
-	inline size_t SizeInBytes() const			{ return m_ImgWidth * m_ImgHeight * BytesPerPixel(); }
+	inline size_t SizeInBytes() const			{ return _ImgWidth * _ImgHeight * BytesPerPixel(); }
 
 	/**
 	 * Image properties: Get number of bytes per pixel
 	 * \return number byte per pixel
 	 */
-	inline unsigned char BytesPerPixel() const	{ return m_ImgMode == GL_RGB ? 3 : m_ImgMode == GL_RGBA ? 4 : 1; }
+	inline unsigned char BytesPerPixel() const	{ return _ImgMode == GL_RGB ? 3 : _ImgMode == GL_RGBA ? 4 : 1; }
 
 	/**
 	 * Image properties: Get image data
 	 * \return image data (bitmap)
 	 */
-	inline const unsigned char* GetData() const	{ return m_Data.empty() ? NULL : &m_Data[0]; }
+	inline const unsigned char* GetData() const	{ return _Data.empty() ? NULL : &_Data[0]; }
 
 	/**
 	 * Image properties: Get image data
 	 * \return image data (bitmap)
 	 */
-	inline unsigned char* GetData()				{ return m_Data.empty() ? NULL : &m_Data[0]; }
+	inline unsigned char* GetData()				{ return _Data.empty() ? NULL : &_Data[0]; }
 
 	/**
 	 * Get sub image
@@ -106,8 +106,8 @@ private:
 	void FlipVertical();
 
 private:	//Class variables
-	size_t					m_ImgWidth;		///< Image width
-	size_t					m_ImgHeight;	///< Image height
-	GLint					m_ImgMode;		///< Image mode
-	vector<unsigned char>	m_Data;			///< Image data
+	size_t					_ImgWidth;	///< Image width
+	size_t					_ImgHeight;	///< Image height
+	GLint					_ImgMode;	///< Image mode
+	vector<unsigned char>	_Data;		///< Image data
 };

@@ -25,15 +25,13 @@
 class CRenderText
 {
 public:
+	//Destructor
+	~CRenderText();
+
 	/**
 	 * Load font data
 	 */
-	static void Load();
-
-	/**
-	 * Free font data
-	 */
-	static void Free();
+	void Load();
 
 	/**
 	 * Print string
@@ -45,9 +43,14 @@ public:
 	 * \param shadow draw shadow flag
 	 * \param text output string
 	 */
-	static void Print(const float x, const float y, const float scale, const float color[4], const bool shadow, const char* text);
+	void Print(const float x, const float y, const float scale, const float color[4], const bool shadow, const char* text) const;
 
+private:
+	/**
+	 * Free font data
+	 */
+	void Free();
 
 private:	//Class variables
-	static CTexture	m_Texture;		///< Fonts texture
+	CTexture _Texture;	///< Fonts texture
 };

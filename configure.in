@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([PipeWalker], [0.8.3], [artemsen@gmail.com])
+AC_INIT([PipeWalker], [0.9.1], [artemsen@gmail.com])
 AM_INIT_AUTOMAKE([-Wall -Werror])
 AC_CONFIG_SRCDIR([src/cell.cpp])
 
@@ -11,7 +11,19 @@ AC_PROG_CXX
 AC_PROG_CC
 
 # Checks for libraries.
-AC_CHECK_LIB([SDL], [SDL_Init], [], AC_MSG_ERROR([libSDL not found]))
+AC_ARG_WITH(xsrv, [  --with-xsrv             use native X Server window manager (experimental)],
+	[
+	CXXFLAGS="$CXXFLAGS -DPW_USE_XSRV=1 "
+	AC_CHECK_LIB([X11], [XOpenDisplay], [], AC_MSG_ERROR([libx11-dev not found]))
+	AC_CHECK_LIB([Xpm], [XpmCreatePixmapFromData], [], AC_MSG_ERROR([libxpm-dev not found]))
+	AC_PATH_XTRA
+	LIBS="$LIBS $X_LIBS"
+	],
+	[
+	CXXFLAGS="$CXXFLAGS -DPW_USE_SDL=1 "
+	AC_CHECK_LIB([SDL], [SDL_Init], [], AC_MSG_ERROR([libsdl-dev not found]))
+	]
+)
 AC_CHECK_LIB([GL], [glBegin], [], AC_MSG_ERROR([libGL not found]))
 
 # Checks for header files.

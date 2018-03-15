@@ -22,8 +22,6 @@
 
 #if defined PW_USE_SDL		//SDL library
 	#include <SDL/SDL.h>
-#elif defined PW_USE_WIN	//Microsoft Windows
-	#include "PipeWalkerRes.h"
 #endif
 
 /**
@@ -33,10 +31,8 @@ class CSound
 {
 public:
 	//Constructor/destructor
-#if defined PW_USE_SDL
-	CSound() : m_Pos(0)	{}
-#endif //PW_USE_SDL
-	~CSound()										{ Free(); }
+	CSound();
+	~CSound();
 
 	/**
 	 * Free sound
@@ -51,9 +47,9 @@ public:
 
 public:
 #if defined PW_USE_SDL		//SDL library
-	size_t	m_Pos;
+	size_t	_Pos;
 #endif
-	vector<unsigned char> m_Data;
+	vector<unsigned char> _Data;
 };
 
 
@@ -63,6 +59,10 @@ public:
 class CSoundBank
 {
 public:
+	//Constructor/Destructor
+	CSoundBank();
+	~CSoundBank();
+
 	//! Sound types
 	enum SoundType {
 		SndClatz = 0,			///< Simple 'Clatz' sound
@@ -73,27 +73,27 @@ public:
 	/**
 	 * Initialize sound bank (load sounds from files)
 	 */
-	static void Load();
-
-	/**
-	 * Free sound bank
-	 */
-	static void Free();
+	void Load();
 
 	/**
 	 * Play sound
 	 * \param type sound identifier
 	 */
-	static void Play(const SoundType type);
+	void Play(const SoundType type);
 
 private:
+	/**
+	 * Free sound bank
+	 */
+	void Free();
+
 #ifdef PW_USE_SDL
 	//! SDL fill audio buffer callback (see SDL SDK for more info)
 	static void OnFillBuffer(void* userdata, Uint8* stream, int len);
-	static SoundType m_CurrentSnd;	///< Current played sound
+	static SoundType _CurrentSnd;	///< Current played sound
 #endif // PW_USE_SDL
 
 private:
-	static CSound	m_Sound[SndCounter];	///< Sound bank
-	static bool		m_SoundInitialized;		///< Sound subsystem initialization flag
+	CSound	_Sound[SndCounter];	///< Sound bank
+	bool	_SoundInitialized;	///< Sound subsystem initialization flag
 };

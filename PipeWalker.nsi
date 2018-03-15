@@ -78,16 +78,22 @@ Section "Dummy Section" SecDummy
   File ChangeLog
   File README
   SetOutPath "$INSTDIR\Data"
+  File data\settings.ini
   File data\clatz.wav
   File data\complete.wav
   File data\font.tga
-  File data\network.tga
+  File data\network1.tga
+  File data\network2.tga
   File data\plumbing.tga
+  File data\hellsfire.tga
+  File data\newyear.tga
+  File data\simple.tga
   
   ;Create uninstaller
   WriteUninstaller "$INSTDIR\Uninstall.exe"
 
   ;Create shortcuts
+  SetOutPath "$INSTDIR"
   !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
     CreateDirectory "$SMPROGRAMS\$StartMenuFolder"
     CreateShortCut  "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk" "$INSTDIR\Uninstall.exe"

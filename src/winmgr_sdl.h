@@ -26,8 +26,8 @@
 class CWinManagerSDL : public CWinManager
 {
 public:
-	//! Default constructor
-	CWinManagerSDL(CEventHandler& eventHandler) : CWinManager(eventHandler), m_ExitProgram(false) {}
+	//! Constructor
+	CWinManagerSDL(CEventHandler& eventHandler);
 
 public:
 	//From CWinManager
@@ -36,7 +36,7 @@ public:
 	void MainLoop();
 	void OnApplicationExit();
 	void ShowError(const char* err);
-	void PostExit()		{ m_ExitProgram = true; }
+	void PostExit()	{ _ExitProgram = true; }
 
 
 protected:
@@ -44,7 +44,9 @@ protected:
 	void SwapBuffers() const;
 
 private:
-	bool m_ExitProgram;		///< Program exit flag
+	bool	_ExitProgram;	///< Program exit flag
+	int		_DesktopWidth;	///< Desktop width
+	int		_DesktopHeight;	///< Desktop height
 };
 
 #endif	//PW_USE_SDL

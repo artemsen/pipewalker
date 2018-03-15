@@ -19,8 +19,8 @@
 #include <windows.h>
 #include "PipeWalkerRes.h"
 
-#define PW_VERSION_TEXT "0.8.3"
-#define PW_VERSION_NUM  0,8,3,0
+#define PW_VERSION_TEXT "0.9.1"
+#define PW_VERSION_NUM  0,9,1,0
 
 
 //Icon resources

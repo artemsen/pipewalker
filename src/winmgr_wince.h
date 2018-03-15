@@ -18,52 +18,54 @@
 
 #pragma once
 
-#include "common.h"
-
-class CGame;
-
-#ifdef _MSC_VER
-#pragma warning(disable: 4512)	//assignment operator could not be generated
-#endif // _MSC_VER
+#include "winmgr.h"
 
 
-class CExplosion
+#ifdef PW_USE_WINCE
+
+class CWinManagerWinCE : public CWinManager
 {
 public:
-	/**
-	 * Constructor
-	 * \param game the game instance
-	 * \param x an initial X explosion position
-	 * \param y an initial Y explosion position
-	 */
-	CExplosion(CGame& game, const float x, const float y);
+	//! Constructor
+	CWinManagerWinCE(CEventHandler& eventHandler);
 
-	/**
-	 * Render explosion
-	 */
-	void Render();
+public:
+	//From CWinManager
+	void CreateGLWindow(const int width, const int height);
+	void PostRedisplay();
+	void MainLoop();
+	void OnApplicationExit();
+	void ShowError(const char* err);
+	void PostExit();
 
-private:
-	/**
-	 * Renew explosion
-	 */
-	void Renew();
+protected:
+	//From CWinManager
+	void SwapBuffers() const;
 
 private:
-	//! Particles description
-	struct PARTICLE {
-		float	Life;		///< Life value
-		float	FadeSpeed;	///< Fade speed
-		float	PosX;		///< Position by X axis
-		float	PosY;		///< Position by Y axis
-		float	SpeedX;		///< Speed by X axis
-		float	SpeedY;		///< Speed by Y axis
-	};
+	/**
+	 * Destroy window and post exit message
+	 */
+	void DestroyAndQuit();
 
-	vector<PARTICLE>	_Particles;	///< Particle Array
-	float				_X;			///< Initial X explosion position
-	float				_Y;			///< Initial Y explosion position
-	float				_Force;		///< Explosion force
+	/**
+	 * The WindowProc function (for more information see MSDN)
+	 * \param wnd Handle to the window
+	 * \param msg Specifies the message
+	 * \param wParam Specifies additional message information
+	 * \param lParam Specifies additional message information
+	 * \return result of the message processing, depends on the message sent
+	 */
+	static LRESULT CALLBACK WndProc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-	CGame&				_Game;		///< Game instance
+private:
+	EGLDisplay	_Display;
+	EGLConfig	_Config;
+	EGLContext	_Context;
+	EGLSurface	_WindowSurface;
+
+	HWND	_Wnd;			///< Holds Our Window Handle
+	bool	_Redisplay;		///< Redisplay flag
 };
+
+#endif	//PW_USE_WINCE

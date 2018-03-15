@@ -1,3 +1,12 @@
+PipeWalker 0.9.1 2010-10-12
+---------------------------
+ * fixed bug 3046994: Application Freezes (MS Windows)
+ * fixed bug: incorrect shortcut in start menu (installer for MS Windows)
+ * aspect ratio of the application window (SDL)
+ * pipewalker.xpm converted to have a 32x32 size
+ * flexible settings to support easy adding new themes
+ * added new themes ('Network 2', 'HellsFire', 'New Year' and 'Simple')
+
 PipeWalker 0.8.3 2010-06-08
 ---------------------------
  * fixed bug: missing file in windows installer

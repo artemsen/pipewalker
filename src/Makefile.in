@@ -50,7 +50,7 @@ am_pipewalker_OBJECTS = buffer.$(OBJEXT) button.$(OBJEXT) \
 	modepuzzle.$(OBJEXT) modesettings.$(OBJEXT) mtrandom.$(OBJEXT) \
 	rendertext.$(OBJEXT) settings.$(OBJEXT) sound.$(OBJEXT) \
 	synchro.$(OBJEXT) texture.$(OBJEXT) winmgr.$(OBJEXT) \
-	winmgr_sdl.$(OBJEXT)
+	winmgr_sdl.$(OBJEXT) winmgr_xsrv.$(OBJEXT)
 pipewalker_OBJECTS = $(am_pipewalker_OBJECTS)
 pipewalker_LDADD = $(LDADD)
 DEFAULT_INCLUDES = -I.@am__isrc@
@@ -86,7 +86,7 @@ CXX = @CXX@
 CXXDEPMODE = @CXXDEPMODE@
 CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
-DEFS = @DEFS@ -DNDEBUG=1 -DPW_USE_SDL=1 -DDIR_GAMEDATA=\""$(datadir)/games/$(PACKAGE)/"\"
+DEFS = @DEFS@ -DNDEBUG=1 -DDIR_GAMEDATA=\""$(datadir)/games/$(PACKAGE)/"\"
 DEPDIR = @DEPDIR@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
@@ -118,6 +118,11 @@ SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
 VERSION = @VERSION@
+XMKMF = @XMKMF@
+X_CFLAGS = @X_CFLAGS@
+X_EXTRA_LIBS = @X_EXTRA_LIBS@
+X_LIBS = @X_LIBS@
+X_PRE_LIBS = @X_PRE_LIBS@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
@@ -181,12 +186,14 @@ pipewalker_SOURCES = \
 	synchro.h synchro.cpp \
 	texture.h texture.cpp \
 	winmgr.h winmgr.cpp \
-	winmgr_sdl.h winmgr_sdl.cpp
+	winmgr_sdl.h winmgr_sdl.cpp \
+	winmgr_xsrv.h winmgr_xsrv.cpp
 
 
 #MS Windows specific files
 EXTRA_DIST = \
 	winmgr_win.h winmgr_win.cpp \
+	winmgr_wince.h winmgr_wince.cpp \
 	PipeWalkerRes.h PipeWalker.rc
 
 all: all-am
@@ -288,6 +295,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/texture.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/winmgr.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/winmgr_sdl.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/winmgr_xsrv.Po@am__quote@
 
 .cpp.o:
 @am__fastdepCXX_TRUE@	$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<

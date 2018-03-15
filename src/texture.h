@@ -22,11 +22,6 @@
 
 class CImage;
 
-enum DecorTheme {
-	ThemeNetwork,
-	ThemePlumbing
-};
-
 /**
  * Texture wrapper
  */
@@ -34,7 +29,7 @@ class CTexture
 {
 public:
 	//Constructor/destructor
-	CTexture() : m_Id(0)	{}
+	CTexture() : _Id(0)	{}
 	~CTexture()				{ Free(); }
 
 	/**
@@ -46,7 +41,7 @@ public:
 	 * Get texture identifier
 	 * \return texture identifier
 	 */
-	GLuint GetId() const	{ return m_Id; }
+	GLuint GetId() const	{ return _Id; }
 
 	/**
 	 * Create texture from part of the image
@@ -67,7 +62,7 @@ public:
 	void Load(const char* fileName, const int modeWrap = GL_CLAMP);
 
 private:
-	GLuint	m_Id;				///< Texture identifier
+	GLuint	_Id;				///< Texture identifier
 };
 
 
@@ -77,6 +72,9 @@ private:
 class CTextureBank
 {
 public:
+	//Destructor
+	~CTextureBank();
+
 	//! Textures types
 	enum TextureType {
 		TexEnvBkgr = 0,			///< Main environment background
@@ -117,23 +115,24 @@ public:
 	};
 
 	/**
-	 * Initialize texture bank (load textures from files)
-	 * \param theme current decor theme
+	 * Initialize texture bank (load textures from file)
+	 * \param fileName theme's texture file name
 	 */
-	static void Load(const DecorTheme theme);
-
-	/**
-	 * Free texture bank
-	 */
-	static void Free();
+	void Load(const char* fileName);
 
 	/**
 	 * Get texture identifier
 	 * \param type model type
 	 * \return texture identifier
 	 */
-	static GLuint Get(const TextureType type);
+	GLuint Get(const TextureType type) const;
 
 private:
-	static CTexture	m_Texture[TexCounter];	///< Textures
+	/**
+	 * Free texture bank
+	 */
+	void Free();
+
+private:
+	CTexture _Texture[TexCounter];	///< Textures
 };

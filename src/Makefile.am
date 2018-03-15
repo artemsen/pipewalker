@@ -1,4 +1,4 @@
-DEFS = @DEFS@ -DNDEBUG=1 -DPW_USE_SDL=1 -DDIR_GAMEDATA=\""$(datadir)/games/$(PACKAGE)/"\"
+DEFS = @DEFS@ -DNDEBUG=1 -DDIR_GAMEDATA=\""$(datadir)/games/$(PACKAGE)/"\"
 bin_PROGRAMS = pipewalker
 pipewalker_SOURCES = \
 	buffer.h buffer.cpp \
@@ -20,9 +20,11 @@ pipewalker_SOURCES = \
 	synchro.h synchro.cpp \
 	texture.h texture.cpp \
 	winmgr.h winmgr.cpp \
-	winmgr_sdl.h winmgr_sdl.cpp
+	winmgr_sdl.h winmgr_sdl.cpp \
+	winmgr_xsrv.h winmgr_xsrv.cpp
 
 #MS Windows specific files
 EXTRA_DIST = \
 	winmgr_win.h winmgr_win.cpp \
+	winmgr_wince.h winmgr_wince.cpp \
 	PipeWalkerRes.h PipeWalker.rc

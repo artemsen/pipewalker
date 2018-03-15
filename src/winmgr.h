@@ -62,12 +62,17 @@ public:
 	 * \param mouseY an Y mouse world coordinate
 	 */
 	virtual void OnMouseMove(const float mouseX, const float mouseY) = 0;
+
+	/**
+	 * Reload textures (needed for SDL on resize window)
+	 */
+	virtual void ReloadTextures() = 0;
 };
 
 
 #ifdef _MSC_VER
 #pragma warning(disable: 4512)	//assignment operator could not be generated
-#endif // WIN32
+#endif // _MSC_VER
 
 class CWinManager
 {
@@ -169,9 +174,9 @@ private:
 
 
 protected:	//Class variables
-	CEventHandler&	m_EventHandler;		///< Event handler instance
-	int				m_MouseWndX;		///< Last mouse X window coordinate
-	int				m_MouseWndY;		///< Last mouse Y window coordinate
-	float			m_MouseWrldX;		///< Last mouse X world coordinate
-	float			m_MouseWrldY;		///< Last mouse Y world coordinate
+	CEventHandler&	_EventHandler;	///< Event handler instance
+	int				_MouseWndX;		///< Last mouse X window coordinate
+	int				_MouseWndY;		///< Last mouse Y window coordinate
+	float			_MouseWrldX;	///< Last mouse X world coordinate
+	float			_MouseWrldY;	///< Last mouse Y world coordinate
 };

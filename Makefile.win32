@@ -1,4 +1,4 @@
-VERSION   = 0.8.3
+VERSION   = 0.9.1
 SOURCES   = src/*.cpp
 RESFILE   = src/PipeWalker.rc
 INSTFILE  = PipeWalker.nsi
@@ -8,12 +8,15 @@ DEFINES   = -DNDEBUG -DPW_USE_WIN -D'PACKAGE_STRING="PipeWalker $(VERSION)"'
 WNDRES    = windres
 STRIPTOOL = strip
 INSTALLER = makensis
+ARCHCMD   = C:\Soft\Far\7z.exe a -ssw -tzip -r
 CXX       = g++
 CXXFLAGS  = -Wall $(DEFINES)
 LNKFLAGS  = -mwindows -lOpenGL32 -lwinmm -lgdi32 -static-libgcc
 
 
-all: $(OUTFILE) install portable
+all: $(OUTFILE)
+
+dist: install portable 
 
 install: $(OUTFILE)
 	$(INSTALLER) /DVERSION=$(VERSION) $(INSTFILE)
@@ -21,7 +24,7 @@ install: $(OUTFILE)
 portable: $(OUTFILE)
 	echo # This is the user settings file of the PipeWalker game > .pipewalker
 	echo # If you want to use non-portable version - just delete this file >> .pipewalker
-	zip pipewalker-$(VERSION)-win32bin.zip $(OUTFILE) ChangeLog README data\clatz.wav data\complete.wav data\font.tga data\network.tga data\plumbing.tga .pipewalker
+	$(ARCHCMD) pipewalker-$(VERSION)-win32bin.zip $(OUTFILE) ChangeLog README *.wav *.tga data\settings.ini .pipewalker
 	del .pipewalker
 
 $(OUTFILE):

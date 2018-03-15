@@ -23,33 +23,42 @@
 #include "PipeWalkerRes.h"
 
 
+CWinManagerWin::CWinManagerWin(CEventHandler& eventHandler)
+:	CWinManager(eventHandler),
+	_Wnd(NULL), _DC(NULL),
+	_AspectRatio(0.0f),
+	_Redisplay(false)
+{
+}
+
+
 CWinManagerWin::~CWinManagerWin()
 {
-	if (m_DC)
-		::ReleaseDC(m_Wnd, m_DC);
-	if (m_Wnd)
-		::DestroyWindow(m_Wnd);
+	if (_DC)
+		::ReleaseDC(_Wnd, _DC);
+	if (_Wnd)
+		::DestroyWindow(_Wnd);
 }
 
 
 void CWinManagerWin::PostRedisplay()
 {
-	if (!m_Redisplay) {
+	if (!_Redisplay) {
  		static unsigned int lastRedraw = CSynchro::GetTick();
  		const unsigned int currTick = CSynchro::GetTick();
  		if (currTick - lastRedraw < 30)
  			::Sleep(30 - (currTick - lastRedraw));
  		lastRedraw = CSynchro::GetTick();
-		::RedrawWindow(m_Wnd, NULL, 0, RDW_INTERNALPAINT);
-		m_Redisplay = true;
+		::RedrawWindow(_Wnd, NULL, 0, RDW_INTERNALPAINT);
+		_Redisplay = true;
 	}
 }
 
 
 void CWinManagerWin::MainLoop()
 {
-	::ShowWindow(m_Wnd, SW_SHOWNORMAL);
-	::UpdateWindow(m_Wnd);
+	::ShowWindow(_Wnd, SW_SHOWNORMAL);
+	::UpdateWindow(_Wnd);
 
 	//Main message loop
 	MSG msg;
@@ -73,10 +82,10 @@ void CWinManagerWin::CreateGLWindow(const int width, const int height)
 	wcex.hInstance		= ::GetModuleHandle(NULL);
 	wcex.hIcon			= ::LoadIcon(wcex.hInstance, (LPCTSTR)IDI_PIPEWALKER);
 	wcex.hCursor		= ::LoadCursor(NULL, IDC_ARROW);
-	wcex.hbrBackground	= (HBRUSH)(COLOR_WINDOW + 1);
+	wcex.hbrBackground	= (HBRUSH)(COLOR_WINDOW);
 	wcex.lpszMenuName	= NULL;
 	wcex.lpszClassName	= windowClassName;
-	wcex.hIconSm		= ::LoadIcon(wcex.hInstance, (LPCTSTR)IDI_PIPEWALKER);
+	wcex.hIconSm		= wcex.hIcon;
 	if (!::RegisterClassEx(&wcex))
 		throw CException("Can't register window class");
 
@@ -90,14 +99,14 @@ void CWinManagerWin::CreateGLWindow(const int width, const int height)
 	rcWnd.right = width;
 	rcWnd.bottom = height;
 	::AdjustWindowRectEx(&rcWnd, wndStyle, FALSE, wndStyleEx);
-	m_AspectRatio = static_cast<float>(rcWnd.right - rcWnd.left) / static_cast<float>(rcWnd.bottom - rcWnd.top);
+	_AspectRatio = static_cast<float>(rcWnd.right - rcWnd.left) / static_cast<float>(rcWnd.bottom - rcWnd.top);
 
 	//Create main window
-	m_Wnd = CreateWindowEx(wndStyleEx, windowClassName, PACKAGE_STRING, wndStyle, CW_USEDEFAULT, 0,
+	_Wnd = CreateWindowEx(wndStyleEx, windowClassName, PACKAGE_STRING, wndStyle, CW_USEDEFAULT, 0,
 		rcWnd.right - rcWnd.left, rcWnd.bottom - rcWnd.top, NULL, NULL, wcex.hInstance, NULL);
-	if (!m_Wnd)
+	if (!_Wnd)
 		throw CException("Can't create window");
-	::SetWindowLong(m_Wnd, GWL_USERDATA, reinterpret_cast<long>(this));
+	::SetWindowLongPtr(_Wnd, GWLP_USERDATA, reinterpret_cast<long>(this));
 
 	PIXELFORMATDESCRIPTOR pfd;
 	memset(&pfd, 0, sizeof(pfd));
@@ -109,29 +118,29 @@ void CWinManagerWin::CreateGLWindow(const int width, const int height)
 	pfd.cDepthBits = 16;
 	pfd.iLayerType = PFD_MAIN_PLANE;
 
-	m_DC = ::GetDC(m_Wnd);
-	if (!m_DC)
+	_DC = ::GetDC(_Wnd);
+	if (!_DC)
 		throw CException("Can't create a GL device context");
 
-	const int pixelFormat = ::ChoosePixelFormat(m_DC, &pfd);
+	const int pixelFormat = ::ChoosePixelFormat(_DC, &pfd);
 	if (!pixelFormat)
 		throw CException("Can't find a suitable pixel format");
 
-	if (!::SetPixelFormat(m_DC, pixelFormat, &pfd))
+	if (!::SetPixelFormat(_DC, pixelFormat, &pfd))
 		throw CException("Can't set the pixel format");
 
-	HGLRC rc = ::wglCreateContext(m_DC);
+	HGLRC rc = ::wglCreateContext(_DC);
 	if (!rc)
 		throw CException("Can't create a GL rendering context");
 
-	if (!::wglMakeCurrent(m_DC, rc))
+	if (!::wglMakeCurrent(_DC, rc))
 		throw CException("Can't activate the GL rendering context");
 }
 
 
 void CWinManagerWin::SwapBuffers() const
 {
-	::SwapBuffers(m_DC);
+	::SwapBuffers(_DC);
 }
 
 
@@ -142,26 +151,26 @@ void CWinManagerWin::OnApplicationExit()
 
 void CWinManagerWin::ShowError(const char* err)
 {
-	::MessageBoxA(m_Wnd, err, PACKAGE_STRING " Error", MB_ICONERROR | MB_OK);
+	::MessageBoxA(_Wnd, err, PACKAGE_STRING " Error", MB_ICONERROR | MB_OK);
 }
 
 
 LRESULT CALLBACK CWinManagerWin::WndProc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	//Get pointer to this class
-	CWinManagerWin* mgr = reinterpret_cast<CWinManagerWin*>(::GetWindowLong(wnd, GWL_USERDATA));
+	CWinManagerWin* mgr = reinterpret_cast<CWinManagerWin*>(::GetWindowLongPtr(wnd, GWLP_USERDATA));
 
 	switch (msg) {
 		case WM_PAINT:
 			assert(mgr);
-			mgr->m_Redisplay = false;
+			mgr->_Redisplay = false;
 			PAINTSTRUCT ps;
 			::BeginPaint(wnd, &ps);
 			mgr->OnRenderScene();
 			::EndPaint(wnd, &ps);
 			break;
  		case WM_GETMINMAXINFO:
- 			{
+			{
 				LPMINMAXINFO mmi = reinterpret_cast<LPMINMAXINFO>(lParam);
 				const int maxSize = GetSystemMetrics(SM_CYMAXIMIZED);
 				static const float aspect = static_cast<float>(PW_SCREEN_WIDTH) / static_cast<float>(PW_SCREEN_HEIGHT);
@@ -177,21 +186,21 @@ LRESULT CALLBACK CWinManagerWin::WndProc(HWND wnd, UINT msg, WPARAM wParam, LPAR
  				//Preserve correct aspect ratio
  				LPRECT rc = reinterpret_cast<LPRECT>(lParam);
  				const float currAspect = static_cast<float>(rc->right - rc->left) / static_cast<float>(rc->bottom - rc->top);
- 				if (static_cast<int>(mgr->m_AspectRatio * 1000.0f) != static_cast<int>(currAspect * 1000.0f)) {
+ 				if (static_cast<int>(mgr->_AspectRatio * 1000.0f) != static_cast<int>(currAspect * 1000.0f)) {
  					switch (wParam) {
  						case WMSZ_BOTTOM:
  						case WMSZ_BOTTOMRIGHT:
  						case WMSZ_TOP:
  						case WMSZ_TOPRIGHT:
- 							rc->right = rc->left + static_cast<long>(static_cast<float>(rc->bottom - rc->top) * mgr->m_AspectRatio);
+ 							rc->right = rc->left + static_cast<long>(static_cast<float>(rc->bottom - rc->top) * mgr->_AspectRatio);
  							break;
  						case WMSZ_TOPLEFT:
  						case WMSZ_BOTTOMLEFT:
- 							rc->left = rc->right - static_cast<long>(static_cast<float>(rc->bottom - rc->top) * mgr->m_AspectRatio);
+ 							rc->left = rc->right - static_cast<long>(static_cast<float>(rc->bottom - rc->top) * mgr->_AspectRatio);
  							break;
  						case WMSZ_RIGHT:
  						case WMSZ_LEFT:
- 							rc->bottom = rc->top + static_cast<long>(static_cast<float>(rc->right - rc->left) / mgr->m_AspectRatio);
+ 							rc->bottom = rc->top + static_cast<long>(static_cast<float>(rc->right - rc->left) / mgr->_AspectRatio);
  							break;
 						default:
 							break;
@@ -215,6 +224,10 @@ LRESULT CALLBACK CWinManagerWin::WndProc(HWND wnd, UINT msg, WPARAM wParam, LPAR
 		case WM_MOUSEMOVE:
 			assert(mgr);
 			mgr->OnMouseMove(((int)(short)LOWORD(lParam)), ((int)(short)HIWORD(lParam)));
+			break;
+		case WM_SYSCOMMAND:
+			if (wParam != SC_KEYMENU)
+				return ::DefWindowProc(wnd, msg, wParam, lParam);
 			break;
 		case WM_LBUTTONDOWN:	//Mouse buttons click
 		case WM_MBUTTONDOWN:

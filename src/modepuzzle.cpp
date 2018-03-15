@@ -25,26 +25,26 @@
 void CModePuzzle::RenewMap()
 {
 	StopWinnerAnimation();
-	m_UseSound = false;
-	const CSettings& settings = m_Game.Settings();
-	m_Map.New(settings.Size, settings.GetCurrentMapId(), settings.Wrapping);
+	_UseSound = false;
+	const CUserSettings& settings = _Game.UserSettings();
+	_Map.New(settings.Size, settings.GetCurrentMapId(), settings.Wrapping);
 }
 
 
 void CModePuzzle::LoadMap()
 {
 	StopWinnerAnimation();
-	const CSettings& settings = m_Game.Settings();
-	if (!m_Map.LoadMap(settings.Size, settings.GetCurrentMapState(), settings.Wrapping))
+	const CUserSettings& settings = _Game.UserSettings();
+	if (!_Map.LoadMap(settings.Size, settings.GetCurrentMapState(), settings.Wrapping))
 		RenewMap();
 }
 
 
 void CModePuzzle::SaveMap() const
 {
-	CSettings& settings = m_Game.Settings();
-	settings.Size = m_Map.GetMapSize();
-	settings.SetCurrentMapState(m_Map.SaveMap());
+	CUserSettings& settings = _Game.UserSettings();
+	settings.Size = _Map.GetMapSize();
+	settings.SetCurrentMapState(_Map.SaveMap());
 }
 
 
@@ -60,14 +60,14 @@ void CModePuzzle::Render(const float transition)
 	static const unsigned short mapIdIndices[] =	{ 0, 1, 2, 0, 2, 3 };
 	glColor4f(1.0f, 1.0, 1.0f, transition);
 	char szMapId[64];
-	sprintf(szMapId, "%08u", static_cast<unsigned int>(m_Game.Settings().GetCurrentMapId()));
+	sprintf(szMapId, "%08u", static_cast<unsigned int>(_Game.UserSettings().GetCurrentMapId()));
 	string mapIdAsString(szMapId);
 	glVertexPointer(2, GL_FLOAT, 0, mapIdVertex);
 	glTexCoordPointer(2, GL_SHORT, 0, mapIdTexture);
 	glPushMatrix();
 		glTranslatef(-2.25f, -5.6f, 0.0f);
 		for (size_t i = 0; i < 8; ++i) {
-			glBindTexture(GL_TEXTURE_2D, CTextureBank::Get(static_cast<CTextureBank::TextureType>(CTextureBank::TexNum0 + (mapIdAsString[i] - '0'))));
+			glBindTexture(GL_TEXTURE_2D, _Game.TextureBank().Get(static_cast<CTextureBank::TextureType>(CTextureBank::TexNum0 + (mapIdAsString[i] - '0'))));
 			glTranslatef(0.5f, 0.0f, 0.0f);
 			glDrawElements(GL_TRIANGLES, (sizeof(mapIdIndices) / sizeof(mapIdIndices[0])), GL_UNSIGNED_SHORT, mapIdIndices);
 		}
@@ -75,19 +75,18 @@ void CModePuzzle::Render(const float transition)
 	glPopMatrix();
 
 	//Render winner explosions
-	if (m_Map.IsGameOver()) {
-		const unsigned short mapSize = static_cast<const unsigned short>(m_Map.GetMapSize());
+	if (_Map.IsGameOver()) {
+		const unsigned short mapSize = static_cast<const unsigned short>(_Map.GetMapSize());
 
-		if (m_Explosions.empty()) {
+		if (_Explosions.empty()) {
 			//Create explosions
-			m_Explosions.reserve((mapSize * mapSize) / 5);
 			for (unsigned short y = 0; y < mapSize; ++y) {
 				const GLfloat pozY = -(mapSize / 2) + 0.5f + y;
 				for (unsigned short x = 0; x < mapSize; ++x) {
 					const GLfloat posX = -(mapSize / 2) + 0.5f + x;
-					const CCell& cell = m_Map.GetCell(x, y);
+					const CCell& cell = _Map.GetCell(x, y);
 					if (cell.GetCellType() == CCell::CTReceiver)
-						m_Explosions.push_back(CExplosion(posX, -pozY));
+						_Explosions.push_back(CExplosion(_Game, posX, -pozY));
 				}
 			}
 		}
@@ -96,7 +95,7 @@ void CModePuzzle::Render(const float transition)
 		glPushMatrix();
 			const float scale = 10.0f / static_cast<float>(mapSize);
 			glScalef(scale, scale, scale);
-			for (vector<CExplosion>::iterator itExpl = m_Explosions.begin(); itExpl != m_Explosions.end(); ++itExpl)
+			for (list<CExplosion>::iterator itExpl = _Explosions.begin(); itExpl != _Explosions.end(); ++itExpl)
 				itExpl->Render();
 		glPopMatrix();
 
@@ -104,20 +103,20 @@ void CModePuzzle::Render(const float transition)
 	}
 
 	if (redarawIsNeeded)
-		m_Game.WinManager().PostRedisplay();
+		_Game.WinManager().PostRedisplay();
 }
 
 
 void CModePuzzle::OnMouseButtonDown(const float mouseX, const float mouseY, const MouseButton btn)
 {
-	if (!m_Map.IsGameOver() && mouseX > -5.0f && mouseX < 5.0f && mouseY > -5.0f && mouseY < 5.0f) {		//point in game field
+	if (!_Map.IsGameOver() && mouseX > -5.0f && mouseX < 5.0f && mouseY > -5.0f && mouseY < 5.0f) {		//point in game field
 		bool redrawNeeded = false;
 
 		const float scale = GetMapScaleFactor();
 		const unsigned short x = static_cast<unsigned short>((mouseX + 5.0f) / scale);
-		const unsigned short y = static_cast<const unsigned short>(m_Map.GetMapSize()) - 1 - static_cast<unsigned short>((mouseY + 5.0f) / scale);
+		const unsigned short y = static_cast<const unsigned short>(_Map.GetMapSize()) - 1 - static_cast<unsigned short>((mouseY + 5.0f) / scale);
 
-		CCell& cell = m_Map.GetCell(x, y);
+		CCell& cell = _Map.GetCell(x, y);
 		if (cell.GetCellType() != CCell::CTFree) {
 			switch (btn) {
 				case MouseButton_Middle:
@@ -127,7 +126,7 @@ void CModePuzzle::OnMouseButtonDown(const float mouseX, const float mouseY, cons
 				case MouseButton_Left:
 				case MouseButton_Right:
 					cell.Rotate(btn != MouseButton_Left);
-					m_Map.DefineConnectStatus();
+					_Map.DefineConnectStatus();
 					redrawNeeded = true;
 					break;
 				default:
@@ -136,14 +135,14 @@ void CModePuzzle::OnMouseButtonDown(const float mouseX, const float mouseY, cons
 		}
 
 		if (redrawNeeded)
-			m_Game.WinManager().PostRedisplay();
+			_Game.WinManager().PostRedisplay();
 	}
 }
 
 
 bool CModePuzzle::RenderPuzzle(const float transition)
 {
-	const unsigned short mapSize = static_cast<const unsigned short>(m_Map.GetMapSize());
+	const unsigned short mapSize = static_cast<const unsigned short>(_Map.GetMapSize());
 
 	//Set scale
 	glPushMatrix();
@@ -156,7 +155,7 @@ bool CModePuzzle::RenderPuzzle(const float transition)
 		const float pozY = -(mapSize / 2) + 0.5f + y;
 		for (unsigned short x = 0; x < mapSize; ++x) {
 			const float posX = -(mapSize / 2) + 0.5f + x;
-			CCell& cell = m_Map.GetCell(x, y);
+			CCell& cell = _Map.GetCell(x, y);
 			const bool activeState = cell.IsActive();
 			glPushMatrix();
 				glTranslatef(posX, -pozY, 0.0f);
@@ -173,8 +172,8 @@ bool CModePuzzle::RenderPuzzle(const float transition)
 							}
 							if (cell.ProcessRotation()) {
 								redarawIsNeeded = true;
-								if (m_UseSound && m_Game.Settings().Sound)
-									CSoundBank::Play(CSoundBank::SndClatz);
+								if (_UseSound && _Game.UserSettings().Sound)
+									_Game.SoundBank().Play(CSoundBank::SndClatz);
 							}
 							glRotatef(cell.GetAngle(), 0.0f, 0.0f, 1.0f);
 
@@ -223,13 +222,13 @@ bool CModePuzzle::RenderPuzzle(const float transition)
 	glPopMatrix();
 
 	//Restore after 'reset by rotate'
-	if (!m_UseSound && !redarawIsNeeded)
-		m_UseSound = true;
+	if (!_UseSound && !redarawIsNeeded)
+		_UseSound = true;
 
 	if (redarawIsNeeded) {
-		m_Map.DefineConnectStatus();
-		if (m_Map.IsGameOver())
-			CSoundBank::Play(CSoundBank::SndComplete);
+		_Map.DefineConnectStatus();
+		if (_Map.IsGameOver())
+			_Game.SoundBank().Play(CSoundBank::SndComplete);
 	}
 
 	glColor4f(1.0f, 1.0, 1.0f, 1.0f);
@@ -243,7 +242,7 @@ void CModePuzzle::RenderCell(const CTextureBank::TextureType type) const
 	static const short texture[] =			{ 0, 1, 0, 0, 1, 0, 1, 1 };
 	static const unsigned short indices[] =	{ 0, 1, 2, 0, 2, 3 };
 
- 	glBindTexture(GL_TEXTURE_2D, CTextureBank::Get(type));
+ 	glBindTexture(GL_TEXTURE_2D, _Game.TextureBank().Get(type));
  	glVertexPointer(2, GL_FLOAT, 0, vertices);
  	glTexCoordPointer(2, GL_SHORT, 0, texture);
  	glDrawElements(GL_TRIANGLES, (sizeof(indices) / sizeof(indices[0])), GL_UNSIGNED_SHORT, indices);

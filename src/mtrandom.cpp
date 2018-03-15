@@ -18,34 +18,34 @@
 
 #include "mtrandom.h"
 
-unsigned long	CMTRandom::m_State[MTSTATE_ARRAY_SIZE];
-unsigned long	CMTRandom::m_Pos = 0;
-bool			CMTRandom::m_Initialized = false;
+unsigned long	CMTRandom::_State[MTSTATE_ARRAY_SIZE];
+unsigned long	CMTRandom::_Pos = 0;
+bool			CMTRandom::_Initialized = false;
 
 #define MTRAND	397
 
 
 void CMTRandom::Seed(const unsigned long seed)
 {
-	m_State[0] = seed & 0xFFFFFFFFUL;	//For > 32 bit machines
+	_State[0] = seed & 0xFFFFFFFFUL;	//For > 32 bit machines
 	for (unsigned long i = 1; i < MTSTATE_ARRAY_SIZE; ++i) {
-		m_State[i] = 1812433253UL * (m_State[i - 1] ^ (m_State[i - 1] >> 30)) + i;
-		m_State[i] &= 0xFFFFFFFFUL; //For > 32 bit machines
+		_State[i] = 1812433253UL * (_State[i - 1] ^ (_State[i - 1] >> 30)) + i;
+		_State[i] &= 0xFFFFFFFFUL; //For > 32 bit machines
 	}
-	m_Pos = MTSTATE_ARRAY_SIZE; //Force GenerateState() to be called for next random number
+	_Pos = MTSTATE_ARRAY_SIZE; //Force GenerateState() to be called for next random number
 }
 
 
 unsigned long CMTRandom::Rand()
 {
-	if (!m_Initialized) {
+	if (!_Initialized) {
 		Seed(0xabcdef);
-		m_Initialized = true;
+		_Initialized = true;
 	}
 
-	if (m_Pos = MTSTATE_ARRAY_SIZE)
+	if (_Pos == MTSTATE_ARRAY_SIZE)
 		GenerateState(); // new state vector needed
-	unsigned long x = m_State[m_Pos++];
+	unsigned long x = _State[_Pos++];
 	x ^= (x >> 11);
 	x ^= (x << 7) & 0x9D2C5680UL;
 	x ^= (x << 15) & 0xEFC60000UL;
@@ -62,9 +62,9 @@ unsigned long CMTRandom::Twiddle(const unsigned long u, const unsigned long v)
 void CMTRandom::GenerateState()
 {
 	for (int i = 0; i < (MTSTATE_ARRAY_SIZE - MTRAND); ++i)
-		m_State[i] = m_State[i + MTRAND] ^ Twiddle(m_State[i], m_State[i + 1]);
+		_State[i] = _State[i + MTRAND] ^ Twiddle(_State[i], _State[i + 1]);
 	for (int i = MTSTATE_ARRAY_SIZE - MTRAND; i < (MTSTATE_ARRAY_SIZE - 1); ++i)
-		m_State[i] = m_State[i + MTRAND - MTSTATE_ARRAY_SIZE] ^ Twiddle(m_State[i], m_State[i + 1]);
-	m_State[MTSTATE_ARRAY_SIZE - 1] = m_State[MTRAND - 1] ^ Twiddle(m_State[MTSTATE_ARRAY_SIZE - 1], m_State[0]);
-	m_Pos = 0;	//Reset position
+		_State[i] = _State[i + MTRAND - MTSTATE_ARRAY_SIZE] ^ Twiddle(_State[i], _State[i + 1]);
+	_State[MTSTATE_ARRAY_SIZE - 1] = _State[MTRAND - 1] ^ Twiddle(_State[MTSTATE_ARRAY_SIZE - 1], _State[0]);
+	_Pos = 0;	//Reset position
 }

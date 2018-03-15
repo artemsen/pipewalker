@@ -25,6 +25,7 @@
 #include <exception>
 #include <string>
 #include <map>
+#include <list>
 #include <vector>
 #include <iterator>
 #include <string.h>
@@ -54,9 +55,9 @@ using namespace std;
 #endif	//__MINGW32__
 
 //Byte order
-#if defined(__hppa__) || defined(__m68k__) || defined(mc68000) || defined(_M_M68K) || \
+#if defined(__hppa__) || defined(__m68k__) || defined(mc68000) || defined(__M68K) || \
 	(defined(__MIPS__) && defined(__MISPEB__)) || \
-	defined(__ppc__) || defined(__POWERPC__) || defined(_M_PPC) || defined(__sparc__)
+	defined(__ppc__) || defined(__POWERPC__) || defined(__PPC) || defined(__sparc__)
 	#define PW_BYTEORDER_BIG_ENDIAN 1
 #else
 	#define PW_BYTEORDER_LITTLE_ENDIAN 1

@@ -1,6 +1,6 @@
 /**************************************************************************
  *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2009 by Artem A. Senichev <artemsen@gmail.com>     *
+ *  Copyright (C) 2007-2010 by Artem A. Senichev <artemsen@gmail.com>     *
  *                                                                        *
  *  This program is free software: you can redistribute it and/or modify  *
  *  it under the terms of the GNU General Public License as published by  *
@@ -19,22 +19,42 @@
 #pragma once
 
 
-class CException
+/**
+ * Exception wrapper
+ */
+class CException : public exception
 {
 public:
-	CException(const char* descr)
-		: exeptionDescr(descr) {}
-	CException(const string& descr)
-		: exeptionDescr(descr) {}
-	CException(const char* descr1, const char* descr2)
-		: exeptionDescr(string(descr1) + string(descr2)) {}
-	CException(const char* descr1, const char* descr2, const char* descr3)
-		: exeptionDescr(string(descr1) + string(descr2) + string(descr3)) {}
-	CException(const char* descr1, const char* descr2, const char* descr3, const char* descr4)
-		: exeptionDescr(string(descr1) + string(descr2) + string(descr3) + string(descr4)) {}
+	/**
+	 * Constructor
+	 * \param descr exception description
+	 */
+	CException(const char* descr) throw()
+	{
+		try {
+			_WhatException = new char[strlen(descr) + 1];
+			strcpy(_WhatException, descr);
+		}
+		catch (...)	{
+			if (_WhatException)
+				delete[] _WhatException;
+			_WhatException = NULL;
+		}
+	}
 
-	const char* what() const { return exeptionDescr.c_str(); }
+	//Destructor
+	~CException() throw()
+	{
+		if (_WhatException)
+			delete[] _WhatException;
+	}
+
+	//From exception
+	const char* what() const throw()
+	{
+		return _WhatException ? _WhatException : "Unknown error";
+	}
 
 private:
-	string exeptionDescr;
+	char* _WhatException;	///< Exception description
 };

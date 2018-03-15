@@ -24,6 +24,9 @@
 #include "modepuzzle.h"
 #include "modesettings.h"
 #include "settings.h"
+#include "texture.h"
+#include "rendertext.h"
+#include "sound.h"
 #include "winmgr.h"
 
 
@@ -52,6 +55,7 @@ public:
 	void OnKeyboardKeyDown(const char key);
 	void OnMouseButtonDown(const float mouseX, const float mouseY, const MouseButton btn);
 	void OnMouseMove(const float mouseX, const float mouseY);
+	void ReloadTextures();
 
 private:
 	//! Game render modes
@@ -89,29 +93,37 @@ private:
 	 * Check for transition in progress
 	 * \return true if transition in progress
 	 */
-	inline bool TransitionInProgress() const	{ return (m_TrnStartTime != 0); }
+	inline bool TransitionInProgress() const	{ return (_TrnStartTime != 0); }
 
 public:
 	//Accessors
-	inline CWinManager& WinManager()	{ return *m_WinManager; }
-	inline CSettings& Settings()		{ return m_Settings; }
+	inline CWinManager& WinManager()			{ return *_WinManager; }
+	inline CUserSettings& UserSettings()		{ return _UserSettings; }
+	inline const CGameSettings& GameSettings() const { return _GameSettings; }
+	inline CTextureBank& TextureBank()				{ return _TextureBank; }
+	inline const CRenderText& RenderText() const	{ return _RenderText; }
+	inline CSoundBank& SoundBank()					{ return _SoundBank; }
 
 private:	//Class variables
-	CWinManager*	m_WinManager;		///< Window manager
-	CSettings		m_Settings;			///< Game settings
+	CWinManager*	_WinManager;		///< Window manager
+	CUserSettings	_UserSettings;		///< Game settings
+	CGameSettings	_GameSettings;		///< Game settings
+	CTextureBank	_TextureBank;		///< Texture bank
+	CRenderText		_RenderText;		///< Text renderer
+	CSoundBank		_SoundBank;			///< Sound bank
 
-	GameMode		m_ActiveMode;		///< Currently active mode
-	GameMode		m_NextMode;			///< Next mode
-	TransitionPhase	m_TrnPhase;			///< Transition phase (first=true, second=false)
-	unsigned int	m_TrnStartTime;		///< Transition (mode changing) start time (zero if transition is not active)
+	GameMode		_ActiveMode;		///< Currently active mode
+	GameMode		_NextMode;			///< Next mode
+	TransitionPhase	_TrnPhase;			///< Transition phase (first=true, second=false)
+	unsigned int	_TrnStartTime;		///< Transition (mode changing) start time (zero if transition is not active)
 	
-	unsigned long	m_NextMapId;		///< Next map id (for next new game level)
-	bool			m_RenewMap;			///< Map renew flag
-	bool			m_LoadMap;			///< Map load flag
+	unsigned long	_NextMapId;			///< Next map id (for next new game level)
+	bool			_RenewMap;			///< Map renew flag
+	bool			_LoadMap;			///< Map load flag
 
-	CModePuzzle		m_ModePuzzle;		///< Renderer/handler (game mode)
-	vector<CButton>	m_BtnPuzzle;		///< Buttons array (game mode)
+	CModePuzzle		_ModePuzzle;		///< Renderer/handler (game mode)
+	list<CButton>	_BtnPuzzle;			///< Buttons array (game mode)
 
-	CModeSettings	m_ModeSettings;		///< Renderer/handler (settings mode)
-	vector<CButton>	m_BtnSettings;		///< Buttons array (settings mode)
+	CModeSettings	_ModeSettings;		///< Renderer/handler (settings mode)
+	list<CButton>	_BtnSettings;		///< Buttons array (settings mode)
 };

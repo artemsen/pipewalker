@@ -42,38 +42,43 @@
 
 
 CGame::CGame()
-:	m_WinManager(NULL),
-	m_ActiveMode(Puzzle),
-	m_NextMode(Undefined),
-	m_TrnPhase(FirstPhase),
-	m_TrnStartTime(0),
-	m_NextMapId(0),
-	m_RenewMap(false),
-	m_LoadMap(false),
-	m_ModePuzzle(*this),
-	m_ModeSettings(*this)
+:	_WinManager(NULL),
+	_ActiveMode(Puzzle),
+	_NextMode(Undefined),
+	_TrnPhase(FirstPhase),
+	_TrnStartTime(0),
+	_NextMapId(0),
+	_RenewMap(false),
+	_LoadMap(false),
+	_ModePuzzle(*this),
+	_ModeSettings(*this)
 {
-	m_Settings.Load();
 }
 
 
 void CGame::Initialize(CWinManager& winMgr)
 {
-	m_WinManager = &winMgr;
+	_WinManager = &winMgr;
+
+	//Load settings
+	_UserSettings.Load();
+	_GameSettings.Load();
+
+	//Initialize texture/sound banks
+	ReloadTextures();
+	_SoundBank.Load();
 
 	//Configure buttons
-	m_BtnPuzzle.reserve(4);
-	m_BtnPuzzle.push_back(CButton( 2.2f, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT,CTextureBank::TexButtonNext, PW_BUTTONID_NEXT));
-	m_BtnPuzzle.push_back(CButton(-3.2f, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::TexButtonPrev, PW_BUTTONID_PREV));
-	m_BtnPuzzle.push_back(CButton(PW_BUTTON_LEFT, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::TexButtonReset, PW_BUTTONID_RESET));
-	m_BtnPuzzle.push_back(CButton(PW_BUTTON_RIGHT, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::TexButtonSett, PW_BUTTONID_SETT));
+	_BtnPuzzle.push_back(CButton(*this, 2.2f, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT,CTextureBank::TexButtonNext, PW_BUTTONID_NEXT));
+	_BtnPuzzle.push_back(CButton(*this, -3.2f, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::TexButtonPrev, PW_BUTTONID_PREV));
+	_BtnPuzzle.push_back(CButton(*this, PW_BUTTON_LEFT, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::TexButtonReset, PW_BUTTONID_RESET));
+	_BtnPuzzle.push_back(CButton(*this, PW_BUTTON_RIGHT, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::TexButtonSett, PW_BUTTONID_SETT));
 
-	m_BtnSettings.reserve(2);
-	m_BtnSettings.push_back(CButton(PW_BUTTON_RIGHT, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::TexButtonOK, PW_BUTTONID_OK));
-	m_BtnSettings.push_back(CButton(PW_BUTTON_LEFT, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::TexButtonCancel, PW_BUTTONID_CANCEL));
+	_BtnSettings.push_back(CButton(*this, PW_BUTTON_RIGHT, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::TexButtonOK, PW_BUTTONID_OK));
+	_BtnSettings.push_back(CButton(*this, PW_BUTTON_LEFT, PW_BUTTON_TOP, PW_BUTTON_WIDTH, PW_BUTTON_HEIGHT, CTextureBank::TexButtonCancel, PW_BUTTONID_CANCEL));
 
-	m_ModePuzzle.LoadMap();
-	m_ModeSettings.Initialize();
+	_ModePuzzle.LoadMap();
+	_ModeSettings.Initialize();
 
 	//First launch - make first transition (to make a new map)
 	BeginTransition(Puzzle, SecondPhase);
@@ -82,8 +87,20 @@ void CGame::Initialize(CWinManager& winMgr)
 
 void CGame::Finalize()
 {
-	m_ModePuzzle.SaveMap();
-	m_Settings.Save();
+	_ModePuzzle.SaveMap();
+	_UserSettings.Save();
+}
+
+
+void CGame::ReloadTextures()
+{
+	if (_UserSettings.ThemeId >= _GameSettings.Themes.size())
+		_UserSettings.ThemeId = 0;
+
+	string textFileName = DIR_GAMEDATA;
+	textFileName += _GameSettings.Themes[_UserSettings.ThemeId].TextureFile;
+	_TextureBank.Load(textFileName.c_str());
+	_RenderText.Load();
 }
 
 
@@ -94,55 +111,55 @@ void CGame::RenderScene(const float mouseX, const float mouseY)
 	//Transition calculate
 	float trnPhase = 1.0f;
 	if (TransitionInProgress()) {
-		if (CSynchro::GetPhase(m_TrnStartTime, 500, trnPhase)) {
-			if (m_TrnPhase == FirstPhase)
+		if (CSynchro::GetPhase(_TrnStartTime, 500, trnPhase)) {
+			if (_TrnPhase == FirstPhase)
 				trnPhase = 1.0f - trnPhase;	//Invert phase
 		}
 		else {
 			//Transition phase complete
-			if (m_TrnPhase == FirstPhase) {
+			if (_TrnPhase == FirstPhase) {
 				trnPhase = 0.0f;
-				m_TrnPhase = SecondPhase;
+				_TrnPhase = SecondPhase;
 
-				assert((!m_RenewMap && !m_LoadMap) || (m_RenewMap && !m_LoadMap) || (!m_RenewMap && m_LoadMap));
-				if (m_RenewMap) {
-					m_Settings.SetCurrentMapId(m_NextMapId);
-					m_ModePuzzle.RenewMap();
-					m_RenewMap = false;
+				assert((!_RenewMap && !_LoadMap) || (_RenewMap && !_LoadMap) || (!_RenewMap && _LoadMap));
+				if (_RenewMap) {
+					_UserSettings.SetCurrentMapId(_NextMapId);
+					_ModePuzzle.RenewMap();
+					_RenewMap = false;
 				}
-				else if (m_LoadMap) {
-					m_ModePuzzle.LoadMap();
-					m_LoadMap = false;
+				else if (_LoadMap) {
+					_ModePuzzle.LoadMap();
+					_LoadMap = false;
 				}
 
-				m_TrnStartTime = CSynchro::GetTick();	//second phase begin
-				m_ActiveMode = m_NextMode;
-				m_NextMode = Undefined;
+				_TrnStartTime = CSynchro::GetTick();	//second phase begin
+				_ActiveMode = _NextMode;
+				_NextMode = Undefined;
 			}
 			else {
 				//Second phase finished
-				m_TrnStartTime = 0;
+				_TrnStartTime = 0;
 			}
 
 		}
-		m_WinManager->PostRedisplay();
+		_WinManager->PostRedisplay();
 	}
 
-	const vector<CButton>* activeBtns = NULL;
+	const list<CButton>* activeBtns = NULL;
 
-	if (m_ActiveMode == Puzzle) {
-		m_ModePuzzle.Render(trnPhase);
-		activeBtns = &m_BtnPuzzle;
+	if (_ActiveMode == Puzzle) {
+		_ModePuzzle.Render(trnPhase);
+		activeBtns = &_BtnPuzzle;
 	}
- 	else if (m_ActiveMode == Options) {
-		m_ModeSettings.Render(mouseX, mouseY, trnPhase);
-		activeBtns = &m_BtnSettings;
+ 	else if (_ActiveMode == Options) {
+		_ModeSettings.Render(mouseX, mouseY, trnPhase);
+		activeBtns = &_BtnSettings;
 	}
 
 	//Buttons
 	assert(activeBtns != NULL);
 	glColor4f(1.0f, 1.0, 1.0f, trnPhase);
-	for (vector<CButton>::const_iterator itBtn = activeBtns->begin(); itBtn != activeBtns->end(); ++itBtn)
+	for (list<CButton>::const_iterator itBtn = activeBtns->begin(); itBtn != activeBtns->end(); ++itBtn)
 		itBtn->Render(mouseX, mouseY);
 	glColor4f(1.0f, 1.0, 1.0f, 1.0f);
 }
@@ -167,7 +184,7 @@ void CGame::RenderEnvironment()
  		glMatrixMode(GL_MODELVIEW);
  		glPushMatrix();
  			glLoadIdentity();
- 			glBindTexture(GL_TEXTURE_2D, CTextureBank::Get(CTextureBank::TexEnvBkgr));
+ 			glBindTexture(GL_TEXTURE_2D, _TextureBank.Get(CTextureBank::TexEnvBkgr));
  			glVertexPointer(2, GL_FLOAT, 0, vertBkgr);
  			glTexCoordPointer(2, GL_SHORT, 0, texBkgr);
  			glDrawElements(GL_TRIANGLES, (sizeof(plainInd) / sizeof(plainInd[0])), GL_UNSIGNED_SHORT, plainInd);
@@ -180,15 +197,15 @@ void CGame::RenderEnvironment()
 	//Draw title
 	static const float vertTitle[] = { -5.0f, 6.1f, -5.0f, 5.1f, 5.0f, 5.1f, 5.0f, 6.1f };
 	static const short texTitle[] =	 { 0, 1, 0, 0, 1, 0, 1, 1 };
-	glBindTexture(GL_TEXTURE_2D, CTextureBank::Get(CTextureBank::TexEnvTitle));
+	glBindTexture(GL_TEXTURE_2D, _TextureBank.Get(CTextureBank::TexEnvTitle));
 	glVertexPointer(2, GL_FLOAT, 0, vertTitle);
 	glTexCoordPointer(2, GL_SHORT, 0, texTitle);
 	glDrawElements(GL_TRIANGLES, (sizeof(plainInd) / sizeof(plainInd[0])), GL_UNSIGNED_SHORT, plainInd);
 
 	//Draw cell's background
-	const unsigned short mapSize = static_cast<const unsigned short>(m_ModePuzzle.GetMapSize());
+	const unsigned short mapSize = static_cast<const unsigned short>(_ModePuzzle.GetMapSize());
 	static const float cellVertex[] = { -5.0f, 5.0f, -5.0f, -5.0f, 5.0f, -5.0f, 5.0f, 5.0f };
-	glBindTexture(GL_TEXTURE_2D, CTextureBank::Get(CTextureBank::TexCellBackground));
+	glBindTexture(GL_TEXTURE_2D, _TextureBank.Get(CTextureBank::TexCellBackground));
 	glVertexPointer(2, GL_FLOAT, 0, cellVertex);
 	const short cellTexture[] =	{ 0, mapSize, 0, 0, mapSize, 0, mapSize, mapSize };
 	glTexCoordPointer(2, GL_SHORT, 0, cellTexture);
@@ -202,37 +219,37 @@ void CGame::OnMouseButtonDown(const float mouseX, const float mouseY, const Mous
 		return;
 
 	if (btn == MouseButton_Left) {
-		const vector<CButton>& btns = (m_ActiveMode == Puzzle ? m_BtnPuzzle : m_BtnSettings);
-		for (vector<CButton>::const_iterator itBtn = btns.begin(); itBtn != btns.end(); ++itBtn) {
+		const list<CButton>& btns = (_ActiveMode == Puzzle ? _BtnPuzzle : _BtnSettings);
+		for (list<CButton>::const_iterator itBtn = btns.begin(); itBtn != btns.end(); ++itBtn) {
 			if (itBtn->IsMouseOver(mouseX, mouseY)) {
 				switch (itBtn->GetId()) {
 					case PW_BUTTONID_NEXT:
 					case PW_BUTTONID_PREV:
-						RenewMap(m_Settings.GetCurrentMapId() + (itBtn->GetId() == PW_BUTTONID_NEXT ? 1 : -1));
+						RenewMap(_UserSettings.GetCurrentMapId() + (itBtn->GetId() == PW_BUTTONID_NEXT ? 1 : -1));
 						break;
 					case PW_BUTTONID_RESET:
-						m_ModePuzzle.ResetByRotate();
-						m_WinManager->PostRedisplay();
+						_ModePuzzle.ResetByRotate();
+						_WinManager->PostRedisplay();
 						break;
 					case PW_BUTTONID_SETT:
-						m_ModeSettings.Reset();
+						_ModeSettings.Reset();
 						BeginTransition(Options);
 						break;
 					case PW_BUTTONID_OK:
-						m_ModePuzzle.SaveMap();	//Save current map
+						_ModePuzzle.SaveMap();	//Save current map
 						
-						if (m_Settings.Size != m_ModeSettings.GetMapSize()) {
-							m_Settings.Size = m_ModeSettings.GetMapSize();
-							m_LoadMap = true;
+						if (_UserSettings.Size != _ModeSettings.GetMapSize()) {
+							_UserSettings.Size = _ModeSettings.GetMapSize();
+							_LoadMap = true;
 							BeginTransition(Puzzle);
 						}
-						else if (m_Settings.Wrapping != m_ModeSettings.GetWrapMode()) {
-							m_Settings.Wrapping = m_ModeSettings.GetWrapMode();
-							RenewMap(m_Settings.GetCurrentMapId());
+						else if (_UserSettings.Wrapping != _ModeSettings.GetWrapMode()) {
+							_UserSettings.Wrapping = _ModeSettings.GetWrapMode();
+							RenewMap(_UserSettings.GetCurrentMapId());
 						}
 						else
 							BeginTransition(Puzzle);
-						m_Settings.Sound = m_ModeSettings.GetSoundMode();
+						_UserSettings.Sound = _ModeSettings.GetSoundMode();
 						break;
 					case PW_BUTTONID_CANCEL:
 						BeginTransition(Puzzle);
@@ -244,28 +261,28 @@ void CGame::OnMouseButtonDown(const float mouseX, const float mouseY, const Mous
 		}
 	}
 
-	if (m_ActiveMode == Puzzle)
-		m_ModePuzzle.OnMouseButtonDown(mouseX, mouseY, btn);
-	else if (m_ActiveMode == Options)
-		m_ModeSettings.OnMouseButtonDown(mouseX, mouseY, btn);
+	if (_ActiveMode == Puzzle)
+		_ModePuzzle.OnMouseButtonDown(mouseX, mouseY, btn);
+	else if (_ActiveMode == Options)
+		_ModeSettings.OnMouseButtonDown(mouseX, mouseY, btn);
 }
 
 
 void CGame::BeginTransition(const GameMode nextMode, const TransitionPhase startPhase /*= FirstPhase*/)
 {
-	m_NextMode = nextMode;
-	m_TrnPhase = startPhase;
-	m_TrnStartTime = CSynchro::GetTick();
-	m_WinManager->PostRedisplay();
+	_NextMode = nextMode;
+	_TrnPhase = startPhase;
+	_TrnStartTime = CSynchro::GetTick();
+	_WinManager->PostRedisplay();
 }
 
 
 void CGame::OnKeyboardKeyDown(const char key)
 {
 	if (!TransitionInProgress() && key == 27) { //Esc
-		if (m_ActiveMode == Puzzle)
-			m_WinManager->PostExit();
-		else if (m_ActiveMode == Options)
+		if (_ActiveMode == Puzzle)
+			_WinManager->PostExit();
+		else if (_ActiveMode == Options)
 			BeginTransition(Puzzle);
 	}
 }
@@ -273,13 +290,13 @@ void CGame::OnKeyboardKeyDown(const char key)
 
 void CGame::OnMouseMove(const float /*mouseX*/, const float /*mouseY*/)
 {
-	m_WinManager->PostRedisplay();
+	_WinManager->PostRedisplay();
 }
 
 
 void CGame::RenewMap(const unsigned long nextMapNum)
 {
-	m_NextMapId = (nextMapNum == 0 || nextMapNum > 99999999) ? 1 : nextMapNum;
-	m_RenewMap = true;
+	_NextMapId = (nextMapNum == 0 || nextMapNum > 99999999) ? 1 : nextMapNum;
+	_RenewMap = true;
 	BeginTransition(Puzzle);
 }

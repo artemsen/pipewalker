@@ -33,6 +33,14 @@
 #endif // WIN32
 
 
+CWinManagerSDL::CWinManagerSDL(CEventHandler& eventHandler)
+:	CWinManager(eventHandler),
+	_ExitProgram(false),
+	_DesktopWidth(0), _DesktopHeight(0)
+{
+}
+
+
 void CWinManagerSDL::PostRedisplay()
 {
 	const int exposeEventNum = SDL_PeepEvents(NULL, 0, SDL_PEEKEVENT, SDL_VIDEOEXPOSEMASK);
@@ -52,10 +60,28 @@ void CWinManagerSDL::PostRedisplay()
 
 void CWinManagerSDL::MainLoop()
 {
-	while (!m_ExitProgram) {
+	//Calculate maxinum/minimum window sizes
+	static const float aspect = static_cast<float>(PW_SCREEN_WIDTH) / static_cast<float>(PW_SCREEN_HEIGHT);
+	int maxWidth = static_cast<int>(static_cast<float>(_DesktopHeight) * aspect);
+	int maxHeight = static_cast<int>(static_cast<float>(_DesktopWidth) / aspect);
+	if (maxWidth > _DesktopWidth)
+		maxWidth = _DesktopWidth;
+	if (maxHeight > _DesktopHeight)
+		maxHeight = _DesktopHeight;
+	int minWidth =  PW_SCREEN_WIDTH  / 3;
+	int minHeight = PW_SCREEN_HEIGHT / 3;
+
+	//Current window size
+	int wndWidth =  PW_SCREEN_WIDTH;
+	int wndHeight = PW_SCREEN_HEIGHT;
+
+	while (!_ExitProgram) {
 		SDL_Event event;
-		if (SDL_WaitEvent(&event) == 0)
-			throw CException("SDL_WaitEvent failed: ", SDL_GetError());
+		if (SDL_WaitEvent(&event) == 0) {
+			string errDescr = "SDL_WaitEvent failed: ";
+			errDescr += SDL_GetError();
+			throw CException(errDescr.c_str());
+		}
 
 		switch (event.type) {
 
@@ -97,20 +123,36 @@ void CWinManagerSDL::MainLoop()
 				break;
 
 			case SDL_VIDEORESIZE:
-				CreateGLWindow(event.resize.w, event.resize.h);
-				InitializeOpenGL(event.resize.w, event.resize.h);
+				if (event.resize.w != 0 && (event.resize.w < minWidth || event.resize.h < minHeight)) {
+					event.resize.w = minWidth;
+					event.resize.h = minHeight;
+				}
+				else if (event.resize.w == _DesktopWidth || event.resize.h == _DesktopHeight) {
+					//Maximize window
+					event.resize.w = maxWidth;
+					event.resize.h = maxHeight;
+				}
+				else if (event.resize.w != wndWidth)
+					event.resize.h = static_cast<int>(static_cast<float>(event.resize.w > maxWidth ? maxWidth : event.resize.w < minWidth ? minWidth : event.resize.w) / aspect);
+				else if (event.resize.h != wndHeight)
+					event.resize.w = static_cast<int>(static_cast<float>(event.resize.h > maxHeight ? maxHeight : event.resize.h < minHeight ? minHeight : event.resize.h) * aspect);
+
+				wndWidth = event.resize.w;
+				wndHeight = event.resize.h;
+
+				CreateGLWindow(wndWidth, wndHeight);
+				InitializeOpenGL(wndWidth, wndHeight);
 
 #ifdef WIN32
 				//We need to reinitialize texture on resizing window (SDL specific)
-				CTextureBank::Load(ThemeNetwork);
-				CRenderText::Load();
+				_EventHandler.ReloadTextures();
 #endif // WIN32
 
 				OnRenderScene();
 				break;
 
 			case SDL_QUIT:
-				m_ExitProgram = true;
+				_ExitProgram = true;
 				break;
 
 			default:
@@ -123,8 +165,11 @@ void CWinManagerSDL::MainLoop()
 void CWinManagerSDL::CreateGLWindow(const int width, const int height)
 {
 	//SDL initialization
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0)
-		throw CException("SDL initialization failed: ", SDL_GetError());
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
+		string errDescr = "SDL initialization failed: ";
+		errDescr += SDL_GetError();
+		throw CException(errDescr.c_str());
+	}
 
 	SDL_WM_SetCaption(PACKAGE_STRING, PACKAGE_STRING);
 
@@ -154,13 +199,24 @@ void CWinManagerSDL::CreateGLWindow(const int width, const int height)
 
 	//Let's get some video information
 	static const SDL_VideoInfo* vinfo = SDL_GetVideoInfo();
-	if (!vinfo)
-		throw CException("Unable to get video information: ", SDL_GetError());
+	if (!vinfo) {
+		string errDescr = "Unable to get video information: ";
+		errDescr += SDL_GetError();
+		throw CException(errDescr.c_str());
+	}
+	if (!_DesktopWidth)
+		_DesktopWidth = vinfo->current_w;
+	if (!_DesktopHeight)
+		_DesktopHeight = vinfo->current_h;
+
 
 	//Create window
 	SDL_Surface* screen = SDL_SetVideoMode(width, height, vinfo->vfmt->BitsPerPixel, SDL_OPENGL | SDL_RESIZABLE);
-	if (!screen)
-		throw CException("Unable to set video mode: ", SDL_GetError());
+	if (!screen) {
+		string errDescr = "Unable to set video mode: ";
+		errDescr += SDL_GetError();
+		throw CException(errDescr.c_str());
+	}
 }
 
 
@@ -183,9 +239,9 @@ void CWinManagerSDL::ShowError(const char* err)
 	SDL_VERSION(&wminfo.version);
 	::MessageBoxA(SDL_GetWMInfo(&wminfo) == 1 ? wminfo.window : NULL, err, PACKAGE_STRING " Error", MB_ICONERROR | MB_OK);
 #else
-	fprintf(stderr, "Critical error: ");
-	fprintf(stderr, err);
-	fprintf(stderr, "\n");
+	fputs("Critical error: ", stderr);
+	fputs(err, stderr);
+	fputs("\n", stderr);
 #endif // WIN32
 }
 

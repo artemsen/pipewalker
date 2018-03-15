@@ -23,33 +23,33 @@
 #include <sys/time.h>
 #endif // WIN32
 
-unsigned int CSynchro::m_TickLast = 0;
-unsigned int CSynchro::m_TickDelta = 0;
-unsigned int CSynchro::m_TickStop = 0;
+unsigned int CSynchro::_TickLast = 0;
+unsigned int CSynchro::_TickDelta = 0;
+unsigned int CSynchro::_TickStop = 0;
 
 
 void CSynchro::Start()
 {
-	if (m_TickStop) {
-		m_TickDelta = GetSystemTick() - m_TickStop;
-		m_TickStop = 0;
+	if (_TickStop) {
+		_TickDelta = GetSystemTick() - _TickStop;
+		_TickStop = 0;
 	}
 }
 
 
 void CSynchro::Stop()
 {
-	if (!m_TickStop)
-		m_TickStop = GetSystemTick();
+	if (!_TickStop)
+		_TickStop = GetSystemTick();
 }
 
 
 unsigned int CSynchro::GetTick()
 {
-	if (!m_TickStop)
-		m_TickLast = GetSystemTick() - m_TickDelta;
+	if (!_TickStop)
+		_TickLast = GetSystemTick() - _TickDelta;
 
-	return m_TickLast;
+	return _TickLast;
 }
 
 
@@ -60,7 +60,7 @@ unsigned int CSynchro::GetSystemTick()
 #ifdef WIN32
 	tick = GetTickCount();
 #else
-	//I hope it is posix...
+	//I hope this is posix os...
 	timeval tv;
 	gettimeofday(&tv, NULL);
 	tick = tv.tv_sec * 1000 + tv.tv_usec / 1000;

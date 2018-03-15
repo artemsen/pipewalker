@@ -28,8 +28,11 @@ class CGame;
 class CModeSettings
 {
 public:
-	//! Default constructor
-	CModeSettings(CGame& game) : m_Game(game) {}
+	/**
+	 * Constructor
+	 * \param game the game instance
+	 */
+	CModeSettings(CGame& game) : _Game(game), _PrevTheme(game), _NextTheme(game) {}
 
 	/**
 	 * Initialization
@@ -61,26 +64,26 @@ public:
 	 * Get currently chosen map size
 	 * \return map size
 	 */
-	inline MapSize GetMapSize() const		{ return static_cast<MapSize>(m_MapSize.GetChoice()); }
+	inline MapSize GetMapSize() const		{ return static_cast<MapSize>(_MapSize.GetChoice()); }
 
 	/**
 	 * Get currently chosen wrapping mode
 	 * \return wrapping mode
 	 */
-	inline bool GetWrapMode() const			{ return (m_WrapMode.GetChoice() == 1 ? true : false); }
+	inline bool GetWrapMode() const			{ return (_WrapMode.GetChoice() == 1 ? true : false); }
 
 	/**
 	 * Get currently chosen sound mode
 	 * \return sound mode
 	 */
-	inline bool GetSoundMode() const		{ return (m_Sound.GetChoice() == 1 ? true : false); }
+	inline bool GetSoundMode() const		{ return (_Sound.GetChoice() == 1 ? true : false); }
 
 
 private:
-	CRadioButtons	m_MapSize;		///< Map size radio buttons group
-	CRadioButtons	m_WrapMode;		///< Wrapping mode on/off radio buttons group
-	CRadioButtons	m_Sound;		///< Sound on/off radio buttons group
-	CButton			m_PrevTheme;	///< Previous theme button
-	CButton			m_NextTheme;	///< Next theme button
-	CGame&			m_Game;			///< Game instance
+	CGame&			_Game;		///< Game instance
+	CRadioButtons	_MapSize;	///< Map size radio buttons group
+	CRadioButtons	_WrapMode;	///< Wrapping mode on/off radio buttons group
+	CRadioButtons	_Sound;		///< Sound on/off radio buttons group
+	CButton			_PrevTheme;	///< Previous theme button
+	CButton			_NextTheme;	///< Next theme button
 };

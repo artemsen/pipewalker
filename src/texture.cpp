@@ -19,14 +19,12 @@
 #include "texture.h"
 #include "image.h"
 
-CTexture CTextureBank::m_Texture[CTextureBank::TexCounter];
-
 
 void CTexture::Free()
 {
-	if (m_Id)
-		glDeleteTextures(1, &m_Id);
-	m_Id = 0;
+	if (_Id)
+		glDeleteTextures(1, &_Id);
+	_Id = 0;
 }
 
 
@@ -38,16 +36,16 @@ void CTexture::Load(const CImage& img, const size_t x, const size_t y, const siz
 	vector<unsigned char> imgData;
 	img.GetSubImage(x, y, width, height, imgData);
 
-	glGenTextures(1, &m_Id);
+	glGenTextures(1, &_Id);
 
-	glBindTexture(GL_TEXTURE_2D, m_Id);
+	glBindTexture(GL_TEXTURE_2D, _Id);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, modeWrap);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, modeWrap);
-	glTexImage2D(GL_TEXTURE_2D, 0, img.GetMode(), width, height, 0, img.GetMode(), GL_UNSIGNED_BYTE, &imgData[0]);
+	glTexImage2D(GL_TEXTURE_2D, 0, img.GetMode(), static_cast<GLsizei>(width), static_cast<GLsizei>(height), 0, img.GetMode(), GL_UNSIGNED_BYTE, &imgData[0]);
 }
 
 
@@ -63,82 +61,80 @@ void CTexture::Load(const char* fileName, const int modeWrap /*= GL_CLAMP*/)
 	assert(!(img.GetWidth() & img.GetWidth() - 1));		//Pow of 2
 	assert(!(img.GetHeight() & img.GetHeight() - 1));	//Pow of 2
 
-	glGenTextures(1, &m_Id);
+	glGenTextures(1, &_Id);
 
-	glBindTexture(GL_TEXTURE_2D, m_Id);
+	glBindTexture(GL_TEXTURE_2D, _Id);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, modeWrap);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, modeWrap);
-	glTexImage2D(GL_TEXTURE_2D, 0, img.GetMode(), img.GetWidth(), img.GetHeight(), 0, img.GetMode(), GL_UNSIGNED_BYTE, img.GetData());
+	glTexImage2D(GL_TEXTURE_2D, 0, img.GetMode(), static_cast<GLsizei>(img.GetWidth()), static_cast<GLsizei>(img.GetHeight()), 0, img.GetMode(), GL_UNSIGNED_BYTE, img.GetData());
 }
 
 
-void CTextureBank::Load(const DecorTheme theme)
+CTextureBank::~CTextureBank()
 {
 	Free();
-
-	string themeTextureFileName = DIR_GAMEDATA;
-	switch (theme) {
-		case ThemePlumbing:
-			themeTextureFileName += "plumbing.tga";
-			break;
-		case ThemeNetwork:
-		default:
-			themeTextureFileName += "network.tga";
-	}
-	
-	CImage img;
-	img.Load(themeTextureFileName.c_str());
-
-	m_Texture[TexEnvBkgr].          Load(img,  8 * 64, 0 * 64, 64, 64, GL_REPEAT);
-	m_Texture[TexEnvTitle].         Load(img,  0 * 64, 0 * 64, 8 * 64, 64, GL_CLAMP);
-	m_Texture[TexCellBackground].   Load(img,  9 * 64, 0 * 64, 64, 64, GL_REPEAT);
-	m_Texture[TexSender].           Load(img,  0 * 64, 2 * 64, 64, 64, GL_CLAMP);
-	m_Texture[TexReceiverPassive].  Load(img,  1 * 64, 2 * 64, 64, 64, GL_CLAMP);
-	m_Texture[TexReceiverActive].   Load(img,  2 * 64, 2 * 64, 64, 64, GL_CLAMP);
-	m_Texture[TexLock].             Load(img,  3 * 64, 2 * 64, 64, 64, GL_CLAMP);
-	m_Texture[TexTubeHalfPassive].  Load(img,  4 * 64, 2 * 64, 64, 64, GL_CLAMP);
-	m_Texture[TexTubeHalfActive].   Load(img,  5 * 64, 2 * 64, 64, 64, GL_CLAMP);
-	m_Texture[TexTubeStrPassive].   Load(img,  6 * 64, 2 * 64, 64, 64, GL_CLAMP);
-	m_Texture[TexTubeStrActive].    Load(img,  7 * 64, 2 * 64, 64, 64, GL_CLAMP);
-	m_Texture[TexTubeCrvPassive].   Load(img,  8 * 64, 2 * 64, 64, 64, GL_CLAMP);
-	m_Texture[TexTubeCrvActive].    Load(img,  9 * 64, 2 * 64, 64, 64, GL_CLAMP);
-	m_Texture[TexTubeJnrPassive].   Load(img, 10 * 64, 2 * 64, 64, 64, GL_CLAMP);
-	m_Texture[TexTubeJnrActive].    Load(img, 11 * 64, 2 * 64, 64, 64, GL_CLAMP);
-	m_Texture[TexExplosionPart].    Load(img,  6 * 64, 1 * 64 + 32, 32, 32, GL_CLAMP);
-	m_Texture[TexNum0].	            Load(img,  7 * 64, 1 * 64, 32, 64, GL_CLAMP);
-	m_Texture[TexNum1].	            Load(img,  7 * 64 + 32, 1 * 64, 32, 64, GL_CLAMP);
-	m_Texture[TexNum2].	            Load(img,  8 * 64, 1 * 64, 32, 64, GL_CLAMP);
-	m_Texture[TexNum3].	            Load(img,  8 * 64 + 32, 1 * 64, 32, 64, GL_CLAMP);
-	m_Texture[TexNum4].	            Load(img,  9 * 64, 1 * 64, 32, 64, GL_CLAMP);
-	m_Texture[TexNum5].	            Load(img,  9 * 64 + 32, 1 * 64, 32, 64, GL_CLAMP);
-	m_Texture[TexNum6].	            Load(img, 10 * 64, 1 * 64, 32, 64, GL_CLAMP);
-	m_Texture[TexNum7].	            Load(img, 10 * 64 + 32, 1 * 64, 32, 64, GL_CLAMP);
-	m_Texture[TexNum8].	            Load(img, 11 * 64, 1 * 64, 32, 64, GL_CLAMP);
-	m_Texture[TexNum9].	            Load(img, 11 * 64 + 32, 1 * 64, 32, 64, GL_CLAMP);
-	m_Texture[TexButtonPrev].       Load(img,  0 * 64, 1 * 64, 64, 64, GL_CLAMP);
-	m_Texture[TexButtonNext].       Load(img,  1 * 64, 1 * 64, 64, 64, GL_CLAMP);
-	m_Texture[TexButtonOK].         Load(img,  2 * 64, 1 * 64, 64, 64, GL_CLAMP);
-	m_Texture[TexButtonCancel].     Load(img,  3 * 64, 1 * 64, 64, 64, GL_CLAMP);
-	m_Texture[TexButtonReset].      Load(img,  4 * 64, 1 * 64, 64, 64, GL_CLAMP);
-	m_Texture[TexButtonSett].       Load(img,  5 * 64, 1 * 64, 64, 64, GL_CLAMP);
-	m_Texture[TexRadBtnOff].        Load(img, 10 * 64, 0 * 64, 64, 64, GL_CLAMP);
-	m_Texture[TexRadBtnOn].         Load(img, 11 * 64, 0 * 64, 64, 64, GL_CLAMP);
 }
 
 
-GLuint CTextureBank::Get(const TextureType type)
+void CTextureBank::Load(const char* fileName)
+{
+	assert(fileName);
+
+	Free();
+
+	CImage img;
+	img.Load(fileName);
+
+	_Texture[TexEnvBkgr].        Load(img,  8 * 64, 0 * 64, 64, 64, GL_REPEAT);
+	_Texture[TexEnvTitle].       Load(img,  0 * 64, 0 * 64, 8 * 64, 64, GL_CLAMP);
+	_Texture[TexCellBackground]. Load(img,  9 * 64, 0 * 64, 64, 64, GL_REPEAT);
+	_Texture[TexSender].         Load(img,  0 * 64, 2 * 64, 64, 64, GL_CLAMP);
+	_Texture[TexReceiverPassive].Load(img,  1 * 64, 2 * 64, 64, 64, GL_CLAMP);
+	_Texture[TexReceiverActive]. Load(img,  2 * 64, 2 * 64, 64, 64, GL_CLAMP);
+	_Texture[TexLock].           Load(img,  3 * 64, 2 * 64, 64, 64, GL_CLAMP);
+	_Texture[TexTubeHalfPassive].Load(img,  4 * 64, 2 * 64, 64, 64, GL_CLAMP);
+	_Texture[TexTubeHalfActive]. Load(img,  5 * 64, 2 * 64, 64, 64, GL_CLAMP);
+	_Texture[TexTubeStrPassive]. Load(img,  6 * 64, 2 * 64, 64, 64, GL_CLAMP);
+	_Texture[TexTubeStrActive].  Load(img,  7 * 64, 2 * 64, 64, 64, GL_CLAMP);
+	_Texture[TexTubeCrvPassive]. Load(img,  8 * 64, 2 * 64, 64, 64, GL_CLAMP);
+	_Texture[TexTubeCrvActive].  Load(img,  9 * 64, 2 * 64, 64, 64, GL_CLAMP);
+	_Texture[TexTubeJnrPassive]. Load(img, 10 * 64, 2 * 64, 64, 64, GL_CLAMP);
+	_Texture[TexTubeJnrActive].  Load(img, 11 * 64, 2 * 64, 64, 64, GL_CLAMP);
+	_Texture[TexExplosionPart].  Load(img,  6 * 64, 1 * 64 + 32, 32, 32, GL_CLAMP);
+	_Texture[TexNum0].	         Load(img,  7 * 64, 1 * 64, 32, 64, GL_CLAMP);
+	_Texture[TexNum1].	         Load(img,  7 * 64 + 32, 1 * 64, 32, 64, GL_CLAMP);
+	_Texture[TexNum2].	         Load(img,  8 * 64, 1 * 64, 32, 64, GL_CLAMP);
+	_Texture[TexNum3].	         Load(img,  8 * 64 + 32, 1 * 64, 32, 64, GL_CLAMP);
+	_Texture[TexNum4].	         Load(img,  9 * 64, 1 * 64, 32, 64, GL_CLAMP);
+	_Texture[TexNum5].	         Load(img,  9 * 64 + 32, 1 * 64, 32, 64, GL_CLAMP);
+	_Texture[TexNum6].	         Load(img, 10 * 64, 1 * 64, 32, 64, GL_CLAMP);
+	_Texture[TexNum7].	         Load(img, 10 * 64 + 32, 1 * 64, 32, 64, GL_CLAMP);
+	_Texture[TexNum8].	         Load(img, 11 * 64, 1 * 64, 32, 64, GL_CLAMP);
+	_Texture[TexNum9].	         Load(img, 11 * 64 + 32, 1 * 64, 32, 64, GL_CLAMP);
+	_Texture[TexButtonPrev].     Load(img,  0 * 64, 1 * 64, 64, 64, GL_CLAMP);
+	_Texture[TexButtonNext].     Load(img,  1 * 64, 1 * 64, 64, 64, GL_CLAMP);
+	_Texture[TexButtonOK].       Load(img,  2 * 64, 1 * 64, 64, 64, GL_CLAMP);
+	_Texture[TexButtonCancel].   Load(img,  3 * 64, 1 * 64, 64, 64, GL_CLAMP);
+	_Texture[TexButtonReset].    Load(img,  4 * 64, 1 * 64, 64, 64, GL_CLAMP);
+	_Texture[TexButtonSett].     Load(img,  5 * 64, 1 * 64, 64, 64, GL_CLAMP);
+	_Texture[TexRadBtnOff].      Load(img, 10 * 64, 0 * 64, 64, 64, GL_CLAMP);
+	_Texture[TexRadBtnOn].       Load(img, 11 * 64, 0 * 64, 64, 64, GL_CLAMP);
+}
+
+
+GLuint CTextureBank::Get(const TextureType type) const
 {
 	assert(type >= 0 && type < TexCounter);
-	return m_Texture[type].GetId();
+	return _Texture[type].GetId();
 }
 
 
 void CTextureBank::Free()
 {
 	for (size_t i = 0; i < TexCounter; ++i)
-		m_Texture[i].Free();
+		_Texture[i].Free();
 }

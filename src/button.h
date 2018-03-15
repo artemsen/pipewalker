@@ -21,17 +21,28 @@
 #include "common.h"
 #include "texture.h"
 
+class CGame;
+
+#ifdef _MSC_VER
+#pragma warning(disable: 4512)	//assignment operator could not be generated
+#endif // _MSC_VER
+
+
 /**
  * CButton - Simple button
  */
 class CButton
 {
 public:
-	//! Default constructor
-	CButton();
+	/**
+	 * Constructor
+	 * \param game the game instance
+	 */
+	CButton(CGame& game);
 
 	/**
 	 * Constructor
+	 * \param game the game instance
 	 * \param x button x coordinate
 	 * \param y button y coordinate
 	 * \param width button width
@@ -39,7 +50,7 @@ public:
 	 * \param tex button texture identifier
 	 * \param id button texture ID
 	 */
-	CButton(const float x, const float y, const float width, const float height, const CTextureBank::TextureType tex, const int id);
+	CButton(CGame& game, const float x, const float y, const float width, const float height, const CTextureBank::TextureType tex, const int id);
 
 	/**
 	 * Button initialization
@@ -64,7 +75,7 @@ public:
 	 * Get button ID
 	 * \return button ID
 	 */
-	int GetId() const	{ return m_BtnId; }
+	int GetId() const	{ return _BtnId; }
 
 	/**
 	 * Render button
@@ -85,12 +96,13 @@ protected:
 
 
 protected:	//Class variables
-	float	m_X;		///< Button x coordinate
-	float	m_Y;		///< Button y coordinate
-	float	m_Width;	///< Button width
-	float	m_Height;	///< Button height
-	int		m_BtnId;	///< Button ID
-	CTextureBank::TextureType	m_TexId;	///< Button texture identifier
+	CGame&	_Game;		///< Game instance
+	float	_X;		///< Button x coordinate
+	float	_Y;		///< Button y coordinate
+	float	_Width;	///< Button width
+	float	_Height;	///< Button height
+	int		_BtnId;	///< Button ID
+	CTextureBank::TextureType	_TexId;	///< Button texture identifier
 };
 
 
@@ -100,11 +112,15 @@ protected:	//Class variables
 class CCheckBoxButton : public CButton
 {
 public:
-	//! Default constructor
-	CCheckBoxButton() : CButton(), m_State(false), m_TexOff(CTextureBank::TexCounter) {}
+	/**
+	 * Constructor
+	 * \param game the game instance
+	 */
+	CCheckBoxButton(CGame& game) : CButton(game), _State(false), _TexOff(CTextureBank::TexCounter) {}
 
 	/**
 	 * Constructor
+	 * \param game the game instance
 	 * \param state initial button state (on/off)
 	 * \param x button x coordinate
 	 * \param y button y coordinate
@@ -114,26 +130,26 @@ public:
 	 * \param texOff button off-state texture identifier
 	 * \param id button ID
 	 */
-	CCheckBoxButton(const bool state, const float x, const float y, const float width, const float height, const CTextureBank::TextureType texOn, const CTextureBank::TextureType texOff, const int id);
+	CCheckBoxButton(CGame& game, const bool state, const float x, const float y, const float width, const float height, const CTextureBank::TextureType texOn, const CTextureBank::TextureType texOff, const int id);
 
 	/**
 	 * Get button state
 	 * \return button state
 	 */
-	bool GetState()	const				{ return m_State; }
+	bool GetState()	const				{ return _State; }
 
 	/**
 	 * Set button state
 	 * \param newState new state
 	 */
-	void SetState(const bool newState)	{ m_State = newState; }
+	void SetState(const bool newState)	{ _State = newState; }
 
 	// From CButton
 	virtual void Render(const float x, const float y) const;
 
 protected:
-	bool	m_State;	///< Button state (on/off)
-	CTextureBank::TextureType	m_TexOff;	///< Button second texture identifier
+	bool	_State;	///< Button state (on/off)
+	CTextureBank::TextureType	_TexOff;	///< Button second texture identifier
 };
 
 
@@ -177,5 +193,5 @@ public:
 	void SetChoice(const int choiceId);
 
 private:
-	vector<CCheckBoxButton>	m_Buttons;	///< Buttons group
+	list<CCheckBoxButton>	_Buttons;	///< Buttons group
 };

@@ -48,7 +48,7 @@ private:
 	static void GenerateState();
 
 private:
-	static unsigned long	m_State[MTSTATE_ARRAY_SIZE];	///< State array
-	static unsigned long	m_Pos;							///< Position in state array
-	static bool				m_Initialized;					///< Initialization flag
+	static unsigned long	_State[MTSTATE_ARRAY_SIZE];	///< State array
+	static unsigned long	_Pos;						///< Position in state array
+	static bool				_Initialized;				///< Initialization flag
 };

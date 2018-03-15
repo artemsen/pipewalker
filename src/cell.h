@@ -20,10 +20,6 @@
 
 #include "common.h"
 
-//! Cell state description (used to load/save map)
-// struct CellState {
-// 
-// };
 
 class CCell
 {
@@ -78,77 +74,77 @@ public:	//Helper functions
 	/**
 	 * Reverse lock state of the cell
 	 */
-	inline void ReverseLock()					{ m_Lock = !m_Lock; }
+	inline void ReverseLock()					{ _Lock = !_Lock; }
 
 	/**
 	 * Get current lock state of the cell
 	 * \return true if cell is locked
 	 */
-	inline bool IsLocked() const				{ return m_Lock; }
+	inline bool IsLocked() const				{ return _Lock; }
 
 	/**
 	 * Get tube type of the cell
 	 * \return tube type
 	 */
-	inline TubeType GetTubeType() const			{ assert(m_CellType != CTFree); return m_TubeType; }
+	inline TubeType GetTubeType() const			{ assert(_CellType != CTFree); return _TubeType; }
 
 	/**
 	 * Get cell type of the cell
 	 * \return cell type
 	 */
-	inline CellType GetCellType() const			{ return m_CellType; }
+	inline CellType GetCellType() const			{ return _CellType; }
 
 	/**
 	 * Get direction connection properties
 	 * \return true if connected
 	 */
-	inline bool IsTopConnected() const			{ return m_ConnTop; }
+	inline bool IsTopConnected() const			{ return _ConnTop; }
 
 	/**
 	 * Get direction connection properties
 	 * \return true if connected
 	 */
-	inline bool IsBottomConnected() const		{ return m_ConnBottom; }
+	inline bool IsBottomConnected() const		{ return _ConnBottom; }
 
 	/**
 	 * Get direction connection properties
 	 * \return true if connected
 	 */
-	inline bool IsLeftConnected() const			{ return m_ConnLeft; }
+	inline bool IsLeftConnected() const			{ return _ConnLeft; }
 
 	/**
 	 * Get direction connection properties
 	 * \return true if connected
 	 */
-	inline bool IsRightConnected() const		{ return m_ConnRight; }
+	inline bool IsRightConnected() const		{ return _ConnRight; }
 
 	/**
 	 * Set Sender cell type of the cell
 	 */
-	inline void SetAsSender()					{ assert(m_CellType == CTFree); m_CellType = CTSender; }
+	inline void SetAsSender()					{ assert(_CellType == CTFree); _CellType = CTSender; }
 
 	/**
 	 * Set Receiver cell type of the cell
 	 */
-	inline void SetAsReceiver()					{ assert(m_CellType == CTFree); m_CellType = CTReceiver; }
+	inline void SetAsReceiver()					{ assert(_CellType == CTFree); _CellType = CTReceiver; }
 
 	/**
 	 * Get status of the cell
 	 * \return cell status (true if connected/active)
 	 */
-	inline bool IsActive() const				{ return m_State; }
+	inline bool IsActive() const				{ return _State; }
 
 	/**
 	 * Set status of the cell
 	 * \param type cell status (true if connected/active)
 	 */
-	inline void SetActive(const bool type)		{ m_State = type; }
+	inline void SetActive(const bool type)		{ _State = type; }
 
 	/**
 	 * Get current angle of the cell
 	 * \return current angle of the cell in degrees
 	 */
-	inline float GetAngle() const				{ return m_Angle; }
+	inline float GetAngle() const				{ return _Angle; }
 
 	/**
 	 * Add tube to cell
@@ -166,13 +162,13 @@ public:	//Helper functions
 	 * Get current use flag of the cell
 	 * \return current use flag of the cell
 	 */
-	bool GetUsed() const						{ return m_Used; }
+	bool GetUsed() const						{ return _Used; }
 
 	/**
 	 * Set current use flag of the cell
 	 * \param weight a new use flag of the cell
 	 */
-	void SetUsed(const bool used)				{ m_Used = used; }
+	void SetUsed(const bool used)				{ _Used = used; }
 
 	/**
 	 * Start rotation
@@ -184,7 +180,7 @@ public:	//Helper functions
 	 * Check if rotation in progress
 	 * \return true if rotation in progress
 	 */
-	inline bool IsRotationInProgress() const	{ return m_Rotate.StartTime != 0; }
+	inline bool IsRotationInProgress() const	{ return _Rotate.StartTime != 0; }
 
 	/**
 	 * Calculate rotation angle
@@ -200,16 +196,16 @@ private:
 	unsigned char GetTubeSideCount() const;
 
 private:	//Class variables
-	TubeType		m_TubeType;			///< Tube type
-	CellType		m_CellType;			///< Cell type
-	float			m_Angle;			///< Angle
-	bool			m_State;			///< Cell connection state (true = active, false = passive)
-	bool			m_Lock;				///< Cell lock status
-	bool			m_ConnTop;			///< Top connection state
-	bool			m_ConnBottom;		///< Bottom connection state
-	bool			m_ConnLeft;			///< Left connection state
-	bool			m_ConnRight;		///< Right connection state
-	bool			m_Used;				///< Cell route use flag
+	TubeType		_TubeType;			///< Tube type
+	CellType		_CellType;			///< Cell type
+	float			_Angle;				///< Angle
+	bool			_State;				///< Cell connection state (true = active, false = passive)
+	bool			_Lock;				///< Cell lock status
+	bool			_ConnTop;			///< Top connection state
+	bool			_ConnBottom;		///< Bottom connection state
+	bool			_ConnLeft;			///< Left connection state
+	bool			_ConnRight;			///< Right connection state
+	bool			_Used;				///< Cell route use flag
 
 	//Rotate description
 	struct TUBE_ROTATION {
@@ -219,5 +215,5 @@ private:	//Class variables
 		bool			Twice;			///< Rotate twice flag (180 degree)
 		float			InitAngle;		///< Init rotate angle
 		float			NeedAngle;		///< Needed rotate angle
-	} m_Rotate;
+	} _Rotate;
 };

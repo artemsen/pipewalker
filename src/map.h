@@ -67,7 +67,7 @@ public:
 	 * Get "game over" flag
 	 * \return "game over" flag
 	 */
-	inline bool IsGameOver() const	{ return m_GameOver; }
+	inline bool IsGameOver() const	{ return _GameOver; }
 
 	/**
 	 * Get object's cell
@@ -94,7 +94,7 @@ public:
 	 * Get current map size
 	 * \return current map size
 	 */
-	MapSize GetMapSize() const	{ return static_cast<MapSize>(m_MapSize); }
+	MapSize GetMapSize() const	{ return static_cast<MapSize>(_MapSize); }
 
 
 private:
@@ -141,10 +141,10 @@ private:
 
 
 private:	//Class variables
-	vector<CCell>	m_CellMap;				///< Object's map
-	bool			m_GameOver;				///< Game over flag
-	bool			m_WrapMode;				///< Wrapping mode on/off flag
-	unsigned short	m_SenderX, m_SenderY;	///< Sender coordinates
-	unsigned short	m_ZeroX, m_ZeroY;		///< Zero point coordinates (sender out)
-	unsigned short	m_MapSize;				///< Map size
+	vector<CCell>	_CellMap;			///< Object's map
+	bool			_GameOver;			///< Game over flag
+	bool			_WrapMode;			///< Wrapping mode on/off flag
+	unsigned short	_SenderX, _SenderY;	///< Sender coordinates
+	unsigned short	_ZeroX, _ZeroY;		///< Zero point coordinates (sender out)
+	unsigned short	_MapSize;			///< Map size
 };

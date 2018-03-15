@@ -18,17 +18,16 @@
 
 #include "common.h"
 #include "synchro.h"
-#include "sound.h"
 #include "game.h"
-#include "texture.h"
-#include "rendertext.h"
 
 #if defined PW_USE_SDL		//SDL library
 	#include "winmgr_sdl.h"
 #elif defined PW_USE_WIN	//Microsoft Windows
 	#include "winmgr_win.h"
+#elif defined PW_USE_XSRV	//X server (experimental!)
+	#include "winmgr_xsrv.h"
 #else
-	#error Undefined window manager (PW_USE_SDL or PW_USE_WIN must be defined)
+	#error Undefined window manager (PW_USE_SDL, PW_USE_WIN or PW_USE_XSRV must be defined)
 #endif
 
 
@@ -53,33 +52,27 @@ int main(int /*argc*/, char** /*argv*/)
 #endif
 	//Program result status
 	int resultStatus = EXIT_SUCCESS;
-
+	
 	CGame game;
-
 #if defined PW_USE_SDL		//SDL library
 	CWinManagerSDL winMgr(game);
 #elif defined PW_USE_WIN	//Microsoft Windows
 	CWinManagerWin winMgr(game);
+#elif defined PW_USE_XSRV	//X server
+	CWinManagerXSrv winMgr(game);
 #else
-	#error Undefined window manager (PW_USE_SDL or PW_USE_WIN must be defined)
+#error Undefined window manager (PW_USE_SDL, PW_USE_WIN or PW_USE_XSRV must be defined)
 #endif
 
 	try {
-		winMgr.CreateGLWindow(PW_SCREEN_WIDTH, PW_SCREEN_HEIGHT);
-		winMgr.InitializeOpenGL(PW_SCREEN_WIDTH, PW_SCREEN_HEIGHT);
-
-		CSoundBank::Load();
 		CSynchro::Start();
-		CTextureBank::Load(game.Settings().Theme);
-		CRenderText::Load();
+		
+		winMgr.CreateGLWindow(PW_SCREEN_WIDTH, PW_SCREEN_HEIGHT);
+		winMgr.InitializeOpenGL(PW_SCREEN_WIDTH, PW_SCREEN_HEIGHT);		
 
 		game.Initialize(winMgr);
 		winMgr.MainLoop();
 		game.Finalize();
-	}
-	catch (const CException& ex) {
-		winMgr.ShowError(ex.what());
-		resultStatus = EXIT_FAILURE;
 	}
 	catch (exception& ex) {
 		winMgr.ShowError(ex.what());
@@ -89,10 +82,6 @@ int main(int /*argc*/, char** /*argv*/)
 		winMgr.ShowError("Unknown fatal error");
 		resultStatus = EXIT_FAILURE;
 	}
-
-	CRenderText::Free();
-	CTextureBank::Free();
-	CSoundBank::Free();
 
 	winMgr.OnApplicationExit();
 	return resultStatus;

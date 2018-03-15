@@ -56,25 +56,25 @@ public:
 	 * Copy buffer
 	 * \param copyBuf destination buffer
 	 */
-	void Copy(vector<unsigned char>& copyBuf) const	{ copyBuf = m_Data; }
+	void Copy(vector<unsigned char>& copyBuf) const	{ copyBuf = _Data; }
 
 	/**
 	 * Get end-of-buffer (EOB) flag
 	 * \return EOB flag
 	 */
-	inline bool EOB() const			{ return m_Offset >= m_Data.size(); }
+	inline bool EOB() const			{ return _Offset >= _Data.size(); }
 
 	/**
 	 * Get size of the buffer
 	 * \return buffer length in bytes
 	 */
-	inline size_t GetSize() const	{ return m_Data.size(); }
+	inline size_t GetSize() const	{ return _Data.size(); }
 
 	/**
 	 * Get offset
 	 * \return offset
 	 */
-	inline size_t GetOffset() const	{ return m_Offset; }
+	inline size_t GetOffset() const	{ return _Offset; }
 
 	/**
 	 * Set offset (current position) in buffer
@@ -135,6 +135,6 @@ public:
 	}
 
 private:	//Class variables
-	vector<unsigned char>	m_Data;		///< Data pointer
-	size_t					m_Offset;	///< Current position (offset) at the buffer
+	vector<unsigned char>	_Data;		///< Data pointer
+	size_t					_Offset;	///< Current position (offset) at the buffer
 };

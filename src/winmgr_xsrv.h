@@ -18,52 +18,42 @@
 
 #pragma once
 
-#include "common.h"
+#include "winmgr.h"
 
-class CGame;
+#ifdef PW_USE_XSRV
 
-#ifdef _MSC_VER
-#pragma warning(disable: 4512)	//assignment operator could not be generated
-#endif // _MSC_VER
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <X11/keysym.h>
+#include <X11/xpm.h>
+#include <GL/glx.h>
 
 
-class CExplosion
+class CWinManagerXSrv : public CWinManager
 {
 public:
-	/**
-	 * Constructor
-	 * \param game the game instance
-	 * \param x an initial X explosion position
-	 * \param y an initial Y explosion position
-	 */
-	CExplosion(CGame& game, const float x, const float y);
+	//! Default constructor
+	CWinManagerXSrv(CEventHandler& eventHandler);
 
-	/**
-	 * Render explosion
-	 */
-	void Render();
+public:
+	//From CWinManager
+	void CreateGLWindow(const int width, const int height);
+	void PostRedisplay();
+	void MainLoop();
+	void OnApplicationExit() {};
+	void ShowError(const char* err);
+	void PostExit();
 
-private:
-	/**
-	 * Renew explosion
-	 */
-	void Renew();
+
+protected:
+	//From CWinManager
+	void SwapBuffers() const;
 
 private:
-	//! Particles description
-	struct PARTICLE {
-		float	Life;		///< Life value
-		float	FadeSpeed;	///< Fade speed
-		float	PosX;		///< Position by X axis
-		float	PosY;		///< Position by Y axis
-		float	SpeedX;		///< Speed by X axis
-		float	SpeedY;		///< Speed by Y axis
-	};
-
-	vector<PARTICLE>	_Particles;	///< Particle Array
-	float				_X;			///< Initial X explosion position
-	float				_Y;			///< Initial Y explosion position
-	float				_Force;		///< Explosion force
-
-	CGame&				_Game;		///< Game instance
+	Display*	_Disp;	///< X display
+	Window		_Wnd;	///< X window
+	GLXContext	_Ctx;	///< X drawing context
+	bool		_Done;	///< Done flag (used for stopping drawing and destroy window)
 };
+
+#endif	//PW_USE_XSRV
