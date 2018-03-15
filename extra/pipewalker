@@ -1,4 +1,4 @@
 ?package(pipewalker):needs="X11" section="Games/Puzzles"\
   longtitle="Connect all hosts to network!"\
   icon="PipeWalker.xpm"\
-  title="Pipewalker" command="pipewalker"
+  title="PipeWalker" command="pipewalker"

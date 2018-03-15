@@ -1,9 +1,9 @@
-SUBDIRS = src textures extra
+SUBDIRS = src data extra
 
 pkgdocdatadir = $(datadir)/doc/$(PACKAGE)
 pkgdocdata_DATA = README
 
 EXTRA_DIST = $(pkgdocdata_DATA) \
-    PipeWalker.dsp \
-    PipeWalker.dsw \
-    PipeWalker.ico
+	PipeWalker.sln \
+	PipeWalker.vcproj \
+	PipeWalker.rc

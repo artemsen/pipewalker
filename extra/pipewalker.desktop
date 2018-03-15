@@ -5,6 +5,7 @@ Encoding=UTF-8
 Name=PipeWalker
 Comment=Connect all hosts to network!
 Comment[ru]=Объедините все компьютеры в сеть!
+Comment[fr]=Connectez tous les ordinateurs au réseau!
 TryExec=pipewalker
 Exec=pipewalker
 Categories=Game;LogicGame;

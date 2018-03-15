@@ -1,424 +1,527 @@
-/************************************************************************** 
- *  PipeWalker - simple puzzle game                                       * 
- *  Copyright (C) 2007-2008 by Artem A. Senichev <artemsen@gmail.com>     * 
- *                                                                        * 
- *  This program is free software: you can redistribute it and/or modify  * 
- *  it under the terms of the GNU General Public License as published by  * 
- *  the Free Software Foundation, either version 3 of the License, or     * 
- *  (at your option) any later version.                                   * 
- *                                                                        * 
- *  This program is distributed in the hope that it will be useful,       * 
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- *  GNU General Public License for more details.                          * 
- *                                                                        * 
- *  You should have received a copy of the GNU General Public License     * 
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>. * 
+/**************************************************************************
+ *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
+ *  Copyright (C) 2007-2009 by Artem A. Senichev <artemsen@gmail.com>     *
+ *                                                                        *
+ *  This program is free software: you can redistribute it and/or modify  *
+ *  it under the terms of the GNU General Public License as published by  *
+ *  the Free Software Foundation, either version 3 of the License, or     *
+ *  (at your option) any later version.                                   *
+ *                                                                        *
+ *  This program is distributed in the hope that it will be useful,       *
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *  GNU General Public License for more details.                          *
+ *                                                                        *
+ *  You should have received a copy of the GNU General Public License     *
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>. *
  **************************************************************************/
 
 #include "game.h"
+#include "sound.h"
+#include "synchro.h"
+#include "serializer.h"
+
+//Button identifiers
+#define PW_BTN_NEXT		1
+#define PW_BTN_PREV		2
+#define PW_BTN_RESET	3
+#define PW_BTN_INFO		4
+#define PW_BTN_OK		5
+
+//! Plain texture coordinates
+static const short PlainTex[] =			{ 0, 1, 0, 0, 1, 0, 1, 1 };
+//! Plain indices
+static const unsigned int PlainInd[] =	{ 0, 1, 2, 0, 2, 3 };
 
 
-CGame::CGame(void)
-: m_pMap(NULL), m_fGameOver(false), m_nMapSize(10), m_nReceiversNum(25)
+CGame::CGame()
+: m_NextMapId(1), m_Mode(InfoToPlay), m_ModeStartTime(0)
 {
 }
 
 
-CGame::~CGame(void)
+void CGame::StartGame()
 {
-	DestroyMap();
+	CGame game;
+
+	const float btnY = -5.2f;
+	const float btnW = 1.0f;
+	const float btnH = 1.0f;
+	game.m_BtnNext.Create( 2.0f, btnY, btnW, btnH, CTextureBank::Get(CTextureBank::TexButtonNext), PW_BTN_NEXT);
+	game.m_BtnPrev.Create(-3.0f, btnY, btnW, btnH, CTextureBank::Get(CTextureBank::TexButtonPrev), PW_BTN_PREV);
+	game.m_BtnReset.Create(-5.0f, btnY, btnW, btnH, CTextureBank::Get(CTextureBank::TexButtonReset), PW_BTN_RESET);
+	game.m_BtnInfo.Create(4.0f, btnY, btnW, btnH, CTextureBank::Get(CTextureBank::TexButtonInfo), PW_BTN_INFO);
+	game.m_BtnOk.Create(4.0f, btnY, btnW, btnH, CTextureBank::Get(CTextureBank::TexButtonOK), PW_BTN_OK);
+	game.DoMainLoop();
 }
 
 
-void CGame::New(const unsigned short nSize /*= 0*/, const unsigned short nReceiversNum /*= 0*/, const unsigned int nMapId /*= 0*/)
+void CGame::DoMainLoop()
 {
-	//Initialize map properties
-	if (nSize)
-		m_nMapSize = nSize;
-	if (nReceiversNum)
-		m_nReceiversNum = nReceiversNum;
+	//Load last saved map
+	string mapDescr;
+	if (CSerializer::Load(m_NextMapId, mapDescr))
+		m_Map.LoadMap(m_NextMapId, mapDescr.c_str());
+	else
+		m_Map.New(m_NextMapId);
 
-	//Initailze random sequence
-	m_nMapID = (nMapId == 0 ? ((GetRandom(0xFFF) << 24) | GetRandom(RAND_MAX)) + GetTickCount() : nMapId);
-#ifndef NDEBUG
-	int nTryCount = 0;
-#endif
-	srand(m_nMapID);
+	//First launch - make first transition (to make a new map)
+	m_ModeStartTime = CSynchro::GetTick();
 
-	m_fGameOver = false;
-	bool fInstallDone = false;
-	while (!fInstallDone) {
-#ifndef NDEBUG
-		nTryCount++;
-#endif
-		//Recreate map
-		DestroyMap();
-		CreateMap();
+	bool exitProgram = false;
 
-		//Install server
-		InstallSender();
-
-		//Install workstations
-		fInstallDone = true;
-		for (unsigned int i = 0; i < m_nReceiversNum && fInstallDone; i++)
-			fInstallDone &= InstallReceiver();
-	}
-#ifndef NDEBUG
-	printf("Generated map %ix%i/%i witdh ID 0x%08x after %i try\n", m_nMapSize, m_nMapSize, m_nReceiversNum, m_nMapID, nTryCount);
-	DefineConnectStatus();
-#else
-	Reset();
-#endif
-	return;
-}
-
-
-bool CGame::CheckGameOver(void)
-{
-	m_fGameOver = true;
-	for (unsigned int i = 0; (i < m_nMapSize * m_nMapSize) && m_fGameOver; i++) {
-		if (m_pMap[i].IsRotationInProgress())
-			m_fGameOver = false;
-		else if (m_pMap[i].Type == CCell::Receiver && !m_pMap[i].State)
-			m_fGameOver = false;
-	}
-	return m_fGameOver;
-}
-
-
-void CGame::Reset(void)
-{
-	m_fGameOver = false;
-	for (unsigned int i = 0; i < m_nMapSize * m_nMapSize; i++) {
-		if (m_pMap[i].Type != CCell::Free && !m_pMap[i].IsLocked() && GetRandom(10) > 0) {
-			m_pMap[i].StartRotate(GetRandom(10) > 5 ? CCell::Positive : CCell::Negative);
-			if (GetRandom(10) > 3) //Twice rotation
-				m_pMap[i].StartRotate(CCell::Positive);
+	while (!exitProgram) {
+		SDL_Event event;
+		if (SDL_WaitEvent(&event) == 0)
+			throw string("SDL_WaitEvent failed: ") + SDL_GetError();
+		switch (event.type) {
+			case SDL_MOUSEBUTTONDOWN:
+				OnMouseClick(event.button.button);
+				break;
+			case SDL_KEYDOWN:
+				if (event.key.keysym.sym == SDLK_ESCAPE)
+					exitProgram = true;
+				else if (event.key.keysym.sym == SDLK_n) {
+					if (m_NextMapId < 99999999) {
+						++m_NextMapId;
+						m_Explosions.clear();
+						m_Mode = PlayToPlay;
+						m_ModeStartTime = CSynchro::GetTick();
+					}
+					PostRedrawEvent();
+				}
+				else if (event.key.keysym.sym == SDLK_r) {
+					m_Map.ResetByRotate();
+					m_Explosions.clear();
+					PostRedrawEvent();
+				}
+				break;
+			case SDL_MOUSEMOTION:
+			case SDL_VIDEOEXPOSE:
+				RenderScene();
+				break;
+			case SDL_QUIT:
+				exitProgram = true;
+				break;
+			default:
+				break;
 		}
 	}
-	DefineConnectStatus();
+
+	//Save state
+	CSerializer::Save(m_Map.GetMapID(), m_Map.SaveMap().c_str());
 }
 
 
-void CGame::InstallSender(void)
+bool CGame::GetMousePosition(float& posX, float& posY)
 {
-	m_nXSndrPos = GetRandom(m_nMapSize);
-	m_nYSndrPos = GetRandom(m_nMapSize);
+	//Get current mouse pointer position
+	int mouseX, mouseY;
+	SDL_GetMouseState(&mouseX, &mouseY);
 
-	CCell* pSrv = GetObject(m_nXSndrPos, m_nYSndrPos);
-	pSrv->Type = CCell::Sender;
+	GLint glViewport[4];
+	glGetIntegerv(GL_VIEWPORT, glViewport);
 
-	//Define zero point (lan-start)
-	bool fZeroPointInstalled = false;
-	while (!fZeroPointInstalled) {
-		m_nXZeroPos = m_nXSndrPos;
-		m_nYZeroPos = m_nYSndrPos;
-		switch (GetRandom(4)) {
-			case 0: pSrv->Sides = CONNECT_RIGHT;	m_nXZeroPos++;	break;
-			case 1: pSrv->Sides = CONNECT_LEFT;		m_nXZeroPos--;	break;
-			case 2: pSrv->Sides = CONNECT_DOWN;		m_nYZeroPos++;	break;
-			case 3: pSrv->Sides = CONNECT_UP;		m_nYZeroPos--;	break;
+	if (mouseX < 0 || mouseX > glViewport[2] || mouseY < 0 || mouseY > glViewport[3])
+		return false;
+
+	GLdouble glProjection[16];
+	glGetDoublev(GL_PROJECTION_MATRIX, glProjection);
+
+	GLdouble glModelView[16];
+	glGetDoublev(GL_MODELVIEW_MATRIX, glModelView);
+
+	GLfloat depth;
+	glReadPixels(mouseX, glViewport[3] - mouseY, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depth);
+
+	GLdouble worldX, worldY, worldZ;
+	gluUnProject(static_cast<GLdouble>(mouseX), static_cast<GLdouble>(glViewport[3] - mouseY), depth, glModelView, glProjection, glViewport, &worldX, &worldY,& worldZ);
+
+	posX = static_cast<float>(worldX);
+	posY = static_cast<float>(worldY);
+	return true;
+}
+
+
+void CGame::PostRedrawEvent()
+{
+	SDL_Event event;
+	event.type = SDL_VIDEOEXPOSE;
+	SDL_PushEvent(&event);
+}
+
+
+void CGame::RenderScene()
+{
+	bool redarawIsNeeded = false;
+
+	float mouseX = 0.0f, mouseY = 0.0f;
+	GetMousePosition(mouseX, mouseY);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glLoadIdentity();
+
+	redarawIsNeeded |= RenderEnvironment(mouseX, mouseY);
+
+	//Transition calculate
+	float modeChanging = 1.0f;
+	if (m_Mode != Info && m_Mode != Play) {
+		if (!CSynchro::GetPhase(m_ModeStartTime, 1000, modeChanging)) {
+			//Transition complete
+			if (m_Mode == InfoToPlay || m_Mode == PlayToPlay)
+				m_Mode = Play;
+			else if (m_Mode == PlayToInfo)
+				m_Mode = Info;
+			redarawIsNeeded = true;
 		}
-		if (m_nXZeroPos >=0 && m_nYZeroPos >=0 && m_nXZeroPos < m_nMapSize && m_nYZeroPos < m_nMapSize)
-			fZeroPointInstalled = true;
 	}
 
-	//Set direction for zero point to server line
-	CCell* pZeroPoint = GetObject(m_nXZeroPos, m_nYZeroPos);
-	pZeroPoint->Type = CCell::Tube;
-	switch (pSrv->Sides) {
-		case CONNECT_RIGHT:	pZeroPoint->Sides = CONNECT_LEFT;	break;
-		case CONNECT_LEFT:	pZeroPoint->Sides = CONNECT_RIGHT;	break;
-		case CONNECT_UP:	pZeroPoint->Sides = CONNECT_DOWN;	break;
-		case CONNECT_DOWN:	pZeroPoint->Sides = CONNECT_UP;		break;
-	}
-
-	//Fill tables weight from zero point
-	FillMapWeight();
-
-#ifndef NDEBUG
-	printf("Map weight:\n");
-	printf("   | ");
-	for (unsigned int xt = 0; xt < m_nMapSize; xt++)
-		printf("%02i ", xt);
-	printf("\n");
-	printf("---+------------------------------\n");
-	for (unsigned int y = 0; y < m_nMapSize; y++) {
-		printf("%02i | ", y);
-		for (unsigned int x = 0; x < m_nMapSize; x++)
-			printf("% 2i ", GetObject(x, y)->Weight);
-		printf("\n");
-	}
-#endif	//NDEBUG
-}
-
-
-CCell* CGame::GetObject(const unsigned int nXPoint, const unsigned int nYPoint)
-{
-	//Check for Outside the map
-	assert(nXPoint >= 0 && nYPoint >= 0 && nXPoint < m_nMapSize && nYPoint < m_nMapSize);
-	assert(m_pMap != NULL);
-	return &m_pMap[nXPoint + nYPoint * m_nMapSize];
-}
-
-
-void CGame::FillMapWeight(int nXPoint /*= 0*/, int nYPoint /*= 0*/, int nWeight /*= 1*/)
-{
-	if (nWeight == 1) { //First iteration in this recursion
-		//Clear cell's weight
-		for (unsigned int i = 0; i < m_nMapSize * m_nMapSize; i++)
-			m_pMap[i].Weight = MAX_WEIGHT;
-
-		//Set weight for zero point
-		GetObject(m_nXZeroPos, m_nYZeroPos)->Weight = 0;
-		nXPoint = m_nXZeroPos;
-		nYPoint = m_nYZeroPos;
-	}
-
-	for (int i = -1; i <= 1; i++) {
-		for (int j = -1; j <= 1; j++) {
-			if ((i && j) || (!i && !j))
-				continue;	//Diagonal
-			int nX = nXPoint + i;
-			int nY = nYPoint + j;
-			if (nX < 0 || nX >= static_cast<int>(m_nMapSize) || nY < 0 || nY >= static_cast<int>(m_nMapSize))
-				continue;	//Not in map scope
-			CCell* pObj = GetObject(nX, nY);
-			if (pObj->Weight > nWeight) {
-				pObj->Weight = nWeight;
-				FillMapWeight(nX, nY, nWeight + 1);
+	if (m_Mode != Info /*any except info*/) {
+		float scale = 1.0f;
+		float rotate = 0.0f;
+		if (m_Mode == InfoToPlay) {
+			scale += 20.0f * (1.0f - modeChanging);
+			rotate = (1.0f - modeChanging) * -360.0f;
+		}
+		else if (m_Mode == PlayToInfo) {
+			scale += 20.0f * modeChanging;
+			rotate = modeChanging * 360.0f;
+		}
+		else if (m_Mode == PlayToPlay) {
+			if (modeChanging < 0.5f) {
+				scale += 20.0f * modeChanging;
+				rotate = modeChanging * 360.0f;
+			}
+			else {
+				if (m_NextMapId != m_Map.GetMapID())
+					m_Map.New(m_NextMapId);
+				scale += 20.0f * (1.0f - modeChanging);
+				rotate = (1.0f - modeChanging) * -360.0f;
 			}
 		}
-	}
-}
 
-
-bool CGame::InstallReceiver(void)
-{
-	//Get free cells
-	int nFreeCount = 0;
-	int* pFreeCoord = new int[m_nMapSize * m_nMapSize - 2];	// Maximum free cells minus server minus zero point
-	unsigned int i, j;
-	for (i = 0; i < m_nMapSize; i++) {
-		for (j = 0; j < m_nMapSize; j++) {
-			if (GetObject(i, j)->Type == CCell::Free && !(i == m_nXZeroPos && j == m_nYZeroPos))
-				pFreeCoord[nFreeCount++] = MAKELONG(i, j);
-		}
-	}
-	if (nFreeCount == 0) {
-		delete[] pFreeCoord;
-		return false;	//No more free cells
-	}
-
-	bool fResult = false;
-	int nTryCounter(9);
-	while (nTryCounter-- && !fResult) {
-
-		//Backup current map state
-		CCell* pBackupMap = new CCell[m_nMapSize * m_nMapSize];
-		for (unsigned int i = 0; i < m_nMapSize * m_nMapSize; i++)
-			pBackupMap[i] = m_pMap[i];
-
-		int nFreeCell = GetRandom(nFreeCount);
-		int nYFree = HIWORD(pFreeCoord[nFreeCell]);
-		int nXFree = LOWORD(pFreeCoord[nFreeCell]);
-		
-		CCell* pRcv = GetObject(nXFree, nYFree);
-		pRcv->Type = CCell::Receiver;
-
-		bool fUseMaxRoute = (GetRandom(10) < 7);
-		fResult = MakeRoute(nXFree, nYFree, fUseMaxRoute ? 0 : MAX_WEIGHT, fUseMaxRoute);
-
-		if (!fResult) {	//Restore map
-			for (unsigned int i = 0; i < m_nMapSize * m_nMapSize; i++)
-				m_pMap[i] = pBackupMap[i];
-		}
-		else {
-			//Clear Used flag
-			for (unsigned int i = 0; i < m_nMapSize * m_nMapSize; i++)
-				m_pMap[i].Used = false;
-		}
-		delete[] pBackupMap;
-	}
-	delete[] pFreeCoord;
-	return fResult;
-}
-
-
-bool CGame::MakeRoute(unsigned int nXPoint, unsigned int nYPoint, int /* TODO: nWeight*/, bool fUseMaxRoute)
-{
-	//Searching for maximal/minimal weigth and coordinates of neighbouring cell's
-	int nMinX = -1, nMinY = -1, nMinWeight = -1;	//Minimal coordinates/weight of new next cell
-	int nMaxX = -1, nMaxY = -1, nMaxWeight = -1;	//Maximal coordinates/weight of new next cell
-	for (int i = -1; i <= 1; i++) {
-		for (int j = -1; j <= 1; j++) {
-			if ((i && j) || (!i && !j)) continue;	//Diagonal
-			int nCheckXPoint = nXPoint + i;
-			int nCheckYPoint = nYPoint + j;
-			if (nCheckXPoint < 0)
-				nCheckXPoint = m_nMapSize - 1;
-			if (nCheckXPoint >= static_cast<int>(m_nMapSize))
-				nCheckXPoint = 0;
-			if (nCheckYPoint < 0)
-				nCheckYPoint = m_nMapSize - 1;
-			if (nCheckYPoint >= static_cast<int>(m_nMapSize))
-				nCheckYPoint = 0;
-
-			CCell* pObj = GetObject(nCheckXPoint, nCheckYPoint);
-
-			if (pObj->Used || !pObj->CanAddTube())
-				continue;
-
-			if (nMaxWeight == -1 || pObj->Weight >= nMaxWeight) {
-				nMaxX = nCheckXPoint;
-				nMaxY = nCheckYPoint;
-				nMaxWeight = pObj->Weight;
+		glPushMatrix();
+			if (m_Mode == InfoToPlay || m_Mode == PlayToInfo || m_Mode == PlayToPlay) {
+				glScalef(scale, scale, 1.0f);
+				glRotatef(rotate, 0.0f, 0.0f, 1.0f);
 			}
-			if (nMinWeight == -1 || pObj->Weight <= nMinWeight) {
-				nMinX = nCheckXPoint;
-				nMinY = nCheckYPoint;
-				nMinWeight = pObj->Weight;
+			redarawIsNeeded |= RenderPuzzle();
+		glPopMatrix();
+
+		if (m_Map.IsGameOver()) {
+			if (m_Explosions.empty()) {
+				//Create explosions
+				const unsigned short mapSize = m_Map.GetMapSize();
+				for (unsigned short y = 0; y < mapSize; y++) {
+					const GLfloat pozY = -(mapSize / 2) + 0.5f + y;
+					for (unsigned short x = 0; x < mapSize; x++) {
+						const GLfloat posX = -(mapSize / 2) + 0.5f + x;
+						const CCell& cell = m_Map.GetCell(x, y);
+						if (cell.GetCellType() == CCell::CTReceiver)
+							m_Explosions.push_back(CExplosion(posX, -pozY));
+					}
+				}
 			}
+
+			//Render winner explosions
+			for (list<CExplosion>::iterator itExpl = m_Explosions.begin(); itExpl != m_Explosions.end(); ++itExpl)
+				itExpl->Render();
+
+			redarawIsNeeded = true;
 		}
 	}
 
-	//Set coordinates and weight of new next cell
-	unsigned int nNewXPoint = (fUseMaxRoute ? nMaxX : nMinX);
-	unsigned int nNewYPoint = (fUseMaxRoute ? nMaxY : nMinY);
-	int nNewWeight = (fUseMaxRoute ? nMaxWeight : nMinWeight);
+	if (m_Mode == InfoToPlay || m_Mode == PlayToInfo || m_Mode == Info) {
+		float scale = 1.0f;
+		float rotate = 0.0f;
+		if (m_Mode == InfoToPlay) {
+			scale += 20.0f * modeChanging;
+			rotate = modeChanging * -360.0f;
+		}
+		else if (m_Mode == PlayToInfo) {
+			scale += 20.0f * (1.0f - modeChanging);
+			rotate = (1.0f - modeChanging) * -360.0f;
+		}
 
-	if (nNewWeight == -1) {	//New point not found...
-		if (fUseMaxRoute)
-			return MakeRoute(nXPoint, nYPoint, MAX_WEIGHT, false);	//Search minimal route
-		else
-			return false;	//Riched min point - we don't have a route
-	}
+		//Draw info pane
+		static const float CellVertex[] = { -5.0f, 5.0f, -5.0f, -5.0f, 5.0f, -5.0f, 5.0f, 5.0f };
+		glPushMatrix();
+			if (m_Mode == InfoToPlay || m_Mode == PlayToInfo) {
+				glScalef(scale, scale, 1.0f);
+				glRotatef(rotate, 0.0f, 0.0f, 1.0f);
+			}
+			glBindTexture(GL_TEXTURE_2D, CTextureBank::Get(CTextureBank::TexEnvInfo));
+			glVertexPointer(2, GL_FLOAT, 0, CellVertex);
+			glTexCoordPointer(2, GL_SHORT, 0, PlainTex);
+			glDrawElements(GL_TRIANGLES, (sizeof(PlainInd) / sizeof(PlainInd[0])), GL_UNSIGNED_INT, PlainInd);
+		glPopMatrix();
 
-	CCell* pCurrObj = GetObject(nNewXPoint, nNewYPoint);
-	pCurrObj->Used = true;
-	pCurrObj->Type = CCell::Tube;
-
-	//Add tube to current cell
-	CCell* pPrevObj = GetObject(nXPoint, nYPoint);
-
-	//Crossover
-	if (nNewXPoint == 0 && nXPoint == m_nMapSize - 1) {
-		pPrevObj->AddTube(CONNECT_RIGHT);
-		pCurrObj->AddTube(CONNECT_LEFT);
-	}
-	else if (nNewXPoint == m_nMapSize - 1 && nXPoint == 0) {
-		pPrevObj->AddTube(CONNECT_LEFT);
-		pCurrObj->AddTube(CONNECT_RIGHT);
-	}
-	else if (nNewYPoint == 0 && nYPoint == m_nMapSize - 1) {
-		pPrevObj->AddTube(CONNECT_DOWN);
-		pCurrObj->AddTube(CONNECT_UP);
-	}
-	else if (nNewYPoint == m_nMapSize - 1 && nYPoint == 0) {
-		pPrevObj->AddTube(CONNECT_UP);
-		pCurrObj->AddTube(CONNECT_DOWN);
-	}
-	//Usualy
-	else if (nNewXPoint < nXPoint) {
-		pPrevObj->AddTube(CONNECT_LEFT);
-		pCurrObj->AddTube(CONNECT_RIGHT);
-	}
-	else if (nNewXPoint > nXPoint) {
-		pPrevObj->AddTube(CONNECT_RIGHT);
-		pCurrObj->AddTube(CONNECT_LEFT);
-	}
-	else if (nNewYPoint < nYPoint) {
-		pPrevObj->AddTube(CONNECT_UP);
-		pCurrObj->AddTube(CONNECT_DOWN);
-	}
-	else if (nNewYPoint > nYPoint) {
-		pPrevObj->AddTube(CONNECT_DOWN);
-		pCurrObj->AddTube(CONNECT_UP);
 	}
 
-	if (!pCurrObj->CanAddTube())
-		return true;
+	SDL_GL_SwapBuffers();
 
-	return nNewWeight == 0 ? true : MakeRoute(nNewXPoint, nNewYPoint, nNewWeight, fUseMaxRoute);
+	redarawIsNeeded |= (m_Mode != Info && m_Mode != Play);
+
+	if (redarawIsNeeded)
+		PostRedrawEvent();
 }
 
 
-void CGame::RotateTube(CCell* pCell, const CCell::Direction enuDir)
+bool CGame::RenderEnvironment(const float mouseX, const float mouseY)
 {
-	assert(pCell);
-	if (!pCell->IsLocked()) {
-		pCell->StartRotate(enuDir);
-		DefineConnectStatus();
+	//Render environment background
+	glDisable(GL_DEPTH_TEST);
+	GLint glViewport[4];
+	glGetIntegerv(GL_VIEWPORT, glViewport);
+	const float wndWidth = static_cast<float>(glViewport[2]);
+	const float wndHeight = static_cast<float>(glViewport[3]);
+	const float vertBkgr[] = { 0.0f, wndHeight, 0.0f, 0.0f, wndWidth, 0.0f, wndWidth, wndHeight };
+	static const short texBkgr[] =	{ 0, 5, 0, 0, 3, 0, 3, 5 };
+	
+	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+		glLoadIdentity();
+		glOrtho(0, glViewport[2], 0, glViewport[3], -1, 1);
+		glMatrixMode(GL_MODELVIEW);
+		glPushMatrix();
+			glLoadIdentity();
+			glBindTexture(GL_TEXTURE_2D, CTextureBank::Get(CTextureBank::TexEnvBkgr));
+			glVertexPointer(2, GL_FLOAT, 0, vertBkgr);
+			glTexCoordPointer(2, GL_SHORT, 0, texBkgr);
+			glDrawElements(GL_TRIANGLES, (sizeof(PlainInd) / sizeof(PlainInd[0])), GL_UNSIGNED_INT, PlainInd);
+
+			const float vertTitle[] = { 10.0f, wndHeight - 5.0f, 10.0f, wndHeight - 50.0f, wndWidth - 10.0f, wndHeight - 50.0f, wndWidth - 10.0f, wndHeight - 5.0f };
+			glBindTexture(GL_TEXTURE_2D, CTextureBank::Get(CTextureBank::TexEnvTitle));
+			glVertexPointer(2, GL_FLOAT, 0, vertTitle);
+			glTexCoordPointer(2, GL_SHORT, 0, PlainTex);
+			glDrawElements(GL_TRIANGLES, (sizeof(PlainInd) / sizeof(PlainInd[0])), GL_UNSIGNED_INT, PlainInd);
+
+			glMatrixMode(GL_PROJECTION);
+		glPopMatrix();
+		glMatrixMode(GL_MODELVIEW);
+	glPopMatrix();
+	glEnable(GL_DEPTH_TEST);
+
+	//Render map ID
+	if (m_Mode == Play || m_Mode == PlayToPlay) {
+		static const float MapIdVertex[] = { -0.2f, 0.4f, -0.2f, -0.4f, 0.2f, -0.4f, 0.2f, 0.4f };
+		glPushMatrix();
+			glTranslatef(-2.25f, -5.7f, 0.0f);
+			char szMapId[64];
+			sprintf(szMapId, "%i", m_Map.GetMapID());
+			string mapIdAsString(szMapId);
+			while (mapIdAsString.length() < 8)
+				mapIdAsString = '0' + mapIdAsString;
+			for (size_t i = 0; i < 8; ++i) {
+				glTranslatef(0.5f, 0.0f, 0.0f);
+				glBindTexture(GL_TEXTURE_2D, CTextureBank::Get(static_cast<CTextureBank::TextureType>(CTextureBank::TexNum0 + (mapIdAsString[i] - '0'))));
+				glVertexPointer(2, GL_FLOAT, 0, MapIdVertex);
+				glTexCoordPointer(2, GL_SHORT, 0, PlainTex);
+				glDrawElements(GL_TRIANGLES, (sizeof(PlainInd) / sizeof(PlainInd[0])), GL_UNSIGNED_INT, PlainInd);
+			}
+		glPopMatrix();
 	}
+
+	//Buttons
+	if (m_Mode == Play) {
+		m_BtnNext.Render(mouseX, mouseY);
+		m_BtnPrev.Render(mouseX, mouseY);
+		m_BtnReset.Render(mouseX, mouseY);
+		m_BtnInfo.Render(mouseX, mouseY);
+	}
+	else if (m_Mode == Info) {
+		m_BtnOk.Render(mouseX, mouseY);
+	}
+
+	//Draw cell's background
+	const unsigned short mapSize = m_Map.GetMapSize();
+	//Set scale
+	glPushMatrix();
+	float scale = 10.0f / static_cast<float>(mapSize);
+	glScalef(scale, scale, scale);
+	for (unsigned short y = 0; y < mapSize; ++y) {
+		const float pozY = -(mapSize / 2) + 0.5f + y;
+		for (unsigned short x = 0; x < mapSize; ++x) {
+			const GLfloat posX = -(mapSize / 2) + 0.5f + x;
+			glPushMatrix();
+				glTranslatef(posX, -pozY, 0.0f);
+				RenderCell(CTextureBank::TexCellBackground);
+			glPopMatrix();
+		}
+	}
+	glPopMatrix();
+
+	return false;
 }
 
 
-void CGame::OnTubeRotated(CCell* pCell)
+bool CGame::RenderPuzzle()
 {
-	assert(pCell);
-	pCell->EndRotate();
-	DefineConnectStatus();
-	CheckGameOver();
+	const unsigned short mapSize = m_Map.GetMapSize();
+
+	//Set scale
+	glPushMatrix();
+	float scale = 10.0f / static_cast<float>(mapSize);
+	glScalef(scale, scale, scale);
+
+	bool redarawIsNeeded = false;
+
+	for (unsigned short y = 0; y < mapSize; ++y) {
+		const float pozY = -(mapSize / 2) + 0.5f + y;
+		for (unsigned short x = 0; x < mapSize; ++x) {
+			const float posX = -(mapSize / 2) + 0.5f + x;
+			CCell& cell = m_Map.GetCell(x, y);
+			const bool activeState = cell.IsActive();
+			glPushMatrix();
+				glTranslatef(posX, -pozY, 0.0f);
+
+				//Draw tube
+				if (cell.GetCellType() != CCell::CTFree) {
+					for (char shadow = 1; shadow >= 0; --shadow) {
+						glPushMatrix();
+							if (!shadow)
+								glColor4f(1.0f, 1.0, 1.0f, 1.0f);
+							else {
+								glColor4f(0.0f, 0.0, 0.0f, 0.6f);
+								glTranslatef(0.05f, -0.05f, 0.0f);
+							}
+							//redarawIsNeeded |= cell.ProcessRotation();
+							if (cell.ProcessRotation()) {
+								redarawIsNeeded = true;
+								CSoundBank::Play(CSoundBank::SndClatz);
+							}
+							glRotatef(cell.GetAngle(), 0.0f, 0.0f, 1.0f);
+
+							CTextureBank::TextureType texType = CTextureBank::TexCounter;
+							switch (cell.GetTubeType()) {
+								case CCell::TTHalf:		texType = (activeState ? CTextureBank::TexTubeHalfActive : CTextureBank::TexTubeHalfPassive);	break;
+								case CCell::TTStraight:	texType = (activeState ? CTextureBank::TexTubeStrActive : CTextureBank::TexTubeStrPassive);	break;
+								case CCell::TTCurved:	texType = (activeState ? CTextureBank::TexTubeCrvActive : CTextureBank::TexTubeCrvPassive);	break;
+								case CCell::TTJoiner:	texType = (activeState ? CTextureBank::TexTubeJnrActive : CTextureBank::TexTubeJnrPassive);	break;
+								default:
+									assert(false && "Unknown tube type");
+									break;
+							}
+							RenderCell(texType);
+							redarawIsNeeded |= cell.IsRotationInProgress();
+						glPopMatrix();
+					}
+				}
+
+				//Draw objects
+				switch (cell.GetCellType()) {
+					case CCell::CTFree:	//Free cell
+					case CCell::CTTube:	//Will be drawn later
+						break;	
+					case CCell::CTSender:
+						RenderCell(CTextureBank::TexSender);
+						break;
+					case CCell::CTReceiver:
+						RenderCell(activeState ? CTextureBank::TexReceiverActive : CTextureBank::TexReceiverPassive);
+						break;
+					default:
+						assert(false && "Unknown object type");
+						break;
+				}
+
+				//Draw lock
+				if (cell.IsLocked()) {
+					glDisable(GL_DEPTH_TEST);
+						RenderCell(CTextureBank::TexLock);
+					glEnable(GL_DEPTH_TEST);
+				}
+			glPopMatrix();
+		}
+	}
+
+	glPopMatrix();
+
+	if (redarawIsNeeded)
+		m_Map.DefineConnectStatus();
+
+	return redarawIsNeeded;
 }
 
 
-void CGame::DefineConnectStatus(int nXPoint /*= -1*/, int nYPoint /*= -1*/)
+void CGame::RenderCell(const CTextureBank::TextureType type) const
 {
-	if (nXPoint < 0) {
-		//This is the first recursive call
-		unsigned int i, j;
-		//Reset conection status
-		for (i = 0; i < m_nMapSize * m_nMapSize; i++)
-			m_pMap[i].State = false;
+ 	//Single cell vertex coordinates
+ 	static const float CellVertex[] = { -0.5f, 0.5f, -0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f };
+ 
+ 	glBindTexture(GL_TEXTURE_2D, CTextureBank::Get(type));
+ 	glVertexPointer(2, GL_FLOAT, 0, CellVertex);
+ 	glTexCoordPointer(2, GL_SHORT, 0, PlainTex);
+ 	glDrawElements(GL_TRIANGLES, (sizeof(PlainInd) / sizeof(PlainInd[0])), GL_UNSIGNED_INT, PlainInd);
+}
 
-		//For each sender on map (but it is only one :-))
-		for (i = 0; i < m_nMapSize; i++)
-			for (j = 0; j < m_nMapSize; j++)
-				if (GetObject(i, j)->Type == CCell::Sender)
-					DefineConnectStatus(i, j);
+
+void CGame::OnMouseClick(const Uint8 button)
+{
+	float posX = 0.0f, posY = 0.0f;
+	if (!GetMousePosition(posX, posY))
 		return;
+
+	if (button == SDL_BUTTON_LEFT) {
+		if (m_Mode == Play) {
+			if (m_BtnNext.IsMouseOver(posX, posY)) {
+				m_Explosions.clear();
+				if (m_NextMapId < 99999999) {
+					++m_NextMapId;
+					m_Explosions.clear();
+					m_Mode = PlayToPlay;
+					m_ModeStartTime = CSynchro::GetTick();
+				}
+			}
+			else if (m_BtnPrev.IsMouseOver(posX, posY)) {
+				if (m_NextMapId > 1) {
+					--m_NextMapId;
+					m_Explosions.clear();
+					m_Mode = PlayToPlay;
+					m_ModeStartTime = CSynchro::GetTick();
+				}
+			}
+			else if (m_BtnReset.IsMouseOver(posX, posY)) {
+				m_Explosions.clear();
+				m_Map.ResetByRotate();
+			}
+			else if (m_BtnInfo.IsMouseOver(posX, posY)) {
+				m_Mode = PlayToInfo;
+				m_ModeStartTime = CSynchro::GetTick();
+			}
+		}
+		else if (m_Mode == Info) {
+			if (m_BtnOk.IsMouseOver(posX, posY)) {
+				m_Mode = InfoToPlay;
+				m_ModeStartTime = CSynchro::GetTick();
+			}
+		}
 	}
 
-	CCell* pObj = GetObject(nXPoint, nYPoint);
-	if (pObj->State || pObj->IsRotationInProgress())
-		return;	//Already connected or rotate in progress
+	if (m_Mode == Play && !m_Map.IsGameOver() && posX > -5.0f && posX < 5.0f && posY > -5.0f && posY < 5.0f) {	//point in game field
+		const float scale = 10.0f / static_cast<float>(m_Map.GetMapSize());
+		const unsigned short x = static_cast<unsigned short>((posX + 5.0f) / scale);
+		const unsigned short y = m_Map.GetMapSize() - 1 - static_cast<unsigned short>((posY + 5.0f) / scale);
+		
+		CCell& cell = m_Map.GetCell(x, y);
+		if (cell.GetCellType() != CCell::CTFree) {
+			switch (button) {
+				case SDL_BUTTON_MIDDLE:
+					cell.ReverseLock();
+					break;
+				case SDL_BUTTON_LEFT:
+				case SDL_BUTTON_RIGHT:
+					cell.Rotate(button != SDL_BUTTON_LEFT);
+					m_Map.DefineConnectStatus();
+					break;
+				default:
+					break;
+			}
+		}
+	}		
+	PostRedrawEvent();
+}
 
-	pObj->State = true;
 
-	//to up
-	if (pObj->Sides & CONNECT_UP) {
-		int nCheckXPoint = nXPoint;
-		int nCheckYPoint = (nYPoint - 1 < 0) ? m_nMapSize - 1 : nYPoint - 1;
-		CCell* pNextObj = GetObject(nCheckXPoint, nCheckYPoint);
-		if (pNextObj->Sides & CONNECT_DOWN)
-			DefineConnectStatus(nCheckXPoint, nCheckYPoint);
-	}
+void CGame::RenderInfo()
+{
 
-	//to down
-	if (pObj->Sides & CONNECT_DOWN) {
-		int nCheckXPoint = nXPoint;
-		int nCheckYPoint = (nYPoint + 1 >= static_cast<int>(m_nMapSize)) ? 0 : nYPoint + 1;
-		CCell* pNextObj = GetObject(nCheckXPoint, nCheckYPoint);
-		if (pNextObj->Sides & CONNECT_UP)
-			DefineConnectStatus(nCheckXPoint, nCheckYPoint);
-	}
-
-	//to left
-	if (pObj->Sides & CONNECT_LEFT) {
-		int nCheckXPoint = (nXPoint - 1 < 0) ? m_nMapSize - 1 : nXPoint - 1;
-		int nCheckYPoint = nYPoint;
-		CCell* pNextObj = GetObject(nCheckXPoint, nCheckYPoint);
-		if (pNextObj->Sides & CONNECT_RIGHT)
-			DefineConnectStatus(nCheckXPoint, nCheckYPoint);
-	}
-
-	//to right
-	if (pObj->Sides & CONNECT_RIGHT) {
-		int nCheckXPoint = (nXPoint + 1 >= static_cast<int>(m_nMapSize)) ? 0 : nXPoint + 1;
-		int nCheckYPoint = nYPoint;
-		CCell* pNextObj = GetObject(nCheckXPoint, nCheckYPoint);
-		if (pNextObj->Sides & CONNECT_LEFT)
-			DefineConnectStatus(nCheckXPoint, nCheckYPoint);
-	}
 }

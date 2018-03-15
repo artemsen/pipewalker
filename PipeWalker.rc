@@ -1,0 +1,60 @@
+/**************************************************************************
+ *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
+ *  Copyright (C) 2007-2009 by Artem A. Senichev <artemsen@gmail.com>     *
+ *                                                                        *
+ *  This program is free software: you can redistribute it and/or modify  *
+ *  it under the terms of the GNU General Public License as published by  *
+ *  the Free Software Foundation, either version 3 of the License, or     *
+ *  (at your option) any later version.                                   *
+ *                                                                        *
+ *  This program is distributed in the hope that it will be useful,       *
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *  GNU General Public License for more details.                          *
+ *                                                                        *
+ *  You should have received a copy of the GNU General Public License     *
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>. *
+ **************************************************************************/
+
+#include "src\PipeWalkerRes.h"
+
+
+//Version
+
+IDR_VERSION VERSIONINFO
+ FILEVERSION 0,5,1,0
+ PRODUCTVERSION 0,5,1,0
+ FILEFLAGSMASK 0x17L
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x4L
+ FILETYPE 0x0L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "000004b0"
+        BEGIN
+            VALUE "FileDescription", "PipeWalker game"
+            VALUE "FileVersion", "0, 5, 1, 0"
+            VALUE "InternalName", "PipeWalker"
+            VALUE "LegalCopyright", "Copyright (C) 2009 Artem A. Senichev"
+            VALUE "OriginalFilename", "PipeWalker.exe"
+            VALUE "ProductName", "PipeWalker game"
+            VALUE "ProductVersion", "0, 5, 1, 0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0, 1200
+    END
+END
+
+
+//Icon
+
+IDI_PIPEWALKER          ICON                    "extra\\pipewalker.ico"
+

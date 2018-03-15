@@ -1,3 +1,11 @@
+PipeWalker 0.5.1 2009-05-15
+---------------------------
+ * game ported to SDL + OpenGL
+ * added simple audio support
+ * added possibility to save/load last map
+ * removed capability to change window size
+ * removed different map size
+
 PipeWalker 0.4.3 2008-05-19
 ---------------------------
  * full install/uninstall support (using automake/autoconf)
