@@ -1,0 +1,71 @@
+.TH PIPEWALKER 6 2020-06-11 "Pipewalker 0.9.4" "Pipewalker Manual"
+.SH NAME
+pipewalker \- combination puzzle game
+.SH SYNOPSIS
+.B pipewalker
+[\fB\-help\fR]
+[\fB\-version\fR]
+[\fB\-id=\fR\fILEVEL\fR]
+[\fB\-wrap=\fR\fIWRAP\fR]
+[\fB\-size=\fR\fISIZE\fR]
+.SH DESCRIPTION
+.B pipewalker
+is a puzzle game in which you need to combine the components into a single
+circuit: connect all computers to a network server, bring water to the taps,
+etc.
+.SH OPTIONS
+.TP
+.BR \-help
+Show help information.
+.TP
+.BR \-version
+Show version information.
+.TP
+.BR \-id=\fILEVEL\fR
+Start the level with the specified ID (a number from 1 up to 99999999).
+.TP
+.BR \-wrap=\fIWRAP\fR
+Set wrap mode (0: disable, 1: enable).
+Default: 1.
+.TP
+.BR \-size=\fISIZE\fR
+Set level map size (small, normal, big or extra).
+Default: normal.
+.SH FILES
+.I /usr/share/games/pipewalker/
+.PP
+.RS
+Data directory for \fBpipewalker\fR themes.
+.RE
+.PP
+.I /usr/share/doc/pipewalker/examples/scheme.png
+.PP
+.RS
+Template file for \fBpipewalker\fR themes.
+.RE
+.SH NOTES
+.B pipewalker
+supports various themes.
+Themes are stored as a set of textures in a PNG file. All themes must be
+512x448 pixels in size, and comply to the template provided on the
+.UR http://\:pipewalker.sourceforge.net/\:themes/\:scheme.png
+project homepage
+.UE .
+On Debian systems, the template can be found in
+\fI/usr/share/doc/pipewalker/examples/scheme.png\fR.
+
+To add a new theme, copy the PNG file to the \fI/usr/share/games/pipewalker\fR
+data directory.  The file name is used as the theme name.
+.SH EXAMPLE
+To start pipewalker on the level 1234, with wrap mode disabled, and using big
+as the level map size:
+.PP
+.RS
+.B $ pipewalker \-id=1234 \-wrap=0 \-size=big
+.RE
+.SH AUTHORS
+.B pipewalker
+was written by Artem Senichev <artemsen@gmail.com>.
+
+This manual page was written by David da Silva Polverari
+<david.polverari@gmail.com> for the Debian project (but may be used by others).
