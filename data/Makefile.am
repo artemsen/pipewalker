@@ -5,6 +5,7 @@ pkgdata_DATA = \
 	Hellsfire.png \
 	Linux.png \
 	Network.png \
+	NewYear.png \
 	Plumbing.png \
 	Simple.png
 
