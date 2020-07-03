@@ -1,0 +1,14 @@
+#!/bin/bash -eu
+
+cd ..
+make clean || true
+
+#mkdir -p 1
+#rm -rf 1/*
+
+autoreconf -fi
+
+#./configure --prefix=$PWD/1 --enable-debug
+./configure --enable-debug
+make -j8
+#make install

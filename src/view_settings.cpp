@@ -1,10 +1,4 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2020 Artem Senichev <artemsen@gmail.com>
 
-#include "settings.hpp"
-
-settings& settings::instance()
-{
-    static settings inst;
-    return inst;
-}
+#include "view.hpp"

@@ -1,89 +1,81 @@
-/**************************************************************************
- *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2012 by Artem Senichev <artemsen@gmail.com>        *
- *                                                                        *
- *  This program is free software: you can redistribute it and/or modify  *
- *  it under the terms of the GNU General Public License as published by  *
- *  the Free Software Foundation, either version 3 of the License, or     *
- *  (at your option) any later version.                                   *
- *                                                                        *
- *  This program is distributed in the hope that it will be useful,       *
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *  GNU General Public License for more details.                          *
- *                                                                        *
- *  You should have received a copy of the GNU General Public License     *
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- **************************************************************************/
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2020 Artem Senichev <artemsen@gmail.com>
 
-#include "mtrandom.h"
+#include "mtrandom.hpp"
 
-#define MTR_RAND	397
-#define MTR_TWIDDLE(u, v) ((((u & 0x80000000UL) | (v & 0x7fffffffUL)) >> 1) ^ ((v & 1UL) ? 0x9908b0dfUL : 0x0UL))
+#include <cassert>
 
+namespace mtrandom {
 
-mtrandom::mtrandom()
-: _pos(0)
+/** @brief Number of iterations for MT19937. */
+static constexpr const uint32_t iter_num = 624;
+/** @brief Middle word number. */
+static constexpr const uint32_t middle = 397;
+/** @brief State array. */
+static uint32_t states[iter_num];
+/** @brief Current state array index. */
+static uint32_t state_index;
+
+/** @brief Twiddle. */
+constexpr uint32_t twiddle(uint32_t u, uint32_t v)
 {
+    return (((u & 0x80000000UL) | (v & 0x7fffffffUL)) >> 1) ^ ((v & 1UL) ? 0x9908b0dfUL : 0x0UL);
 }
 
-
-mtrandom& mtrandom::instance()
+/**
+ * @brief Regenerate state array.
+ */
+static void generate_state()
 {
-	static mtrandom i;
-	return i;
+    for (uint32_t i = 0; i < iter_num - middle; ++i) {
+        states[i] = states[i + middle] ^ twiddle(states[i], states[i + 1]);
+    }
+    for (uint32_t i = iter_num - middle; i < iter_num - 1; ++i) {
+        states[i] = states[i + middle - iter_num] ^ twiddle(states[i], states[i + 1]);
+    }
+    states[iter_num - 1] = states[middle - 1] ^ twiddle(states[iter_num - 1], states[0]);
+    state_index = 0;
 }
 
-
-void mtrandom::seed(const unsigned long seed)
+/**
+ * @brief Get random number.
+ *
+ * @return random number.
+ */
+static uint32_t random()
 {
-	mtrandom& inst = instance();
-
-	inst._state[0] = seed & 0xffffffffUL;	//For > 32 bit machines
-	for (unsigned long i = 1; i < MTR_STATE_ARRAY_SIZE; ++i) {
-		inst._state[i] = 1812433253UL * (inst._state[i - 1] ^ (inst._state[i - 1] >> 30)) + i;
-		inst._state[i] &= 0xffffffffUL;		//For > 32 bit machines
-	}
-	inst._pos = MTR_STATE_ARRAY_SIZE; //Force generate_state() to be called for next random number
+    if (state_index == iter_num) {
+        generate_state(); // new state array is needed
+    }
+    uint32_t n = states[state_index++];
+    n ^= (n >> 11);
+    n ^= (n << 7) & 0x9d2c5680UL;
+    n ^= (n << 15) & 0xefc60000UL;
+    return (n ^ (n >> 18));
 }
 
-
-float mtrandom::random(const float min_val, const float max_val)
+void seed(uint32_t seed)
 {
-	const float r = min_val + static_cast<float>(instance().random() % static_cast<unsigned long>(((max_val - min_val) * 1000.f))) / 1000.0f;
-	assert(r >= min_val && r <= max_val);
-	return r;
-
+    states[0] = seed;
+    for (uint32_t i = 1; i < iter_num; ++i) {
+        states[i] = 1812433253UL * (states[i - 1] ^ (states[i - 1] >> 30)) + i;
+    }
+    state_index = iter_num; // force regenerate state array
 }
 
-
-int mtrandom::random(const int min_val, const int max_val)
+float get(float min_val, float max_val)
 {
-	const int r = min_val + (instance().random() % (max_val - min_val));
-	assert(r >= min_val && r <= max_val);
-	return r;
-
+    const int32_t d = static_cast<int32_t>((max_val - min_val) * 1000.0f);
+    const float n = min_val + static_cast<float>(random() % d) / 1000.0f;
+    assert(n >= min_val && n <= max_val);
+    return n;
 }
 
-
-void mtrandom::generate_state()
+uint32_t get(uint32_t min_val, uint32_t max_val)
 {
-	for (int i = 0; i < (MTR_STATE_ARRAY_SIZE - MTR_RAND); ++i)
-		_state[i] = _state[i + MTR_RAND] ^ MTR_TWIDDLE(_state[i], _state[i + 1]);
-	for (int i = MTR_STATE_ARRAY_SIZE - MTR_RAND; i < (MTR_STATE_ARRAY_SIZE - 1); ++i)
-		_state[i] = _state[i + MTR_RAND - MTR_STATE_ARRAY_SIZE] ^ MTR_TWIDDLE(_state[i], _state[i + 1]);
-	_state[MTR_STATE_ARRAY_SIZE - 1] = _state[MTR_RAND - 1] ^ MTR_TWIDDLE(_state[MTR_STATE_ARRAY_SIZE - 1], _state[0]);
-	_pos = 0;	//Reset position
+    const uint32_t n = min_val + (random() % (max_val - min_val));
+    assert(n >= min_val && n <= max_val);
+    return n;
 }
 
-
-unsigned long mtrandom::random()
-{
-	if (_pos == MTR_STATE_ARRAY_SIZE)
-		generate_state(); //New state vector needed
-	unsigned long x = _state[_pos++];
-	x ^= (x >> 11);
-	x ^= (x << 7) & 0x9d2c5680UL;
-	x ^= (x << 15) & 0xefc60000UL;
-	return (x ^ (x >> 18));
-}
+}; // namespace mtrandom

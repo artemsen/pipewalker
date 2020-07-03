@@ -1,56 +1,60 @@
 bin_PROGRAMS = pipewalker
-pipewalker_SOURCES = \
-	button.cpp button.h \
-	cell.cpp cell.h \
-	common.h \
-	explosion.cpp explosion.h \
-	game.cpp game.h \
-	image.cpp image.h \
-	level.cpp level.h \
-	loading_xpm.h \
-	main.cpp \
-	mode.h \
-	mode_puzzle.cpp mode_puzzle.h \
-	mode_settings.cpp mode_settings.h \
-	mtrandom.cpp mtrandom.h \
-	render.cpp render.h \
-	settings.cpp settings.h \
-	sound.cpp sound.h
 
-if WIN32
-pipewalker_DEPENDENCIES = pipewalker_win32_res.o
-pipewalker_LDADD = pipewalker_win32_res.o
+pipewalker_SOURCES = \
+	main.cpp \
+	cell.cpp \
+	cell.hpp \
+	level.cpp \
+	level.hpp \
+	level_ui.cpp \
+	level_ui.hpp \
+	mtrandom.cpp \
+	mtrandom.hpp \
+	render.cpp \
+	render.hpp \
+	settings.hpp \
+	settings.cpp \
+	sound.hpp \
+	sound.cpp \
+	ui_console.cpp \
+	ui_console.hpp \
+	ui_sdl.cpp \
+	ui_sdl.hpp \
+	view.hpp \
+	view_level.cpp \
+	view_settings.cpp
+
+if DEBUG
+AM_CPPFLAGS = -DGAME_DATA_DIR='"$(top_srcdir)/res"'
+else
+AM_CPPFLAGS = -DGAME_DATA_DIR='"$(datadir)/$(PACKAGE)"'
 endif
 
-pipewalker_win32_res.rc:
-	@echo "#include <windows.h>" > pipewalker_win32_res.rc
-	@echo "0 ICON \"..\\\\extra\\\\pipewalker.ico\"" >> pipewalker_win32_res.rc
-	@echo "LANGUAGE 0, SUBLANG_NEUTRAL" >> pipewalker_win32_res.rc
-	@echo "1 VERSIONINFO" >> pipewalker_win32_res.rc
-	@echo "  FILEVERSION    `echo $(VERSION) | $(AWK) 'ORS=""; { subs = gsub(/\./,","); print $0; for (ndx=subs; ndx < 3; ndx++) print ",0"; }'`" >> pipewalker_win32_res.rc
-	@echo "  PRODUCTVERSION `echo $(VERSION) | $(AWK) 'ORS=""; { subs = gsub(/\./,","); print $0; for (ndx=subs; ndx < 3; ndx++) print ",0"; }'`" >> pipewalker_win32_res.rc
-	@echo "  FILEOS         VOS__WINDOWS32" >> pipewalker_win32_res.rc
-	@echo "  FILEFLAGSMASK  VFT2_UNKNOWN" >> pipewalker_win32_res.rc
-	@echo "  FILETYPE       VFT_UNKNOWN" >> pipewalker_win32_res.rc
-	@echo "BEGIN" >> pipewalker_win32_res.rc
-	@echo "  BLOCK \"StringFileInfo\"" >> pipewalker_win32_res.rc
-	@echo "  BEGIN" >> pipewalker_win32_res.rc
-	@echo "    BLOCK \"000004b0\"" >> pipewalker_win32_res.rc
-	@echo "    BEGIN" >> pipewalker_win32_res.rc
-	@echo "      VALUE \"FileDescription\", \"PipeWalker game\"" >> pipewalker_win32_res.rc
-	@echo "      VALUE \"FileVersion\", \"$(VERSION)\"" >> pipewalker_win32_res.rc
-	@echo "      VALUE \"InternalName\", \"PipeWalker\"" >> pipewalker_win32_res.rc
-	@echo "      VALUE \"LegalCopyright\", \"Copyright (C) 2007-2012 Artem Senichev\"" >> pipewalker_win32_res.rc
-	@echo "      VALUE \"OriginalFilename\", \"PipeWalker.exe\"" >> pipewalker_win32_res.rc
-	@echo "      VALUE \"ProductName\", \"PipeWalker game\"" >> pipewalker_win32_res.rc
-	@echo "      VALUE \"ProductVersion\", \"$(VERSION)\"" >> pipewalker_win32_res.rc
-	@echo "    END" >> pipewalker_win32_res.rc
-	@echo "  END" >> pipewalker_win32_res.rc
-	@echo "  BLOCK \"VarFileInfo\"" >> pipewalker_win32_res.rc
-	@echo "  BEGIN" >> pipewalker_win32_res.rc
-	@echo "    VALUE \"Translation\", 0x0, 1200" >> pipewalker_win32_res.rc
-	@echo "  END" >> pipewalker_win32_res.rc
-	@echo "END" >> pipewalker_win32_res.rc
-
-pipewalker_win32_res.o: pipewalker_win32_res.rc
-	@windres $^ -o $@
+#if WIN32
+#AM_CPPFLAGS = -DPW_GAMEDATADIR='"data\\\\"'
+#else
+#AM_CPPFLAGS = -DPW_GAMEDATADIR='"$(datadir)/$(PACKAGE)/"'
+#endif
+#
+#WIN32_RESOURCES_SRC_IN = win32_resources.rc.in
+#EXTRA_DIST = $(WIN32_RESOURCES_IN)
+#
+#if WIN32
+#WIN32_RESOURCES_SRC = $(abs_builddir)/win32_resources.rc
+#WIN32_RESOURCES_OBJ = $(abs_builddir)/win32_resources.o
+#pipewalker_DEPENDENCIES = $(WIN32_RESOURCES_OBJ)
+#pipewalker_LDADD = $(WIN32_RESOURCES_OBJ)
+#
+#$(WIN32_RESOURCES_SRC): $(WIN32_RESOURCES_SRC_IN)
+#	$(SED) -e "s/\@ver_str\@/$(VERSION)/g" \
+#	       -e "s/\@ver_comma\@/$$(echo "$(VERSION).0" | $(SED) 's/\./,/g')/g" $< > $@
+#
+#$(WIN32_RESOURCES_OBJ): $(WIN32_RESOURCES_SRC)
+#	windres $< -o $@
+#
+## Clean generated files
+#clean-local: clean-local-tmp
+#.PHONY: clean-local-tmp
+#clean-local-tmp:
+#	-rm -f $(WIN32_RESOURCES_SRC) $(WIN32_RESOURCES_OBJ)
+#endif

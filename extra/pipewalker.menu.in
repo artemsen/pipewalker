@@ -1,0 +1,6 @@
+?package(pipewalker):needs="X11" \
+  section="Games/Puzzles" \
+  longtitle="Connect all hosts to network!" \
+  icon="@datarootdir@/pixmaps/pipewalker.xpm" \
+  title="PipeWalker" \
+  command="@bindir@/pipewalker"
