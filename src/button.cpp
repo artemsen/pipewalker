@@ -82,7 +82,7 @@ bool button::draw(const float alpha /*= 1.0f*/)
 
 
 button_chbox::button_chbox(const bool state, const float x, const float y, const float scale, const int id /* = 0 */)
-:	button(_state ? render::btn_cb_on : render::btn_cb_off, _state ? render::btn_cb_on_s : render::btn_cb_off_s, x, y, scale, id),
+:	button(state ? render::btn_cb_on : render::btn_cb_off, state ? render::btn_cb_on_s : render::btn_cb_off_s, x, y, scale, id),
 	_state(state), _state_trans(0)
 {
 }
