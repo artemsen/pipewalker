@@ -318,7 +318,8 @@ struct Image {
 
     Image tile(size_t x, size_t y, size_t w, size_t h) const
     {
-        const size_t cell_size = 32;
+        //const size_t cell_size = 32;
+        const size_t cell_size = width / 16;
 
         // calculate cell position and size in pixels
         const size_t offset_x = x * cell_size;
@@ -343,8 +344,10 @@ struct Image {
         if (img.height & (img.height - 1)) {
             // append new lines, up to width size
             assert(img.height < img.width);
-            assert(img.height < 256);
-            const size_t add_lines = 256 - img.height;
+            //assert(img.height < 256);
+            //const size_t add_lines = 256 - img.height;
+            assert(img.height < 512);
+            const size_t add_lines = 512 - img.height;
             img.data.insert(img.data.end(), add_lines * img.width, 0);
             img.height += add_lines;
         }
@@ -484,23 +487,25 @@ void load_textures(const char* file)
     // todo: delete old textures
 
     Image img(file);
-    if (img.width != 512 || img.height != 448) {
-        throw std::runtime_error("Invalid image size: nexpected 512x448");
-    }
+    //if (img.width != 512 || img.height != 448) {
+    //    throw std::runtime_error("Invalid image size: nexpected 512x448");
+    //}
 
     for (const auto& tx : tex_map) {
         const Image tile = img.tile(tx.x, tx.y, tx.width, tx.height);
 
-        const GLint wrap = tx.type == Texture::bkg_env || tx.type == Texture::bkg_cell ? GL_REPEAT : GL_CLAMP_TO_EDGE;
+        //const GLint wrap = tx.type == Texture::bkg_env || tx.type == Texture::bkg_cell ? GL_REPEAT : GL_CLAMP_TO_EDGE;
 
         // create OpenGL texture
         GLuint id = 0;
         glGenTextures(1, &id);
         glBindTexture(GL_TEXTURE_2D, id);
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap);
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap);
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, static_cast<GLsizei>(tile.width), static_cast<GLsizei>(tile.height), 0,
                      GL_RGBA, GL_UNSIGNED_BYTE, tile.data.data());
 

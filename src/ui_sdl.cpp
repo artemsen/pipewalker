@@ -182,7 +182,8 @@ void start()
     sdl.init();
 
     render::initialize();
-    render::load_textures(GAME_DATA_DIR "/Simple.png");
+    render::load_textures(GAME_DATA_DIR "/default.png");
+    //render::load_textures(GAME_DATA_DIR "/Simple.png");
 
     sdl.run();
 }
