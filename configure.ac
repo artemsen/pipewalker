@@ -70,7 +70,7 @@ AS_IF([test "${WIN32}" = "yes"],
 # Set compiler/linker flags
 AS_IF([test "${WIN32}" = "yes"],
 	[CXXFLAGS="$CXXFLAGS -DPW_GAMEDATADIR='\"data\\\\\"'"],
-	[CXXFLAGS="$CXXFLAGS -DPW_GAMEDATADIR='\"$datadir/$PACKAGE/\"'"]
+	[CXXFLAGS="$CXXFLAGS -DPW_GAMEDATADIR='\"$datadir/games/$PACKAGE/\"'"]
 )
 LIBS="$LIBS $OPENGL_LIBS"
 AS_IF([test "${WIN32}" = "yes"],
