@@ -1,4 +1,4 @@
-pkgdatadir = $(datadir)/$(PACKAGE)
+pkgdatadir = $(datadir)/games/$(PACKAGE)
 pkgdata_DATA = \
 	clatz.wav \
 	complete.wav \
