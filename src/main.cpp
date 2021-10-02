@@ -238,7 +238,7 @@ bool parse_cmd_params(int argc, char* argv[], unsigned long& lvl_id, level::size
 			MessageBoxA(NULL, msg, "PipeWalker " PACKAGE_VERSION, MB_OK | MB_ICONINFORMATION);
 #else
 			printf("PipeWalker version " PACKAGE_VERSION "\n");
-			printf(msg);
+			printf("%s", msg);
 #endif // WIN32
 			app_exit = true;
 		}
