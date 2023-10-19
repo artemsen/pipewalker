@@ -185,7 +185,12 @@ bool settings::serializer::load(string& settings_file)
 		settings_file = getenv("USERPROFILE");
 		settings_file += '\\';
 #else
-		settings_file = getenv("HOME");
+		char* xdg_config_home = getenv("XDG_CONFIG_HOME");
+		if (xdg_config_home) settings_file = xdg_config_home;
+		else {
+			settings_file = getenv("HOME");
+			settings_file += "/.config";
+		}
 		settings_file += '/';
 #endif //WIN32
 		settings_file += PWS_FILENAME;
