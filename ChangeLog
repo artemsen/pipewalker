@@ -1,3 +1,7 @@
+PipeWalker 0.9.5+
+---------------------------
+ * See git log for details
+
 PipeWalker 0.9.4 2012-03-19
 ---------------------------
  * correct handle of 'maximize' button (MW Windows)
