@@ -8,5 +8,5 @@ Comment[fr]=Connectez tous les ordinateurs au réseau!
 TryExec=pipewalker
 Exec=pipewalker
 Categories=Game;LogicGame;
-Icon=pipewalker.xpm
+Icon=pipewalker
 Keywords=circuit;combination;components;connect;game;logic;puzzle;

@@ -1,269 +1,479 @@
-/**************************************************************************
- *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2012 by Artem Senichev <artemsen@gmail.com>        *
- *                                                                        *
- *  This program is free software: you can redistribute it and/or modify  *
- *  it under the terms of the GNU General Public License as published by  *
- *  the Free Software Foundation, either version 3 of the License, or     *
- *  (at your option) any later version.                                   *
- *                                                                        *
- *  This program is distributed in the hope that it will be useful,       *
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *  GNU General Public License for more details.                          *
- *                                                                        *
- *  You should have received a copy of the GNU General Public License     *
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- **************************************************************************/
+// SPDX-License-Identifier: MIT
+// Main game class.
+// Copyright (C) 2024 Artem Senichev <artemsen@gmail.com>
 
-#include "game.h"
-#include "render.h"
-#include "settings.h"
-#include "sound.h"
-#include "mtrandom.h"
-#ifndef WIN32
-#include <dirent.h>
-#endif //WIN32
+#include "game.hpp"
 
-#define PW_SWAP_MODE_SPEED     500
-#define PW_THEME_FILE_EXT      ".png"
+#include "buildcfg.h"
 
+struct LevelSize {
+    size_t size;
+    const char* name;
+};
+static const LevelSize level_sizes[] = {
+    { 10, "10 x 10" },
+    { 15, "15 x 15" },
+    { 20, "20 x 20" },
+    { 30, "30 x 30" },
+};
 
-game::game()
-:	_need_redisplay(true),
-	_wnd_width(PW_SCREEN_WIDTH), _wnd_height(PW_SCREEN_HEIGHT),
-	_mouse_x(0.0f), _mouse_y(0.0f),
-	_curr_mode(NULL), _next_mode(NULL),
-	_trans_stime(0)
+Game::Game(SDL_Window* wnd, SDL_Renderer* renderer)
+    : window(wnd)
+    , render(renderer)
+    , puzzle_mode(true)
 {
 }
 
-
-game& game::instance()
+bool Game::initialize(const State& state)
 {
-	static game i;
-	return i;
+    SDL_Surface* skin_image = skin.initialize(state.skin);
+    if (!skin_image) {
+        printf("Failed to load textures\n");
+        return false;
+    }
+    render.load(skin_image);
+    SDL_FreeSurface(skin_image);
+
+    sound.initialize();
+    sound.enable = state.sound;
+
+    level.id = state.level_id;
+    level.width = state.level_width;
+    level.height = state.level_height;
+    level.wrap = state.level_wrap;
+    level.generate();
+
+    int width = 480, height = 640;
+    SDL_GetWindowSize(window, &width, &height);
+    layout.resize(width, height);
+    layout.update(level.width, level.height);
+
+    if (level.load(state.level_pipes)) {
+        level.update();
+    } else {
+        reset_level(true);
+    }
+
+    return true;
 }
 
-
-bool game::initialize(const unsigned long lvl_id, const level::size lvl_sz, const bool lvl_wrap)
+void Game::handle_event(const SDL_Event& event)
 {
-	settings::load();
-	if (lvl_id)
-		settings::set_state(lvl_id, lvl_sz, lvl_wrap, "Dummy");
-
-	//Initialize render subsystem
-	render& renderer = render::instance();
-	renderer.initialize();
-
-	//Load texture image
-	string file_name = PW_GAMEDATADIR;
-	file_name += settings::theme();
-	file_name += PW_THEME_FILE_EXT;
-	if (!renderer.load(file_name.c_str())) {
-		//Try to load first available theme
-		if (!load_next_theme(true)) {
-			fprintf(stderr, "Critical error\nNo one available themes found\n");
-			return false;
-		}
-	}
-
-	//Initialize randomizer
-	mtrandom::seed(0xabcdef);
-
-	//Initialize sound subsystem
-	sound::instance().initialize();
-
-	//Initialize modes
-	_mode_puzzle.initialize();
-	_mode_sett.initialize(_mode_puzzle.current_level_size(), _mode_puzzle.current_wrap_mode(),
-		settings::rndlvl_mode(), settings::sound_mode());
-	_curr_mode = &_mode_puzzle;
-
-	return true;
+    switch (event.type) {
+        case SDL_KEYDOWN:
+            switch (event.key.keysym.sym) {
+                case SDLK_ESCAPE:
+                case SDLK_q:
+                    if (!puzzle_mode) {
+                        puzzle_mode = true;
+                    } else {
+                        SDL_Event quit {};
+                        quit.type = SDL_QUIT;
+                        SDL_PushEvent(&quit);
+                    }
+                    break;
+                case SDLK_s:
+                    sound.enable = !sound.enable;
+                    break;
+                case SDLK_r:
+                    if (puzzle_mode) {
+                        reset_level(false);
+                    }
+                    break;
+                case SDLK_n:
+                    if (puzzle_mode && level.id < level.max_id) {
+                        ++level.id;
+                        reset_level(true);
+                    }
+                    break;
+                case SDLK_p:
+                    if (puzzle_mode && level.id > 1) {
+                        --level.id;
+                        reset_level(true);
+                    }
+                    break;
+            }
+            break;
+        case SDL_MOUSEBUTTONDOWN:
+            on_mouse_click(event.motion.x, event.motion.y, event.button.button);
+            break;
+        case SDL_WINDOWEVENT:
+            if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
+                const SDL_WindowEvent& ev = event.window;
+                layout.resize(ev.data1, ev.data2);
+            }
+            break;
+    }
 }
 
-
-void game::finalize()
+void Game::update()
 {
-	_mode_puzzle.save_current_level();
-	settings::save();
+    level.update();
+
+    if (level.state.level_complete) {
+        if (fireworks.empty()) {
+            sound.play(Sound::Complete);
+            create_fireworks();
+        }
+        // update fireworks
+        for (auto& it : fireworks) {
+            it.update();
+        }
+    }
+
+    if (!level.state.level_complete && level.state.rotation_complete) {
+        sound.play(Sound::Clatz);
+    }
 }
 
-
-void game::draw_scene()
+void Game::draw()
 {
-	_need_redisplay = false;
-	render& renderer = render::instance();
+    render.clear();
+    render.fill_background(layout.window.w, layout.window.h);
+    render.draw(Render::Title, layout.title);
 
-	renderer.draw_begin();
+    // cells background
+    SDL_Rect dst = { 0, 0, static_cast<int>(layout.cell_size),
+                     static_cast<int>(layout.cell_size) };
+    for (size_t y = 0; y < level.height; ++y) {
+        for (size_t x = 0; x < level.width; ++x) {
+            dst.x = layout.field.x + x * layout.cell_size;
+            dst.y = layout.field.y + y * layout.cell_size;
+            render.draw(Render::CellBkg, dst);
+        }
+    }
 
-	float trn_step = 1.0f;
-	if (_trans_stime != 0) {
-		assert(_next_mode);
-		_need_redisplay = true;
-		const unsigned int diff_time = SDL_GetTicks() - _trans_stime;
-		if (diff_time < PW_SWAP_MODE_SPEED) {
-			//Transition in progress
-			trn_step = static_cast<float>(diff_time) / static_cast<float>(PW_SWAP_MODE_SPEED);
-			_next_mode->draw(trn_step);
-			trn_step = 1.0f - trn_step;	//Invert
-		}
-		else {
-			//Transition complete
-			_trans_stime = 0;
-			_curr_mode = _next_mode;
-			_next_mode = NULL;
-		}
-	}
+    if (puzzle_mode) {
+        draw_puzzle();
+    } else {
+        draw_settings();
+    }
 
-	_need_redisplay |= _curr_mode->draw(trn_step);
-
-	renderer.draw_end();
+    render.flush();
 }
 
-
-void game::on_mouse_move(const int x, const int y)
+void Game::save(State& state) const
 {
-	//Calculate new mouse world coordinates
-	assert(x >= 0 && x <= _wnd_width && y >= 0 && y <= _wnd_height);
-	_mouse_x = static_cast<float>(x) * (PW_BASE_WIDTH / static_cast<float>(_wnd_width)) - PW_BASE_WIDTH / 2.0f;
-	_mouse_y = PW_ASPECT_RATIO * (PW_BASE_WIDTH / 2.0f - static_cast<float>(y) * (PW_BASE_WIDTH / static_cast<float>(_wnd_height)));
-
-#ifndef NDEBUG
-	printf("Mouse motion: %03i %03i on %.02f %.02f\n", x, y, _mouse_x, _mouse_y);
-#endif //NDEBUG
-
-	_need_redisplay |= _curr_mode->on_mouse_move(_mouse_x, _mouse_y);
+    state.level_id = level.id;
+    state.level_width = level.width;
+    state.level_height = level.height;
+    state.level_wrap = level.wrap;
+    state.level_pipes = level.save();
+    state.skin = skin.name;
+    state.sound = sound.enable;
 }
 
-
-void game::on_mouse_click(const Uint8 btn)
+void Game::draw_puzzle()
 {
-#ifndef NDEBUG
-	printf("Mouse button click: %i on %.02f %.02f\n", btn, _mouse_x, _mouse_y);
-#endif //NDEBUG
+    SDL_Rect dst = { 0, 0, static_cast<int>(layout.cell_size),
+                     static_cast<int>(layout.cell_size) };
 
-	if (_trans_stime != 0)
-		return;	//No action in time of transition between modes
+    // pipes shadow
+    const int shadow_shift = layout.cell_size / 20;
+    for (size_t y = 0; y < level.height; ++y) {
+        for (size_t x = 0; x < level.width; ++x) {
+            const Cell& cell = level.get_cell({ x, y });
+            dst.x = layout.field.x + x * layout.cell_size + shadow_shift;
+            dst.y = layout.field.y + y * layout.cell_size + shadow_shift;
+            Render::TextureId tid;
+            switch (cell.pipe) {
+                case Pipe::Half:
+                    tid = Render::PipeHalfShadow;
+                    break;
+                case Pipe::Straight:
+                    tid = Render::PipeStrShadow;
+                    break;
+                case Pipe::Bent:
+                    tid = Render::PipeBentShadow;
+                    break;
+                case Pipe::Fork:
+                    tid = Render::PipeForkShadow;
+                    break;
+                default:
+                    continue;
+            }
+            render.draw(tid, dst, cell.angle(), 0.3);
+        }
+    }
 
-	_need_redisplay = true;
-	if (_curr_mode->on_mouse_click(_mouse_x, _mouse_y, btn))
-		swap_mode();
+    // pipes
+    for (size_t y = 0; y < level.height; ++y) {
+        for (size_t x = 0; x < level.width; ++x) {
+            Render::TextureId tid;
+            const Cell& cell = level.get_cell({ x, y });
+            dst.x = layout.field.x + x * layout.cell_size;
+            dst.y = layout.field.y + y * layout.cell_size;
+            switch (cell.pipe) {
+                case Pipe::Half:
+                    tid =
+                        cell.active ? Render::PipeHalfOn : Render::PipeHalfOff;
+                    break;
+                case Pipe::Straight:
+                    tid = cell.active ? Render::PipeStrOn : Render::PipeStrOff;
+                    break;
+                case Pipe::Bent:
+                    tid =
+                        cell.active ? Render::PipeBentOn : Render::PipeBentOff;
+                    break;
+                case Pipe::Fork:
+                    tid =
+                        cell.active ? Render::PipeForkOn : Render::PipeForkOff;
+                    break;
+                default:
+                    continue;
+            }
+            render.draw(tid, dst, cell.angle());
+        }
+    }
+
+    // cell objects
+    for (size_t y = 0; y < level.height; ++y) {
+        for (size_t x = 0; x < level.width; ++x) {
+            const Cell& cell = level.get_cell({ x, y });
+            dst.x = layout.field.x + x * layout.cell_size;
+            dst.y = layout.field.y + y * layout.cell_size;
+            switch (cell.object) {
+                case Cell::Sender:
+                    render.draw(Render::Sender, dst);
+                    break;
+                case Cell::Receiver:
+                    if (cell.active) {
+                        render.draw(Render::ReceiverOn, dst);
+                    } else {
+                        render.draw(Render::ReceiverOff, dst);
+                    }
+                    break;
+                default:
+                    break;
+            }
+            if (cell.locked) {
+                render.draw(Render::Lock, dst);
+            }
+        }
+    }
+
+    // buttons
+    render.draw(Render::ButtonReset, layout.reset);
+    render.draw(Render::ButtonPrev, layout.lvlprev);
+    render.draw(Render::ButtonNext, layout.lvlnext);
+    render.draw(Render::ButtonSettings, layout.settings);
+
+    // level Id
+    char level_id[32];
+    sprintf(level_id, "%08u", level.id);
+    const size_t font_sz = layout.reset->h * 0.7;
+    const size_t width = render.text_width(level_id, font_sz);
+    render.draw_text(level_id, font_sz,
+                     layout.window.w / 2 - width / 2 - font_sz / 10,
+                     layout.field.y + layout.field.h + font_sz / 3);
+
+    // draw particles
+    for (auto& it : fireworks) {
+        render.draw(Render::Firework, it.current, it.angle, it.alpha);
+    }
 }
 
-
-bool game::on_key_press(const SDLKey key)
+void Game::draw_settings()
 {
-#ifndef NDEBUG
-	printf("Pressed key: %02i (%s)\n", key, SDL_GetKeyName(key));
-#endif //NDEBUG
+    size_t width;
+    const size_t font_sz = layout.base_size * 0.8;
+    const size_t font_fix = font_sz / 10; // to center on a button
 
-	if (_trans_stime != 0)
-		return false;	//No action in time of transition between modes
-	if (key == SDLK_ESCAPE) {
-		if (_curr_mode == &_mode_sett)
-			swap_mode();
-		else
-			return true;
-	}
-	return false;
+    // level size switch
+    const char* lvlsize = "Level size:";
+    width = render.text_width(lvlsize, font_sz);
+    render.draw_text(lvlsize, font_sz, layout.window.w / 2 - width / 2,
+                     layout.lvlsize[0]->y - font_sz);
+    for (size_t i = 0; i < sizeof(level_sizes) / sizeof(level_sizes[0]); ++i) {
+        render.draw(layout.lvlsize[i].checked ? Render::ButtonCbOn
+                                              : Render::ButtonCbOff,
+                    layout.lvlsize[i]);
+        render.draw_text(level_sizes[i].name, layout.lvlsize[i]->h,
+                         layout.lvlsize[i]->x + layout.lvlsize[i]->w,
+                         layout.lvlsize[i]->y + font_fix);
+    }
+
+    // wrap mode switch
+    render.draw(layout.wrap.checked ? Render::ButtonCbOn : Render::ButtonCbOff,
+                layout.wrap);
+    render.draw_text("Wrap mode", layout.wrap->h,
+                     layout.wrap->x + layout.wrap->w,
+                     layout.wrap->y + font_fix);
+
+    // sound control
+    render.draw(sound.enable ? Render::ButtonCbOn : Render::ButtonCbOff,
+                layout.sound);
+    render.draw_text("Sound", layout.sound->h,
+                     layout.sound->x + layout.sound->w,
+                     layout.sound->y + font_fix);
+
+    // skin switch
+    const char* skin_label = "Skin";
+    width = render.text_width(skin_label, font_sz);
+    render.draw_text(skin_label, font_sz, layout.window.w / 2 - width / 2,
+                     layout.skinprev->y - layout.skinprev->h * 1.2);
+    width = render.text_width(skin.name.c_str(), font_sz);
+    render.draw_text(skin.name.c_str(), font_sz,
+                     layout.window.w / 2 - width / 2, layout.skinprev->y);
+    render.draw(Render::ButtonPrev, layout.skinprev);
+    render.draw(Render::ButtonNext, layout.skinnext);
+
+    // version info
+    std::string version = "Version " + std::string(APP_VERSION);
+    const size_t delim = version.find('-');
+    if (delim != std::string::npos) {
+        version.resize(delim);
+    }
+    const size_t ver_font_sz = layout.base_size * 0.6;
+    width = render.text_width(version.c_str(), ver_font_sz);
+    render.draw_text(
+        version.c_str(), ver_font_sz,
+        layout.field.x + (layout.settings->x - layout.field.x) / 2 - width / 2,
+        layout.settings->y + layout.settings->h / 2 - ver_font_sz / 2);
+
+    render.draw(Render::ButtonOk, layout.settings);
 }
 
-
-void game::on_window_resize(const int width, const int height)
+void Game::on_mouse_click(int x, int y, int button)
 {
-	_wnd_width = width;
-	_wnd_height = height;
-	render::instance().on_window_resize(_wnd_width, _wnd_height);
+    if (puzzle_mode) {
+        on_mouse_click_puzzle(x, y, button);
+    } else {
+        on_mouse_click_settings(x, y, button);
+    }
 }
 
-
-bool game::load_next_theme(const bool direction)
+void Game::on_mouse_click_puzzle(int x, int y, int button)
 {
-	vector<string> themes;
+    if (!level.state.level_complete && x >= layout.field.x &&
+        x < layout.field.x + layout.field.w && y >= layout.field.y &&
+        y < layout.field.y + layout.field.h) {
+        Position pos;
+        pos.x = static_cast<float>(x - layout.field.x) / layout.cell_size;
+        pos.y = static_cast<float>(y - layout.field.y) / layout.cell_size;
+        Cell& cell = level.get_cell(pos);
 
-#ifdef WIN32
-	string find_path = PW_GAMEDATADIR;
-	find_path += "*" PW_THEME_FILE_EXT;
-	WIN32_FIND_DATAA find_data;
-	HANDLE find_handle = FindFirstFileA(find_path.c_str(), &find_data);
-	if (find_handle != INVALID_HANDLE_VALUE) {
-		do {
-			if (!(find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
-				themes.push_back(find_data.cFileName);
-		}
-		while (FindNextFileA(find_handle, &find_data));
-		FindClose(find_handle);
-	}
+        if (!cell.locked &&
+            (button == SDL_BUTTON_LEFT || button == SDL_BUTTON_RIGHT)) {
+            level.rotate(pos, button == SDL_BUTTON_LEFT);
+        } else if (button == SDL_BUTTON_MIDDLE && cell.pipe != Pipe::None) {
+            cell.locked = !cell.locked;
+        }
+    } else if (layout.reset.own(x, y)) {
+        reset_level(false);
+    } else if (layout.lvlprev.own(x, y)) {
+        if (level.id > 1) {
+            --level.id;
+            reset_level(true);
+        }
+    } else if (layout.lvlnext.own(x, y)) {
+        if (level.id < level.max_id) {
+            ++level.id;
+            reset_level(true);
+        }
+    } else if (layout.settings.own(x, y)) {
+        puzzle_mode = false;
+        layout.wrap.checked = level.wrap;
+        for (size_t i = 0; i < sizeof(level_sizes) / sizeof(level_sizes[0]);
+             ++i) {
+            layout.lvlsize[i].checked = (level.width == level_sizes[i].size &&
+                                         level.height == level_sizes[i].size);
+        }
+    }
+}
 
+void Game::on_mouse_click_settings(int x, int y, int /*button*/)
+{
+    SDL_Surface* skin_image = nullptr;
+
+    if (layout.settings.own(x, y)) {
+        bool regen_level = false;
+        if (layout.wrap.checked != level.wrap) {
+            level.wrap = layout.wrap.checked;
+            regen_level = true;
+        }
+        for (size_t i = 0; i < sizeof(level_sizes) / sizeof(level_sizes[0]);
+             ++i) {
+            if (layout.lvlsize[i].checked) {
+                const size_t lvl_sz = level_sizes[i].size;
+                if (level.width != lvl_sz || level.height != lvl_sz) {
+                    level.width = lvl_sz;
+                    level.height = lvl_sz;
+                    regen_level = true;
+                    break;
+                }
+            }
+        }
+        if (regen_level) {
+            reset_level(true);
+        }
+        puzzle_mode = true;
+    } else if (layout.wrap.own(x, y)) {
+        layout.wrap.checked = !layout.wrap.checked;
+    } else if (layout.sound.own(x, y)) {
+        sound.enable = !sound.enable;
+    } else if (layout.skinprev.own(x, y)) {
+        skin_image = skin.prev();
+    } else if (layout.skinnext.own(x, y)) {
+        skin_image = skin.next();
+    } else {
+        // handle level size switch
+        int index = -1;
+        for (size_t i = 0; index < 0 &&
+             i < sizeof(layout.lvlsize) / sizeof(layout.lvlsize[0]);
+             ++i) {
+            if (layout.lvlsize[i].own(x, y)) {
+                index = i;
+            }
+        }
+        if (index >= 0) {
+            for (size_t i = 0;
+                 i < sizeof(layout.lvlsize) / sizeof(layout.lvlsize[0]); ++i) {
+                layout.lvlsize[i].checked = (static_cast<size_t>(index) == i);
+            }
+        }
+    }
+
+    if (skin_image) {
+        render.load(skin_image);
+        SDL_FreeSurface(skin_image);
+    }
+}
+
+void Game::reset_level(bool regen)
+{
+    fireworks.clear();
+
+    if (regen) {
+        level.generate();
+        layout.update(level.width, level.height);
+    }
+
+#ifdef DEBUG
+    level.get_cell(level.sender).rotate(false);
 #else
-	DIR* dir = opendir(PW_GAMEDATADIR);
-	if (dir) {
-		dirent* ent = NULL;
-		while ((ent = readdir(dir))) {
-			if (strstr(ent->d_name, PW_THEME_FILE_EXT))
-				themes.push_back(ent->d_name);
-		}
-		closedir(dir);
-	}
-#endif //WIN32
+    level.reset();
+#endif // DEBUG
 
-	const size_t themes_sz = themes.size();
-	if (themes_sz == 0)
-		return false;	//Not themes found?
-
-	//Find current position
-	const string curr_theme_file = string(settings::theme()) + PW_THEME_FILE_EXT;
-	int curr_theme_id = -1;
-	for (size_t i = 0; curr_theme_id  < 0 && i < themes_sz; ++i) {
-		if (themes[i].compare(curr_theme_file) == 0)
-			curr_theme_id = static_cast<int>(i);
-	}
-
-	//Try to load next available theme
-	int try_count = static_cast<int>(themes_sz);
-	while (--try_count >= 0) {
-		string new_theme_file = PW_GAMEDATADIR;
-		if (curr_theme_id < 0)
-			new_theme_file += themes.front();	//Current theme not found
-		else {
-			curr_theme_id += (direction ? 1 : -1);
-			if (curr_theme_id < 0)
-				curr_theme_id = static_cast<int>(themes_sz - 1);
-			else if (curr_theme_id >= static_cast<int>(themes_sz))
-				curr_theme_id = 0;
-			new_theme_file += themes[curr_theme_id];
-		}
-		if (render::instance().load(new_theme_file.c_str())) {
-			string theme_name = new_theme_file;
-			theme_name.erase(0, theme_name.find_last_of("\\/") + 1); //Erase path
-			theme_name.erase(theme_name.length() - 4);               //Erase file extension
-			settings::theme(theme_name.c_str());
-			break;
-		}
-	}
-
-	return try_count >= 0;
+    level.update();
 }
 
-
-void game::swap_mode()
+void Game::create_fireworks()
 {
-	assert(!_next_mode);
-
-	if (_curr_mode == &_mode_sett) {
-		//May be we need change size/mode
-		_mode_puzzle.on_settings_changed(_mode_sett.level_size(), _mode_sett.wrap_mode());
-		settings::sound_mode(_mode_sett.sound_mode());
-		settings::rndlvl_mode(_mode_sett.random_mode());
-		_next_mode = &_mode_puzzle;
-	}
-	else {
-		_mode_sett.reset();
-		_next_mode = &_mode_sett;
-	}
-
-	_need_redisplay = true;
-	_trans_stime = SDL_GetTicks();
+    fireworks.clear();
+    fireworks.reserve(((level.width * level.height) / 5) * 2);
+    for (size_t y = 0; y < level.height; ++y) {
+        for (size_t x = 0; x < level.width; ++x) {
+            const Cell& cell = level.get_cell({ x, y });
+            if (cell.object == Cell::Receiver) {
+                SDL_Rect rect;
+                rect.x = layout.field.x + x * layout.cell_size;
+                rect.y = layout.field.y + y * layout.cell_size;
+                rect.w = layout.cell_size / 2;
+                rect.h = layout.cell_size / 2;
+                fireworks.push_back(Firework(rect));
+                fireworks.push_back(Firework(rect));
+            }
+        }
+    }
 }

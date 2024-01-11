@@ -2,47 +2,32 @@
 .SH NAME
 pipewalker \- combination puzzle game
 .SH SYNOPSIS
-.B pipewalker
-[\fB\-help\fR]
-[\fB\-version\fR]
-[\fB\-id=\fR\fILEVEL\fR]
-[\fB\-wrap=\fR\fIWRAP\fR]
-[\fB\-size=\fR\fISIZE\fR]
+pipewalker [\fIOPTIONS\fR]...
 .SH DESCRIPTION
 .B pipewalker
 is a puzzle game in which you need to combine the components into a single
 circuit: connect all computers to a network server, bring water to the taps,
 etc.
 .SH OPTIONS
-.TP
-.BR \-help
-Show help information.
-.TP
-.BR \-version
-Show version information.
-.TP
-.BR \-id=\fILEVEL\fR
+.IP "\fB\-h\fR, \fB\-\-help\fR"
+Display help message and exit.
+.IP "\fB\-v\fR, \fB\-\-version\fR"
+Display version information and exit.
+.IP "\fB\-i\fR, \fB\-\-id\fR\fB=\fR\fIID\fR:"
 Start the level with the specified ID (a number from 1 up to 99999999).
-.TP
-.BR \-wrap=\fIWRAP\fR
-Set wrap mode (0: disable, 1: enable).
-Default: 1.
-.TP
-.BR \-size=\fISIZE\fR
-Set level map size (small, normal, big or extra).
-Default: normal.
+.IP "\fB\-c\fR, \fB\-\-width\fR\fB=\fR\fICOLUMNS\fR:"
+Set level width (a number from 10 to 50).
+.IP "\fB\-r\fR, \fB\-\-height\fR\fB=\fR\fIROWS\fR:"
+Set level height (a number from 10 to 50).
+.IP "\fB\-w\fR, \fB\-\-no\-wrap\fR"
+Disable wrap mode.
+.IP "\fB\-s\fR, \fB\-\-no\-sound\fR"
+Disable sound.
 .SH FILES
 .I /usr/share/games/pipewalker/
 .PP
 .RS
 Data directory for \fBpipewalker\fR themes.
-.RE
-.PP
-.I /usr/share/doc/pipewalker/examples/scheme.png
-.PP
-.RS
-Template file for \fBpipewalker\fR themes.
-.RE
 .SH NOTES
 .B pipewalker
 supports various themes.
@@ -61,11 +46,8 @@ To start pipewalker on the level 1234, with wrap mode disabled, and using big
 as the level map size:
 .PP
 .RS
-.B $ pipewalker \-id=1234 \-wrap=0 \-size=big
+.B $ pipewalker \-\-id=1234 \-\-no\-wrap \-\-width=10 \-\-height=20
 .RE
 .SH AUTHORS
-.B pipewalker
-was written by Artem Senichev <artemsen@gmail.com>.
-
 This manual page was written by David da Silva Polverari
 <david.polverari@gmail.com> for the Debian project (but may be used by others).

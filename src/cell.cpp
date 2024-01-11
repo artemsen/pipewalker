@@ -1,297 +1,200 @@
-/**************************************************************************
- *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2012 by Artem Senichev <artemsen@gmail.com>        *
- *                                                                        *
- *  This program is free software: you can redistribute it and/or modify  *
- *  it under the terms of the GNU General Public License as published by  *
- *  the Free Software Foundation, either version 3 of the License, or     *
- *  (at your option) any later version.                                   *
- *                                                                        *
- *  This program is distributed in the hope that it will be useful,       *
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *  GNU General Public License for more details.                          *
- *                                                                        *
- *  You should have received a copy of the GNU General Public License     *
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- **************************************************************************/
+// SPDX-License-Identifier: MIT
+// Single cell.
+// Copyright (C) 2024 Artem Senichev <artemsen@gmail.com>
 
-#include "cell.h"
+#include "cell.hpp"
 
-#define PW_ROTATE_TUBE_SPEED     300
+#include <SDL2/SDL.h>
 
-
-cell::cell()
+bool Position::operator==(const Position& other) const
 {
-	reset();
+    return y == other.y && x == other.x;
 }
 
-
-void cell::reset()
+bool Position::operator!=(const Position& other) const
 {
-	_tube_type = tt_none;
-	_cell_type = ct_free;
-	_angle = 0.0f;
-	_state = false;
-	_lock = false;
-	_top_conn = false;
-	_bottom_conn = false;
-	_left_conn = false;
-	_right_conn = false;
-	_used = false;
+    return y != other.y || x != other.x;
 }
 
-
-unsigned char cell::save() const
+Side::Side(Side::Type side)
 {
-	const int rotate = static_cast<int>(rotation_in_progress() ? _rotate.init_angle / 90.0f : _angle / 90.0f);
-	assert(rotate >= 0 && rotate <= 3);
-
-	return
-		(static_cast<unsigned char>(_tube_type) << 5) |
-		(static_cast<unsigned char>(_cell_type) << 3) |
-		(static_cast<unsigned char>(rotate)     << 1) |
-		(_lock ? 1 : 0);
+    this->side = side;
 }
 
-
-bool cell::load(const unsigned char state)
+Side Side::opposite() const
 {
-	_tube_type = static_cast<ttype>((state >> 5) & 0x7);
-	_cell_type = static_cast<ctype>((state >> 3) & 0x3);
-	const int rotate = (state >> 1) & 0x3;
-	_lock = (state >> 0) & 0x1;
-
-	_angle = rotate * 90.0f;
-
-	//Restore connection side by rotate angle
-	switch (rotate) {
-		case 0:	//0 degrees
-			switch (_tube_type) {
-				case tt_none:														break;
-				case tt_half:		_top_conn = true;								break;
-				case tt_straight:	_top_conn = _bottom_conn = true;				break;
-				case tt_curved:		_top_conn = _right_conn = true;					break;
-				case tt_joiner:		_top_conn = _bottom_conn = _right_conn = true;	break;
-				default:			assert(false && "Unknown tube type"); return false;
-			}
-			break;
-		case 1:	//90 degrees
-			switch (_tube_type) {
-				case tt_none:														break;
-				case tt_half:		_left_conn = true;								break;
-				case tt_straight:	_right_conn = _left_conn = true;				break;
-				case tt_curved:		_top_conn = _left_conn = true;					break;
-				case tt_joiner:		_top_conn = _left_conn = _right_conn = true;	break;
-				default:			assert(false && "Unknown tube type"); return false;
-			}
-			break;
-		case 2:	//180 degrees
-			switch (_tube_type) {
-				case tt_none:														break;
-				case tt_half:		_bottom_conn = true;							break;
-				case tt_straight:	_top_conn = _bottom_conn = true;				break;
-				case tt_curved:		_bottom_conn = _left_conn = true;				break;
-				case tt_joiner:		_top_conn = _bottom_conn = _left_conn = true;	break;
-				default:			assert(false && "Unknown tube type"); return false;
-			}
-			break;
-		case 3:	//270 degrees
-			switch (_tube_type) {
-				case tt_none:														break;
-				case tt_half:		_right_conn = true;								break;
-				case tt_straight:	_right_conn = _left_conn = true;				break;
-				case tt_curved:		_right_conn = _bottom_conn = true;				break;
-				case tt_joiner:		_right_conn = _left_conn = _bottom_conn = true;	break;
-				default:			assert(false && "Unknown tube type"); return false;
-			}
-			break;
-		default:
-			assert(false && "Wrong angle"); return false;
-	}
-
-	return true;
+    switch (side) {
+        case Top:
+            return Bottom;
+        case Bottom:
+            return Top;
+        case Left:
+            return Right;
+        case Right:
+        default:
+            return Left;
+    }
 }
 
-
-void cell::add_tube(const cside side)
+Side::operator Type() const
 {
-	assert(can_add_tube());
-
-	//Already connected?
-	assert(!(_top_conn && side == cs_top));
-	assert(!(_bottom_conn && side == cs_bottom));
-	assert(!(_left_conn && side == cs_left));
-	assert(!(_right_conn && side == cs_right));
-
-	//Add connection
-	switch (side) {
-		case cs_top:	_top_conn = true;		break;
-		case cs_bottom:	_bottom_conn = true;	break;
-		case cs_left:	_left_conn = true;		break;
-		case cs_right:	_right_conn = true;		break;
-		default:
-			assert(false && "Undefined connection side");
-			break;
-	}
-	//Define cell type
-	if (_cell_type == ct_free)
-		_cell_type = ct_tube;
-
-	//Define tube type
-	switch (tube_side_count()) {
-		case 1:	_tube_type = tt_half;	break;
-		case 2:	_tube_type = (_top_conn || _bottom_conn) && (_left_conn || _right_conn) ? tt_curved : tt_straight;	break;
-		case 3:	_tube_type = tt_joiner;	break;
-		default:
-			assert(false && "Incorrect connection count");
-			break;
-	}
-
-	//Define angle from base direction (anticlockwise)
-	_angle = 0.0f;
-	switch (_tube_type) {
-		case tt_half:
-			if (_right_conn)									_angle = 90.0f * 3;
-			else if (_bottom_conn)								_angle = 90.0f * 2;
-			else if (_left_conn)								_angle = 90.0f * 1;
-			break;
-		case tt_straight:
-			if (_right_conn /*|| _ConnLeft*/)					_angle = 90.0f * 1;
-			break;
-		case tt_curved:
-			if (_right_conn && _bottom_conn)					_angle = 90.0f * 3;
-			else if (_bottom_conn && _left_conn)				_angle = 90.0f * 2;
-			else if (_left_conn && _top_conn)					_angle = 90.0f * 1;
-			break;
-		case tt_joiner:
-			if (_left_conn && _right_conn && _bottom_conn)		_angle = 90.0f * 3;
-			else if (_top_conn && _bottom_conn && _left_conn)	_angle = 90.0f * 2;
-			else if (_left_conn && _right_conn && _top_conn)	_angle = 90.0f * 1;
-			break;
-		default:
-			assert(false && "Unknown tube type");
-			break;
-	}
+    return side;
 }
 
-
-bool cell::can_add_tube() const
+double Pipe::angle() const
 {
-	const unsigned char connection_count = tube_side_count();
-	return
-		_cell_type == ct_free ||
-		(_cell_type == ct_tube && connection_count < 3) ||
-		((_cell_type == ct_sender || _cell_type == ct_receiver) && connection_count == 0);
+    double angle = 0;
+
+    switch (type) {
+        case Half:
+            if (sides[Side::Right]) {
+                angle = 90;
+            } else if (sides[Side::Bottom]) {
+                angle = 180;
+            } else if (sides[Side::Left]) {
+                angle = 270;
+            }
+            break;
+        case Straight:
+            if (sides[Side::Right]) {
+                angle = 90;
+            }
+            break;
+        case Bent:
+            if (sides[Side::Right] && sides[Side::Bottom]) {
+                angle = 90;
+            } else if (sides[Side::Bottom] && sides[Side::Left]) {
+                angle = 180;
+            } else if (sides[Side::Left] && sides[Side::Top]) {
+                angle = 270;
+            }
+            break;
+        case Fork:
+            if (!sides[Side::Top]) {
+                angle = 90;
+            } else if (!sides[Side::Right]) {
+                angle = 180;
+            } else if (!sides[Side::Bottom]) {
+                angle = 270;
+            }
+            break;
+        case None:
+            break;
+    }
+
+    return angle;
 }
 
-
-unsigned char cell::tube_side_count() const
+void Pipe::rotate(bool clockwise)
 {
-	unsigned char connection_count = 0;
-	if (_top_conn)
-		connection_count++;
-	if (_bottom_conn)
-		connection_count++;
-	if (_left_conn)
-		connection_count++;
-	if (_right_conn)
-		connection_count++;
-	return connection_count;
+    auto old = sides;
+    if (clockwise) {
+        sides <<= 1;
+        if (old[old.size() - 1]) {
+            sides[0] = true;
+        }
+    } else {
+        sides >>= 1;
+        if (old[0]) {
+            sides[sides.size() - 1] = true;
+        }
+    }
 }
 
-
-void cell::rotate(const bool dir)
+bool Pipe::get(const Side& side) const
 {
-	if (locked())
-		return;
-	if (rotation_in_progress()) {
-		if (dir == _rotate.direction)
-			_rotate.twice = true;
-		else {
-			//Back rotation
-			const bool new_conn_top =    _rotate.direction ? _left_conn : _right_conn;
-			const bool new_conn_bottom = _rotate.direction ? _right_conn : _left_conn;
-			const bool new_conn_left =   _rotate.direction ? _bottom_conn : _top_conn;
-			const bool new_conn_right =  _rotate.direction ? _top_conn : _bottom_conn;
-			_top_conn = new_conn_top;
-			_bottom_conn = new_conn_bottom;
-			_left_conn = new_conn_left;
-			_right_conn = new_conn_right;
-			_rotate.direction = !_rotate.direction;
-			_rotate.twice = false;
-			const unsigned long curr_tick = SDL_GetTicks();
-			_rotate.start_time = curr_tick - (PW_ROTATE_TUBE_SPEED - (curr_tick - _rotate.start_time));
-			_rotate.need_angle = _rotate.init_angle;
-			_rotate.init_angle += (_rotate.direction ? 90.0f : -90.0f);
-		}
-	}
-	else {
-		_rotate.direction = dir;
-		_rotate.start_time = SDL_GetTicks();
-		_rotate.twice = false;
-		_rotate.init_angle = _angle;
-		_rotate.need_angle = _angle + (_rotate.direction ? -90.0f : 90.0f);
-	}
+    return sides[side];
 }
 
-
-void cell::rotate_still(const bool dir, const bool twice)
+void Pipe::set(const Side& side)
 {
-	assert(!locked());
+    sides[side] = true;
 
-	_rotate.direction = dir;
-	_rotate.need_angle = _angle + (dir ? -90.0f : 90.0f);
-	update_rotate_state();
-	if (twice)
-		rotate_still(dir, false);
+    switch (sides.count()) {
+        case 1:
+            type = Half;
+            break;
+        case 2:
+            type = (sides[Side::Top] && sides[Side::Bottom]) ||
+                    (sides[Side::Left] && sides[Side::Right])
+                ? Straight
+                : Bent;
+            break;
+        case 3:
+            type = Fork;
+            break;
+        default:
+            break;
+    }
 }
 
-
-cell::state cell::calculate_state()
+Pipe::operator Type() const
 {
-	state st = st_unchanged;
-
-	//Rotation processing
-	if (rotation_in_progress()) {
-		const unsigned int diff_time = SDL_GetTicks() - _rotate.start_time;
-		if (diff_time < PW_ROTATE_TUBE_SPEED) {
-			const float degree = static_cast<float>(diff_time) / static_cast<float>(PW_ROTATE_TUBE_SPEED) * 90.0f;
-			_angle = _rotate.init_angle;
-			_angle += (_rotate.direction ? -degree : degree);
-			st = st_updated;
-		}
-		else {
-			update_rotate_state();
-			if (!_rotate.twice)
-				st = st_rcomplete;
-			else {
-				rotate(_rotate.direction);
-				st = st_updated;
-			}
-		}
-	}
-
-	return st;
+    return type;
 }
 
-
-void cell::update_rotate_state()
+Cell::Status Cell::update()
 {
-	_angle = _rotate.need_angle;
-	if (_angle > 359.0f)
-		_angle = 0.0f;
-	else if (_angle < 0.0f)
-		_angle = 270.0f;
-	_rotate.start_time = 0;
+    if (rotate_start) {
+        const Uint64 diff = SDL_GetTicks64() - rotate_start;
+        if (diff > rotation_time) {
+            // rotation completed
+            rotate_start = 0;
+            if (rotate_twice) {
+                rotate_twice = false;
+                rotate(rotate_clockwise);
+            }
+            return Cell::RotationComplete;
+        }
+        return Cell::RotationInProgress;
+    }
 
-	//Calculate new connection sides
-	const bool new_conn_top =    _rotate.direction ? _left_conn : _right_conn;
-	const bool new_conn_bottom = _rotate.direction ? _right_conn : _left_conn;
-	const bool new_conn_left =   _rotate.direction ? _bottom_conn : _top_conn;
-	const bool new_conn_right =  _rotate.direction ? _top_conn : _bottom_conn;
-	_top_conn = new_conn_top;
-	_bottom_conn = new_conn_bottom;
-	_left_conn = new_conn_left;
-	_right_conn = new_conn_right;
+    return Cell::Unchanged;
+}
+
+double Cell::angle() const
+{
+    double angle = pipe.angle();
+
+    if (rotate_start) {
+        const Uint64 diff = SDL_GetTicks64() - rotate_start;
+        if (diff < rotation_time) {
+            const float diff_angle = static_cast<float>(diff) /
+                static_cast<float>(rotation_time) * 90.0f;
+            angle = rotate_pipe.angle();
+            if (rotate_clockwise) {
+                angle += diff_angle;
+            } else {
+                angle -= diff_angle;
+            }
+        }
+    }
+
+    return angle;
+}
+
+void Cell::rotate(bool clockwise)
+{
+    if (rotate_start) {
+        // rotation in progress
+        if (rotate_clockwise == clockwise) {
+            rotate_twice = true;
+        } else if (rotate_twice) {
+            rotate_twice = false;
+        } else {
+            // back rotation
+            const Uint64 tick = SDL_GetTicks64();
+            const Uint64 passed = tick - rotate_start;
+            const Uint64 rest = rotation_time - passed;
+            rotate_start = tick - rest;
+            rotate_pipe = pipe;
+            pipe.rotate(clockwise);
+            rotate_clockwise = clockwise;
+        }
+    } else {
+        rotate_pipe = pipe;
+        rotate_clockwise = clockwise;
+        rotate_start = SDL_GetTicks64();
+        pipe.rotate(clockwise);
+    }
 }

@@ -1,463 +1,308 @@
-/**************************************************************************
- *  PipeWalker game (http://pipewalker.sourceforge.net)                   *
- *  Copyright (C) 2007-2012 by Artem Senichev <artemsen@gmail.com>        *
- *                                                                        *
- *  This program is free software: you can redistribute it and/or modify  *
- *  it under the terms of the GNU General Public License as published by  *
- *  the Free Software Foundation, either version 3 of the License, or     *
- *  (at your option) any later version.                                   *
- *                                                                        *
- *  This program is distributed in the hope that it will be useful,       *
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *  GNU General Public License for more details.                          *
- *                                                                        *
- *  You should have received a copy of the GNU General Public License     *
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- **************************************************************************/
+// SPDX-License-Identifier: MIT
+// Game level.
+// Copyright (C) 2024 Artem Senichev <artemsen@gmail.com>
 
-#include "level.h"
-#include "mtrandom.h"
-#include "settings.h"
+#include "level.hpp"
 
-#define C2H(x) (x >= '0' && x <= '9' ? x - '0' : x >= 'A' && x <= 'F' ? x - ('A' - 10) : x - ('a' - 10))
+#include "mtrand.hpp"
 
-
-level::level()
-:	_id(0),
-	_size_cell(10),
-	_solved(false),
-	_wrap_mode(true),
-	_senderX(0), _senderY(0),
-	_zeroX(0), _zeroY(0)
+void Level::generate()
 {
+    mtrand::seed(id);
+
+    // reset cells state
+    cells.resize(width * height);
+    std::fill(cells.begin(), cells.end(), Cell {});
+
+    // install sender (server)
+    sender.x = mtrand::get(1ul, width - 1);
+    sender.y = mtrand::get(1ul, height - 1);
+    get_cell(sender).object = Cell::Sender;
+
+    const size_t max_recievers = cells.size() / 5;
+    recievers.clear();
+    recievers.reserve(max_recievers);
+    for (size_t i = 0; i < max_recievers; ++i) {
+        add_reciever();
+    }
 }
 
-
-void level::create(const unsigned long id, const size sz, const bool wrap_mode)
+bool Level::load(const std::string& dump)
 {
- 	assert(id >= 1 && id <= PW_MAX_LEVEL_NUMBER);
+    if (dump.length() != width * height) {
+        return false;
+    }
 
-	_id = id;
-	sprintf(_id_text, "%08u", static_cast<unsigned int>(_id));
-	_wrap_mode = wrap_mode;
-	_size_type = sz;
-	_size_cell = size_from_type(sz);
+    for (size_t i = 0; i < width * height; ++i) {
+        const char c = dump[i] - 'A';
+        const bool lock = c & (1 << 4);
+        const size_t sides = c & 0xf;
+        cells[i].pipe.sides = sides;
+        cells[i].locked = lock;
+    }
 
-	_cells.resize(_size_cell * _size_cell);
-
-	mtrandom::seed(id);		//Initialize random sequence
-
-	const unsigned int receivers_num = (_size_cell * _size_cell) / 5;
-
-	bool install_done = false;
-	while (!install_done) {
-		//Reset map
-		for (cells::iterator it = _cells.begin(); it != _cells.end(); ++it)
-			it->reset();
-
-		install_sender();
-
-		//Install receivers
-		install_done = true;
-		for (unsigned int i = 0; i < receivers_num && install_done; ++i)
-			install_done &= install_receiver();
-	}
-
-	if (settings::debug_mode())
-		_solved = false;
-	else {
-		//Reset map - still rotation
-		for (cells::iterator it = _cells.begin(); it != _cells.end(); ++it) {
-			if (it->cell_type() != cell::ct_free && mtrandom::random(0, 5) != 0) {
-				it->rotate_still(mtrandom::random(0, 2) != 0, mtrandom::random(0, 2) != 0);
-			}
-		}
-		define_connect_status();
-	}
+    return true;
 }
 
-
-bool level::load(const unsigned long id, const size sz, const bool wrap_mode, const string& state)
+std::string Level::save() const
 {
-	assert(id >= 1 && id <= PW_MAX_LEVEL_NUMBER);
-	assert(!state.empty());
+    std::string dump;
+    dump.reserve(width * height);
 
-	_id = id;
-	sprintf(_id_text, "%08u", static_cast<unsigned int>(_id));
-	_wrap_mode = wrap_mode;
-	_size_type = sz;
-	_size_cell = size_from_type(sz);
-	const size_t cell_count = _size_cell * _size_cell;
-	_cells.resize(cell_count);
+    for (const Cell& cell : cells) {
+        const unsigned long long sides = cell.pipe.sides.to_ullong();
+        const char lock = cell.locked ? (1 << 4) : 0;
+        const char state = lock + sides;
+        dump += 'A' + state;
+    }
 
-	if (state.length() != cell_count * 2)
-		return false;
-
-	for (size_t i = 0; i < cell_count; ++i) {
-		_cells[i].reset();
-
-		unsigned char cell_state;
-		cell_state = C2H(state[i * 2]);
-		cell_state = cell_state << 4;
-		cell_state |= C2H(state[i * 2 + 1]);
-
-		if (!_cells[i].load(cell_state))
-			return false;
-	}
-
-	for (unsigned short y = 0; y < _size_cell; ++y) {
-		for (unsigned short x = 0; x < _size_cell; ++x) {
-			cell& c = cell_at(x, y);
-			if (c.cell_type() == cell::ct_sender) {
-				_senderX = x;
-				_senderY = y;
-				break;
-			}
-		}
-	}
-
-	define_connect_status();
-	_solved = false;
-
-	return true;
+    return dump;
 }
 
-
-string level::save() const
+void Level::update()
 {
-	string state;
+    // update cells state
+    state.rotation_complete = false;
+    Position pos;
+    for (pos.y = 0; pos.y < height; ++pos.y) {
+        for (pos.x = 0; pos.x < width; ++pos.x) {
+            Cell& cell = get_cell(pos);
+            cell.active = (pos == sender);
+            switch (cell.update()) {
+                case Cell::RotationComplete:
+                    state.rotation_complete = true;
+                    break;
+                case Cell::Unchanged:
+                case Cell::RotationInProgress:
+                    break;
+            }
+        }
+    }
 
-	for (unsigned short y = 0; y < _size_cell; ++y) {
-		for (unsigned short x = 0; x < _size_cell; ++x) {
-			const unsigned char cell_state = get_cell(x, y).save();
-			char buf[3];
-			sprintf(buf, "%02x", cell_state);
-			state += buf;
-		}
-	}
+    // trace from sender
+    if (get_cell(sender).rotate_start == 0) {
+        trace_state(sender);
+    }
 
-	return state;
+    // check completion status
+    state.level_complete = true;
+    for (const auto& it : recievers) {
+        if (!get_cell(it).active) {
+            state.level_complete = false;
+            break;
+        }
+    }
 }
 
-
-void level::rotate_all()
+void Level::reset()
 {
-	for (cells::iterator it = _cells.begin(); it != _cells.end(); ++it) {
-		if (it->cell_type() != cell::ct_free && !it->locked() && mtrandom::random(0, 5) != 0) {
-			it->rotate(mtrandom::random(0, 2) != 0);
-			if (mtrandom::random(0, 2) != 0) //Twice rotation
-				it->rotate(true /* ignored in twice rotation mode */);
-		}
-	}
-	define_connect_status();
+    for (auto& it : cells) {
+        if (it.pipe != Pipe::None && !it.locked) {
+            const bool clockwize = mtrand::get(0, 2);
+            size_t count = mtrand::get(0, 3);
+            while (count--) {
+                it.rotate(clockwize);
+            }
+        }
+    }
 }
 
-
-void level::install_sender()
+void Level::rotate(const Position& pos, bool clockwise)
 {
-	do {
-		_senderX = static_cast<unsigned short>(mtrandom::random(0, static_cast<int>(_size_cell)));
-		_senderY = static_cast<unsigned short>(mtrandom::random(0, static_cast<int>(_size_cell)));
-
-	} while (!_wrap_mode && (_senderX == 0 || _senderX == _size_cell - 1 || _senderY == 0 || _senderY == _size_cell - 1));
-
-
-	cell& srv = cell_at(_senderX, _senderY);
-	srv.set_type_sender();
-
-	//Define zero point (sender output cell)
-	_zeroX = _senderX;
-	_zeroY = _senderY;
-	switch (mtrandom::random(0, 4)) {
-		case 0:
-			_zeroX = (_zeroX + 1) % _size_cell;
-			break;
-		case 1:
-			_zeroX = _zeroX == 0 ? _size_cell - 1 : _zeroX - 1;
-			break;
-		case 2:
-			_zeroY = (_zeroY + 1) % _size_cell;
-			break;
-		case 3:
-			_zeroY = _zeroY == 0 ? _size_cell - 1 : _zeroY - 1;
-			break;
-		default:
-			assert(false);
-			break;
-	}
-
-	make_connection(_senderX, _senderY, _zeroX, _zeroY);
+    get_cell(pos).rotate(clockwise);
+    update();
 }
 
-
-cell& level::cell_at(const unsigned short x, const unsigned short y)
+Cell& Level::get_cell(const Position& pos)
 {
-	assert(x < _size_cell && y < _size_cell);	//Check for outside the map
-	return _cells[x + y * _size_cell];
+    return cells[pos.y * width + pos.x];
 }
 
-
-const cell& level::get_cell(const unsigned short x, const unsigned short y) const
+const Cell& Level::get_cell(const Position& pos) const
 {
-	assert(x < _size_cell && y < _size_cell);	//Check for outside the map
-	return _cells[x + y * _size_cell];
+    return cells[pos.y * width + pos.x];
 }
 
-
-bool level::install_receiver()
+void Level::add_reciever()
 {
-	//Get free cells
-	vector< pair<unsigned short, unsigned short> > free_cells;
-	for (unsigned short x = 0; x < _size_cell; ++x) {
-		for (unsigned short y = 0; y < _size_cell; ++y) {
-			cell& c = cell_at(x, y);
-			if (c.cell_type() == cell::ct_free)
-				free_cells.push_back(make_pair(x, y));
-			c.set_used(false);
+    // get free cells
+    std::vector<Position> free_cells;
+    free_cells.reserve(width * height);
+    Position free_cell;
+    for (free_cell.x = 0; free_cell.x < width; ++free_cell.x) {
+        for (free_cell.y = 0; free_cell.y < height; ++free_cell.y) {
+            const Cell& cell = get_cell(free_cell);
+            if (cell.object == Cell::Empty && cell.pipe == Pipe::None &&
+                (std::abs(static_cast<ssize_t>(free_cell.x) -
+                          static_cast<ssize_t>(sender.x)) > 1 ||
+                 std::abs(static_cast<ssize_t>(free_cell.y) -
+                          static_cast<ssize_t>(sender.y)) > 1)) {
+                free_cells.push_back(free_cell);
+            }
+        }
+    }
+    if (free_cells.empty()) {
+        return;
+    }
 
-		}
-	}
-	if (free_cells.empty())
-		return true;	//No more free cells
+    // get random position
+    const size_t free_index = mtrand::get(0ul, free_cells.size());
+    const Position& reciever = free_cells[free_index];
 
-	bool result = false;
-
-	int try_counter = _size_cell * 2;
-	while (try_counter-- && !result) {
-		//Backup current map state
-		const cells backup = _cells;
-		const int free_cell_ind = mtrandom::random(0, static_cast<int>(free_cells.size()));
-		const unsigned short free_x = free_cells[free_cell_ind].first;
-		const unsigned short free_y = free_cells[free_cell_ind].second;
-		cell& rcv = cell_at(free_x, free_y);
-		rcv.set_type_receiver();
-
-		result = make_route(free_x, free_y);
-
-		if (!result)	//Restore map
-			_cells = backup;
-	}
-
-	return result;
+    // find path from receiver to sender
+    Path path;
+    std::set<Position> vizited;
+    vizited.insert(reciever);
+    if (!find_path(reciever, vizited, path)) {
+        return;
+    }
+    // update level
+    get_cell(reciever).object = Cell::Receiver;
+    apply_path(reciever, path);
+    recievers.push_back(reciever);
 }
 
-
-bool level::make_route(const unsigned short x, const unsigned short y)
+bool Level::find_path(const Position& from, std::set<Position>& vizited,
+                      Path& path) const
 {
-	unsigned short next_x = 0, next_y = 0;	//Next coordinates
+    // define order of possible directions
+    std::vector<Side> sides;
+    sides.reserve(4);
 
-	bool result = false;
+    if (vizited.size() < std::min(width, height)) {
+        // random directions
+        sides.push_back(Side::Left);
+        sides.push_back(Side::Right);
+        sides.push_back(Side::Top);
+        sides.push_back(Side::Bottom);
+        for (size_t i = 0; i < 4; ++i) {
+            const size_t index0 = mtrand::get(0ul, sides.size());
+            const size_t index1 = mtrand::get(0ul, sides.size());
+            std::iter_swap(sides.begin() + index0, sides.begin() + index1);
+        }
+    } else {
+        // shortest path
+        const ssize_t delta_x = sender.x - from.x;
+        const ssize_t delta_y = sender.y - from.y;
+        if (std::abs(delta_x) > std::abs(delta_y)) {
+            sides.push_back(delta_x < 0 ? Side::Left : Side::Right);
+            sides.push_back(delta_y < 0 ? Side::Top : Side::Bottom);
+            sides.push_back(delta_y >= 0 ? Side::Top : Side::Bottom);
+            sides.push_back(delta_x >= 0 ? Side::Left : Side::Right);
+        } else {
+            sides.push_back(delta_y < 0 ? Side::Top : Side::Bottom);
+            sides.push_back(delta_x < 0 ? Side::Left : Side::Right);
+            sides.push_back(delta_x >= 0 ? Side::Left : Side::Right);
+            sides.push_back(delta_y >= 0 ? Side::Top : Side::Bottom);
+        }
+        // check for possible forks
+        for (const Side side : sides) {
+            const Position next_pos = neighbor(from, side);
+            if (next_pos != from) {
+                const Cell& next_cell = get_cell(next_pos);
+                if (next_cell.object == Cell::Empty &&
+                    next_cell.pipe != Pipe::None &&
+                    next_cell.pipe != Pipe::Fork) {
+                    path.push_back(side);
+                    return true;
+                }
+            }
+        }
+    }
 
-	int try_counter = 5;
-	while (try_counter && !result) {
-		short i, j;
-		do {
-			i = 1 - static_cast<unsigned short>(mtrandom::random(0, 3));
-			j = 1 - static_cast<unsigned short>(mtrandom::random(0, 3));
-		} while ((i && j) || (!i && !j));	//Diagonal
+    // go through possible directions
+    for (const Side& side : sides) {
+        const Position next_pos = neighbor(from, side);
+        if (vizited.find(next_pos) != vizited.end()) {
+            continue; // already visited
+        }
 
+        vizited.insert(next_pos);
+        path.push_back(side);
 
-		if (!_wrap_mode) {
-			if ((j < 0 && x == 0) || (j > 0 && x == _size_cell - 1) ||
-				(i < 0 && y == 0) || (i > 0 && y == _size_cell - 1)) {
-					--try_counter;
-					continue;
-			}
-		}
+        // try to connect with the neighbor
+        const Cell& next_cell = get_cell(next_pos);
+        if (next_cell.object == Cell::Sender && next_cell.pipe == Pipe::None) {
+            return true; // connected to sender
+        }
+        if (next_cell.object == Cell::Empty && next_cell.pipe != Pipe::Fork) {
+            if (next_cell.pipe != Pipe::None) {
+                return true; // fork: connect to existing pipe
+            }
+            if (find_path(next_pos, vizited, path)) {
+                return true; // route found
+            }
+        }
 
-		const unsigned short cp_x = (j < 0 && x == 0) ? _size_cell - 1 : (x + j) % _size_cell;
-		const unsigned short cp_y = (i < 0 && y == 0) ? _size_cell - 1 : (y + i) % _size_cell;
+        // remove current step and try another direction
+        path.pop_back();
+    }
 
-		cell& cell = cell_at(cp_x, cp_y);
-		if (!cell.is_used() && cell.can_add_tube()) {
-			result = true;
-			next_x = cp_x;
-			next_y = cp_y;
-		}
-
-		--try_counter;
-	}
-
-	if (!result)
-		return false;	//min point - we don't have a route
-
-	make_connection(x, y, next_x, next_y);
-	cell_at(x, y).set_used(true);
-
-	if (cell_at(next_x, next_y).tube_type() == cell::tt_joiner || (next_x == _zeroX && next_y == _zeroY))
-		return true;
-
-	return make_route(next_x, next_y);
+    return false;
 }
 
-
-void level::make_connection(const unsigned short curr_x, const unsigned short curr_y, const unsigned short next_x, const unsigned short next_y)
+void Level::apply_path(const Position& start, const Level::Path& path)
 {
-	assert(curr_x == next_x || curr_y == next_y);
-	assert(curr_x != next_x || curr_y != next_y);
-
-	cell& cell_curr = cell_at(curr_x, curr_y);
-	cell& cell_next = cell_at(next_x, next_y);
-
-	//Wrapping
-	if (next_x == 0 && curr_x == _size_cell - 1) {
-		cell_curr.add_tube(cell::cs_right);
-		cell_next.add_tube(cell::cs_left);
-	}
-	else if (next_x == _size_cell - 1 && curr_x == 0) {
-		cell_curr.add_tube(cell::cs_left);
-		cell_next.add_tube(cell::cs_right);
-	}
-	else if (next_y == 0 && curr_y == _size_cell - 1) {
-		cell_curr.add_tube(cell::cs_bottom);
-		cell_next.add_tube(cell::cs_top);
-	}
-	else if (next_y == _size_cell - 1 && curr_y == 0) {
-		cell_curr.add_tube(cell::cs_top);
-		cell_next.add_tube(cell::cs_bottom);
-	}
-	//Non-wrapping
-	else if (next_x < curr_x) {
-		cell_curr.add_tube(cell::cs_left);
-		cell_next.add_tube(cell::cs_right);
-	}
-	else if (next_x > curr_x) {
-		cell_curr.add_tube(cell::cs_right);
-		cell_next.add_tube(cell::cs_left);
-	}
-	else if (next_y < curr_y) {
-		cell_curr.add_tube(cell::cs_top);
-		cell_next.add_tube(cell::cs_bottom);
-	}
-	else if (next_y > curr_y) {
-		cell_curr.add_tube(cell::cs_bottom);
-		cell_next.add_tube(cell::cs_top);
-	}
+    Position pos = start;
+    for (const Side side : path) {
+        get_cell(pos).pipe.set(side);
+        pos = neighbor(pos, side);
+        get_cell(pos).pipe.set(side.opposite());
+    }
 }
 
-
-void level::define_connect_status(const unsigned short x, const unsigned short y)
+void Level::trace_state(const Position& pos)
 {
-	cell& cell_curr = cell_at(x, y);
-	if (cell_curr.active() || cell_curr.rotation_in_progress())
-		return;	//Already connected or rotate in progress
+    Cell& cell = get_cell(pos);
+    const Side sides[] = { Side::Top, Side::Right, Side::Bottom, Side::Left };
 
-	cell_curr.set_active(true);
-
-	//to up
-	if (cell_curr.top_connected()) {
-		if (_wrap_mode || y > 0) {
-			const unsigned short next_y = y > 0 ? y - 1 : _size_cell - 1;
-			cell& cell_next = cell_at(x, next_y);
-			if (cell_next.bottom_connected())
-				define_connect_status(x, next_y);
-		}
-	}
-
-	//to down
-	if (cell_curr.bottom_connected()) {
-		if (_wrap_mode || y < _size_cell - 1) {
-			const unsigned short next_y = (y + 1) % _size_cell;
-			cell& cell_next = cell_at(x, next_y);
-			if (cell_next.top_connected())
-				define_connect_status(x, next_y);
-		}
-	}
-
-	//to left
-	if (cell_curr.left_connected()) {
-		if (_wrap_mode || x > 0) {
-			const unsigned short next_x = x > 0 ? x - 1 : _size_cell - 1;
-			cell& cell_next = cell_at(next_x, y);
-			if (cell_next.right_connected())
-				define_connect_status(next_x, y);
-		}
-	}
-
-	//to right
-	if (cell_curr.right_connected()) {
-		if (_wrap_mode || x < _size_cell - 1) {
-			const unsigned short next_x = (x + 1) % _size_cell;
-			cell& cell_next = cell_at(next_x, y);
-			if (cell_next.left_connected())
-				define_connect_status(next_x, y);
-		}
-	}
+    for (const Side side : sides) {
+        if (cell.pipe.get(side)) {
+            const Position next_pos = neighbor(pos, side);
+            Cell& next_cell = get_cell(next_pos);
+            if (next_cell.rotate_start == 0 && !next_cell.active &&
+                next_cell.pipe.get(side.opposite())) {
+                next_cell.active = true;
+                trace_state(next_pos);
+            }
+        }
+    }
 }
 
-
-void level::define_connect_status()
+Position Level::neighbor(const Position& from, Side to) const
 {
-	//Reset connection status
-	for (cells::iterator it = _cells.begin(); it != _cells.end(); ++it)
-		it->set_active(false);
+    Position next = from;
 
-	define_connect_status(_senderX, _senderY);
+    switch (to) {
+        case Side::Top:
+            if (next.y) {
+                --next.y;
+            } else if (wrap) {
+                next.y = height - 1;
+            }
+            break;
+        case Side::Bottom:
+            if (next.y < height - 1) {
+                ++next.y;
+            } else if (wrap) {
+                next.y = 0;
+            }
+            break;
+        case Side::Left:
+            if (next.x) {
+                --next.x;
+            } else if (wrap) {
+                next.x = width - 1;
+            }
+            break;
+        case Side::Right:
+            if (next.x < width - 1) {
+                ++next.x;
+            } else if (wrap) {
+                next.x = 0;
+            }
+            break;
+    }
 
-	_solved = true;
-	for (cells::const_iterator it = _cells.begin(); _solved && it != _cells.end(); ++it)
-		_solved = !it->rotation_in_progress() && (it->cell_type() != cell::ct_receiver || it->active());
-
-	if (_solved) {
-		//Reset locks
-		for (cells::iterator it = _cells.begin(); _solved && it != _cells.end(); ++it)
-			if (it->locked())
-				it->reverse_lock();
-	}
-}
-
-
-unsigned short level::size_from_type(const size sz)
-{
-	switch (sz) {
-		case sz_small:
-			return 10;
-		case sz_normal:
-			return 14;
-		case sz_big:
-			return 20;
-		case sz_extra:
-			return 30;
-		default:
-			assert(false && "Unknown size");
-	}
-	return 14;
-}
-
-
-cell::state level::calculate_state()
-{
-	cell::state rs = cell::st_unchanged;
-
-	for (cells::iterator it = _cells.begin(); it != _cells.end(); ++it) {
-		const cell::state cs = it->calculate_state();
-		if (cs == cell::st_updated)
-			rs = cell::st_updated;
-		else if (cs == cell::st_rcomplete && rs != cell::st_updated)
-			rs = cell::st_rcomplete;
-	}
-
-	if (rs == cell::st_rcomplete)
-		define_connect_status();
-
-	return rs;
-}
-
-
-void level::reverse_lock(const unsigned short x, const unsigned short y)
-{
-	cell& c = cell_at(x, y);
-	if (c.cell_type() != cell::ct_free)
-		c.reverse_lock();
-}
-
-
-void level::rotate(const unsigned short x, const unsigned short y, const bool dir)
-{
-	cell& c = cell_at(x, y);
-	if (c.cell_type() != cell::ct_free) {
-		c.rotate(dir);
-		define_connect_status();
-	}
+    return next;
 }
