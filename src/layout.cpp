@@ -45,23 +45,22 @@ void Layout::update(size_t width, size_t height)
     // margin: size of header and footer
     size_t margin = std::min(64ul, static_cast<size_t>(window.h) / 10);
 
-    // puzzle field
+    // size of a single puzzle cell
     const int max_wnd_w = window.w - padding * 2;
     const int max_wnd_h = window.h - (margin * 2 + padding * 2);
     const float level_ratio =
         static_cast<float>(level_width) / static_cast<float>(level_height);
     if (max_wnd_w > static_cast<float>(max_wnd_h) * level_ratio) {
-        field.h = max_wnd_h;
-        field.w = static_cast<float>(field.h) * level_ratio;
+        cell_size = static_cast<float>(max_wnd_h) / level_height;
     } else {
-        field.w = max_wnd_w;
-        field.h = static_cast<float>(field.w) / level_ratio;
+        cell_size = static_cast<float>(max_wnd_w) / level_width;
     }
+
+    // puzzle field
+    field.w = cell_size * level_width;
+    field.h = cell_size * level_height;
     field.x = window.w / 2 - field.w / 2;
     field.y = window.h / 2 - field.h / 2;
-
-    // size of a single puzzle cell
-    cell_size = static_cast<float>(field.w) / level_width;
 
     // base size
     base_size = std::min(field.w, field.h) / 10;

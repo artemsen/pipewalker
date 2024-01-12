@@ -41,7 +41,7 @@ public:
 
     size_t level_width;  ///< Level width
     size_t level_height; ///< Level height
-    float cell_size;     ///< Size of a single puzzle cell
+    size_t cell_size;    ///< Size of a single puzzle cell
 
     SDL_Rect window; ///< Window size
     SDL_Rect title;  ///< Title "PieWalker"
