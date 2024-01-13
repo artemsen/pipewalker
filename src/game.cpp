@@ -136,17 +136,6 @@ void Game::draw()
     render.fill_background(layout.window.w, layout.window.h);
     render.draw(Render::Title, layout.title);
 
-    // cells background
-    SDL_Rect dst = { 0, 0, static_cast<int>(layout.cell_size),
-                     static_cast<int>(layout.cell_size) };
-    for (size_t y = 0; y < level.height; ++y) {
-        for (size_t x = 0; x < level.width; ++x) {
-            dst.x = layout.field.x + x * layout.cell_size;
-            dst.y = layout.field.y + y * layout.cell_size;
-            render.draw(Render::CellBkg, dst);
-        }
-    }
-
     if (puzzle_mode) {
         draw_puzzle();
     } else {
@@ -171,6 +160,15 @@ void Game::draw_puzzle()
 {
     SDL_Rect dst = { 0, 0, static_cast<int>(layout.cell_size),
                      static_cast<int>(layout.cell_size) };
+
+    // cells background
+    for (size_t y = 0; y < level.height; ++y) {
+        for (size_t x = 0; x < level.width; ++x) {
+            dst.x = layout.field.x + x * layout.cell_size;
+            dst.y = layout.field.y + y * layout.cell_size;
+            render.draw(Render::CellBkg, dst);
+        }
+    }
 
     // pipes shadow
     const int shadow_shift = layout.cell_size / 20;
@@ -281,38 +279,35 @@ void Game::draw_settings()
 {
     size_t width;
     const size_t font_sz = layout.base_size * 0.8;
-    const size_t font_fix = font_sz / 10; // to center on a button
 
     // level size switch
     const char* lvlsize = "Level size:";
     width = render.text_width(lvlsize, font_sz);
     render.draw_text(lvlsize, font_sz, layout.window.w / 2 - width / 2,
-                     layout.lvlsize[0]->y - font_sz);
+                     layout.lvlsize[0]->y - font_sz * 1.2);
     for (size_t i = 0; i < sizeof(level_sizes) / sizeof(level_sizes[0]); ++i) {
         render.draw(layout.lvlsize[i].checked ? Render::ButtonCbOn
                                               : Render::ButtonCbOff,
                     layout.lvlsize[i]);
         render.draw_text(level_sizes[i].name, layout.lvlsize[i]->h,
                          layout.lvlsize[i]->x + layout.lvlsize[i]->w,
-                         layout.lvlsize[i]->y + font_fix);
+                         layout.lvlsize[i]->y);
     }
 
     // wrap mode switch
     render.draw(layout.wrap.checked ? Render::ButtonCbOn : Render::ButtonCbOff,
                 layout.wrap);
     render.draw_text("Wrap mode", layout.wrap->h,
-                     layout.wrap->x + layout.wrap->w,
-                     layout.wrap->y + font_fix);
+                     layout.wrap->x + layout.wrap->w, layout.wrap->y);
 
     // sound control
     render.draw(sound.enable ? Render::ButtonCbOn : Render::ButtonCbOff,
                 layout.sound);
     render.draw_text("Sound", layout.sound->h,
-                     layout.sound->x + layout.sound->w,
-                     layout.sound->y + font_fix);
+                     layout.sound->x + layout.sound->w, layout.sound->y);
 
     // skin switch
-    const char* skin_label = "Skin";
+    const char* skin_label = "Skin:";
     width = render.text_width(skin_label, font_sz);
     render.draw_text(skin_label, font_sz, layout.window.w / 2 - width / 2,
                      layout.skinprev->y - layout.skinprev->h * 1.2);
@@ -359,7 +354,7 @@ void Game::on_mouse_click_puzzle(int x, int y, int button)
 
         if (!cell.locked &&
             (button == SDL_BUTTON_LEFT || button == SDL_BUTTON_RIGHT)) {
-            level.rotate(pos, button == SDL_BUTTON_LEFT);
+            level.rotate(pos, button == SDL_BUTTON_RIGHT);
         } else if (button == SDL_BUTTON_MIDDLE && cell.pipe != Pipe::None) {
             cell.locked = !cell.locked;
         }
@@ -466,7 +461,7 @@ void Game::create_fireworks()
 {
     const size_t fw_per_rcv = 5;
     fireworks.clear();
-    fireworks.reserve(((level.width * level.height) / 5) * fw_per_rcv);
+    fireworks.reserve(level.recievers.size() * fw_per_rcv);
     for (size_t y = 0; y < level.height; ++y) {
         for (size_t x = 0; x < level.width; ++x) {
             const Cell& cell = level.get_cell({ x, y });

@@ -27,5 +27,5 @@ struct State {
     size_t level_height = 10;
     std::string level_pipes;
     bool sound = true;
-    std::string skin = "Simple";
+    std::string skin = "Network";
 };

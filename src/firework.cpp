@@ -22,7 +22,7 @@ void Firework::update()
         current = initial;
         birth_time = cur_time;
         age_limit = mtrand::get(500, 1500);
-        delta_x = mtrand::get(initial.w / 2, initial.w);
+        delta_x = mtrand::get(initial.w / 10, initial.w);
         if (mtrand::get(0, 2)) {
             delta_x = -delta_x;
         }
