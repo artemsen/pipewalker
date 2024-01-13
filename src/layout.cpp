@@ -42,12 +42,12 @@ void Layout::update(size_t width, size_t height)
     level_width = width;
     level_height = height;
 
-    // margin: size of header and footer
-    size_t margin = std::min(64ul, static_cast<size_t>(window.h) / 10);
+    // size of header and footer
+    size_t header_h = std::min(64ul, static_cast<size_t>(window.h) / 10);
 
     // size of a single puzzle cell
     const int max_wnd_w = window.w - padding * 2;
-    const int max_wnd_h = window.h - (margin * 2 + padding * 2);
+    const int max_wnd_h = window.h - (header_h * 2 + padding * 2);
     const float level_ratio =
         static_cast<float>(level_width) / static_cast<float>(level_height);
     if (max_wnd_w > static_cast<float>(max_wnd_h) * level_ratio) {
@@ -65,34 +65,34 @@ void Layout::update(size_t width, size_t height)
     // base size
     base_size = std::min(field.w, field.h) / 10;
 
-    // fix up margin size
-    if (margin * base_ratio > static_cast<size_t>(field.w)) {
-        margin = field.w / base_ratio;
+    // fix up header size
+    if (header_h * base_ratio > static_cast<size_t>(field.w)) {
+        header_h = field.w / base_ratio;
     }
 
     // title
-    title.h = margin;
-    title.w = margin * base_ratio;
+    title.h = header_h;
+    title.w = header_h * base_ratio;
     title.x = window.w / 2 - title.w / 2;
     title.y = field.y - title.h - padding;
 
     // buttons in footer
     reset->x = field.x;
     reset->y = field.y + field.h + padding;
-    reset->w = margin;
-    reset->h = margin;
-    settings->x = field.x + field.w - margin;
+    reset->w = header_h;
+    reset->h = header_h;
+    settings->x = field.x + field.w - header_h;
     settings->y = reset->y;
-    settings->w = margin;
-    settings->h = margin;
-    lvlprev->x = field.x + margin + padding;
+    settings->w = header_h;
+    settings->h = header_h;
+    lvlprev->x = field.x + header_h + padding;
     lvlprev->y = reset->y;
-    lvlprev->w = margin;
-    lvlprev->h = margin;
-    lvlnext->x = settings->x - margin - padding;
+    lvlprev->w = header_h;
+    lvlprev->h = header_h;
+    lvlnext->x = settings->x - header_h - padding;
     lvlnext->y = reset->y;
-    lvlnext->w = margin;
-    lvlnext->h = margin;
+    lvlnext->w = header_h;
+    lvlnext->h = header_h;
 
     // level size buttons (settings specific)
     const int btn_x = field.x + base_size * 3.3;

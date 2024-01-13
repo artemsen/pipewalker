@@ -7,43 +7,37 @@
 #include "mtrand.hpp"
 
 Firework::Firework(const SDL_Rect& init)
+    : initial(init)
+    , birth_time(0)
 {
-    initial = init;
-    // center of the cell
-    initial.x += initial.w / 2;
-    initial.y += initial.h / 2;
-
-    age_limit = 0;
-    birth_time = 0;
 }
 
 void Firework::update()
 {
-    const uint64_t age = SDL_GetTicks64() - birth_time;
-    if (age > age_limit) {
-        // reinit
+    const uint64_t cur_time = SDL_GetTicks64();
+    uint64_t age = cur_time - birth_time;
+    if (birth_time == 0 || age > age_limit) {
+        // reinitialize
+        age = 0;
         current = initial;
-        angle = 0;
-        alpha = 1.0;
-
-        birth_time = SDL_GetTicks64();
-        age_limit = mtrand::get(1000, 3000);
-
-        xstep = mtrand::get(initial.w, initial.w * 3);
+        birth_time = cur_time;
+        age_limit = mtrand::get(500, 1500);
+        delta_x = mtrand::get(initial.w / 2, initial.w);
         if (mtrand::get(0, 2)) {
-            xstep = -xstep;
+            delta_x = -delta_x;
         }
-
-        rotation = mtrand::get(90, 180);
-        if (mtrand::get(0, 2)) {
-            rotation = -rotation;
-        }
-    } else {
-        // recalc
-        const float phase = static_cast<float>(age) / age_limit;
-        alpha = 1.0 - phase;
-        angle = phase * rotation;
-        current.x = initial.x + phase * xstep;
-        current.y = initial.y - sin(M_PI * phase) * initial.w * 2;
     }
+    // recalc state
+    const float phase = static_cast<float>(age) / age_limit;
+    alpha = 1.0 - phase;
+    angle = phase * 90;
+    if (delta_x < 0) {
+        angle = -angle;
+    }
+    current.w = initial.w * phase;
+    current.h = initial.h * phase;
+    current.x = initial.x + (initial.w / 2 - current.w / 2);
+    current.y = initial.y + (initial.h / 2 - current.h / 2);
+    current.x += phase * delta_x;
+    current.y -= (initial.h / 2) * sin(M_PI * phase);
 }

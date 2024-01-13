@@ -11,7 +11,7 @@
 struct Firework {
     /**
      * Constructor.
-     * @param init initial position (cell)
+     * @param init initial position and size of the cell
      */
     Firework(const SDL_Rect& init);
 
@@ -26,6 +26,5 @@ private:
     SDL_Rect initial;  ///< Initial position and size
     size_t birth_time; ///< Creation timestamp
     size_t age_limit;  ///< Age limit in ms
-    int xstep;         ///< Direction and horizontal step
-    int rotation;      ///< Rotation direction and final angle
+    ssize_t delta_x;   ///< Direction and diff of the final x coordinate
 };

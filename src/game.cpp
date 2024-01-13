@@ -11,10 +11,10 @@ struct LevelSize {
     const char* name;
 };
 static const LevelSize level_sizes[] = {
-    { 10, "10 x 10" },
-    { 15, "15 x 15" },
-    { 20, "20 x 20" },
-    { 30, "30 x 30" },
+    { 10, "10 * 10" },
+    { 15, "15 * 15" },
+    { 20, "20 * 20" },
+    { 30, "30 * 30" },
 };
 
 Game::Game(SDL_Window* wnd, SDL_Renderer* renderer)
@@ -101,6 +101,10 @@ void Game::handle_event(const SDL_Event& event)
             if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
                 const SDL_WindowEvent& ev = event.window;
                 layout.resize(ev.data1, ev.data2);
+                if (!fireworks.empty()) {
+                    // reinit fireworks with new coordinates
+                    create_fireworks();
+                }
             }
             break;
     }
@@ -460,8 +464,9 @@ void Game::reset_level(bool regen)
 
 void Game::create_fireworks()
 {
+    const size_t fw_per_rcv = 5;
     fireworks.clear();
-    fireworks.reserve(((level.width * level.height) / 5) * 2);
+    fireworks.reserve(((level.width * level.height) / 5) * fw_per_rcv);
     for (size_t y = 0; y < level.height; ++y) {
         for (size_t x = 0; x < level.width; ++x) {
             const Cell& cell = level.get_cell({ x, y });
@@ -469,10 +474,11 @@ void Game::create_fireworks()
                 SDL_Rect rect;
                 rect.x = layout.field.x + x * layout.cell_size;
                 rect.y = layout.field.y + y * layout.cell_size;
-                rect.w = layout.cell_size / 2;
-                rect.h = layout.cell_size / 2;
-                fireworks.push_back(Firework(rect));
-                fireworks.push_back(Firework(rect));
+                rect.w = layout.cell_size;
+                rect.h = layout.cell_size;
+                for (size_t i = 0; i < fw_per_rcv; ++i) {
+                    fireworks.push_back(Firework(rect));
+                }
             }
         }
     }
