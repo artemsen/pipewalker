@@ -40,11 +40,8 @@ endif
 install_data(
   [
     'data/Hellsfire.png',
-    'data/Linux.png',
     'data/Network.png',
-    'data/NewYear.png',
     'data/Plumbing.png',
-    'data/Simple.png',
     'data/clatz.wav',
     'data/complete.wav',
   ],
