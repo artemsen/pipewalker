@@ -96,7 +96,6 @@ void Skin::search(const char* path)
                 continue; // not a skin file
             }
             std::string full_path = path;
-            full_path += '/';
             full_path += ent->d_name;
             available.push_back(full_path);
         }

@@ -28,12 +28,13 @@ endif
 sdl_base = dependency('sdl2')
 sdl_image = dependency('SDL2_image')
 
-# path to game data
-if get_option('buildtype') == 'debug'
-  data_dir = join_paths(meson.current_source_dir(), 'data')
+# install path
+if host_machine.system() == 'windows'
+  install_bin_dir = get_option('prefix') / f'PipeWalker-@version@'
+  install_data_dir = install_bin_dir / 'data'
 else
-  data_dir = join_paths(get_option('prefix'), get_option('datadir'),
-                        'games', meson.project_name())
+  install_bin_dir = get_option('bindir')
+  install_data_dir = get_option('datadir') / 'games' / meson.project_name()
 endif
 
 # installation
@@ -45,17 +46,28 @@ install_data(
     'data/clatz.wav',
     'data/complete.wav',
   ],
-  install_dir: data_dir)
-install_data('extra/pipewalker.desktop',
-  install_dir: join_paths(get_option('datadir'), 'applications'))
-install_data('extra/pipewalker.png',
-  install_dir: join_paths(get_option('datadir'), 'icons/hicolor/64x64/apps'))
-install_man('extra/pipewalker.6')
+  install_dir: install_data_dir)
+if host_machine.system() != 'windows'
+  install_data('extra/pipewalker.desktop',
+    install_dir: get_option('datadir') / 'applications')
+  install_data('extra/pipewalker.png',
+    install_dir: get_option('datadir') / 'icons/hicolor/64x64/apps')
+  install_man('extra/pipewalker.6')
+endif
+
+# path to game data
+if get_option('buildtype') == 'debug'
+  appdata_dir = meson.current_source_dir() / 'data'
+elif host_machine.system() == 'windows'
+  appdata_dir = 'data'
+else
+  appdata_dir = get_option('prefix') / install_data_dir
+endif
 
 # configuration file
 conf = configuration_data()
 conf.set_quoted('APP_VERSION', version)
-conf.set_quoted('APP_DATADIR', data_dir)
+conf.set_quoted('APP_DATADIR', appdata_dir + '/')
 if get_option('buildtype') == 'release'
   conf.set('NDEBUG', 1)
 else
@@ -82,5 +94,6 @@ executable(
     sdl_base,
     sdl_image,
   ],
-  install: true
+  install: true,
+  install_dir: install_bin_dir,
 )

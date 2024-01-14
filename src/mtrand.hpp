@@ -31,4 +31,4 @@ template <typename T> T get(T min_val, T max_val)
     return min_val + (get() % (max_val - min_val));
 }
 
-}; // namespace mtrand
+} // namespace mtrand

@@ -4,6 +4,8 @@
 
 #include "firework.hpp"
 
+#include <cmath>
+
 #include "mtrand.hpp"
 
 Firework::Firework(const SDL_Rect& init)

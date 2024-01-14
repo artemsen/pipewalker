@@ -58,4 +58,4 @@ uint32_t get()
     return (n ^ (n >> 18));
 }
 
-}; // namespace mtrand
+} // namespace mtrand
