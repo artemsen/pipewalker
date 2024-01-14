@@ -33,6 +33,13 @@ public:
     bool enable = true; ///< Sound enable/disable
 
 private:
+    /**
+     * Load sound files from the specified directory.
+     * @param dir path to directory with sound files (wav)
+     * @return false if load failed
+     */
+    bool load(const char* dir);
+
     /** Callback that feeds the audio device. */
     static void feed(void* userdata, uint8_t* stream, int len);
 

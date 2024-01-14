@@ -40,24 +40,18 @@ bool Sound::initialize()
     SDL_PauseAudio(1); // set pause
 
     // load wave files
-    for (size_t i = 0; i < sizeof(waves) / sizeof(waves[0]); ++i) {
-        SDL_AudioSpec spec;
-        Uint32 len;
-        std::string file = APP_DATADIR;
-        switch (i) {
-            case Clatz:
-                file += "/clatz.wav";
-                break;
-            case Complete:
-                file += "/complete.wav";
-                break;
-        }
-        if (SDL_LoadWAV(file.c_str(), &spec, &waves[i].data, &len)) {
-            waves[i].size = len;
+    if (!load(APP_DATADIR)) {
+        // try portable variant
+        char* app_dir = SDL_GetBasePath();
+        if (app_dir) {
+            std::string path = app_dir;
+            path += "data";
+            SDL_free(app_dir);
+            load(path.c_str());
         }
     }
 
-    return true;
+    return waves[0].data && waves[1].data;
 }
 
 void Sound::play(Sound::Type type)
@@ -69,6 +63,31 @@ void Sound::play(Sound::Type type)
             SDL_PauseAudio(0);
         }
     }
+}
+
+bool Sound::load(const char* dir)
+{
+    bool rc = true;
+
+    for (size_t i = 0; i < sizeof(waves) / sizeof(waves[0]); ++i) {
+        SDL_AudioSpec spec;
+        Uint32 len;
+        std::string file = dir;
+        switch (i) {
+            case Clatz:
+                file += "clatz.wav";
+                break;
+            case Complete:
+                file += "complete.wav";
+                break;
+        }
+        if (SDL_LoadWAV(file.c_str(), &spec, &waves[i].data, &len)) {
+            waves[i].size = len;
+            rc |= true;
+        }
+    }
+
+    return rc;
 }
 
 void Sound::feed(void* userdata, uint8_t* stream, int len)
