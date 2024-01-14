@@ -19,25 +19,19 @@ void Firework::update()
     if (birth_time == 0 || age > age_limit) {
         // reinitialize
         age = 0;
-        current = initial;
         birth_time = cur_time;
         age_limit = mtrand::get(500, 1500);
-        delta_x = mtrand::get(initial.w / 10, initial.w);
-        if (mtrand::get(0, 2)) {
-            delta_x = -delta_x;
-        }
+        variant = mtrand::get(0, 4);
+        delta_x = static_cast<float>(mtrand::get(-1000, 1000)) / 1000;
     }
     // recalc state
     const float phase = static_cast<float>(age) / age_limit;
     alpha = 1.0 - phase;
-    angle = phase * 90;
-    if (delta_x < 0) {
-        angle = -angle;
-    }
-    current.w = initial.w * phase;
-    current.h = initial.h * phase;
+    angle = phase * delta_x * 90;
+    current.w = (initial.w / 2) * phase;
+    current.h = (initial.h / 2) * phase;
     current.x = initial.x + (initial.w / 2 - current.w / 2);
     current.y = initial.y + (initial.h / 2 - current.h / 2);
-    current.x += phase * delta_x;
-    current.y -= (initial.h / 2) * sin(M_PI * phase);
+    current.x += phase * delta_x * initial.w;
+    current.y -= (initial.h / 1.2) * sin(M_PI * phase);
 }

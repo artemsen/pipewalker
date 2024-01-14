@@ -95,9 +95,9 @@ void Layout::update(size_t width, size_t height)
     lvlnext->h = header_h;
 
     // level size buttons (settings specific)
-    const int btn_x = field.x + base_size * 3.3;
+    const int btn_x = field.x + base_size * 3;
     const int btn_y = field.y + base_size * 1.4;
-    const int btn_s = base_size * 0.7;
+    const int btn_s = base_size * 0.8;
     for (size_t i = 0; i < sizeof(lvlsize) / sizeof(lvlsize[0]); ++i) {
         Checkbox& cb = lvlsize[i];
         cb->x = btn_x;
@@ -114,17 +114,17 @@ void Layout::update(size_t width, size_t height)
 
     // sound control button (settings specific)
     sound->x = btn_x;
-    sound->y = wrap->y + wrap->h + base_size / 2;
+    sound->y = wrap->y + wrap->h + base_size / 1.5;
     sound->w = btn_s;
     sound->h = btn_s;
 
     // skin switch buttons (settings specific)
     skinprev->w = btn_s;
     skinprev->h = btn_s;
-    skinprev->x = field.x + base_size;
-    skinprev->y = field.y + field.h - base_size * 1.8;
+    skinprev->x = btn_x;
+    skinprev->y = field.y + field.h - base_size * 1.6;
     skinnext->w = btn_s;
     skinnext->h = btn_s;
-    skinnext->x = field.x + field.w - btn_s - base_size;
+    skinnext->x = window.w - btn_x - btn_s;
     skinnext->y = skinprev.rect.y;
 }

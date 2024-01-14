@@ -19,6 +19,7 @@ struct Firework {
     void update();
 
     SDL_Rect current; ///< Current position and size
+    size_t variant;   ///< Texture variant [0-4)
     double angle;     ///< Current angle
     double alpha;     ///< Current transparency
 
@@ -26,5 +27,5 @@ private:
     SDL_Rect initial;  ///< Initial position and size
     size_t birth_time; ///< Creation timestamp
     size_t age_limit;  ///< Age limit in ms
-    ssize_t delta_x;   ///< Direction and diff of the final x coordinate
+    float delta_x;     ///< Direction and diff of the final x coordinate
 };

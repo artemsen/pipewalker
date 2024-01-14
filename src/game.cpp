@@ -271,14 +271,16 @@ void Game::draw_puzzle()
 
     // draw particles
     for (auto& it : fireworks) {
-        render.draw(Render::Firework, it.current, it.angle, it.alpha);
+        const Render::TextureId tid =
+            static_cast<Render::TextureId>(it.variant + Render::Firework0);
+        render.draw(tid, it.current, it.angle, it.alpha);
     }
 }
 
 void Game::draw_settings()
 {
     size_t width;
-    const size_t font_sz = layout.base_size * 0.8;
+    const size_t font_sz = layout.lvlsize[0]->h;
 
     // level size switch
     const char* lvlsize = "Level size:";
@@ -307,28 +309,16 @@ void Game::draw_settings()
                      layout.sound->x + layout.sound->w, layout.sound->y);
 
     // skin switch
-    const char* skin_label = "Skin:";
-    width = render.text_width(skin_label, font_sz);
-    render.draw_text(skin_label, font_sz, layout.window.w / 2 - width / 2,
-                     layout.skinprev->y - layout.skinprev->h * 1.2);
+    const char* skin_label = "Skin";
+    render.draw_text(skin_label, font_sz,
+                     layout.skinprev->x + layout.skinprev->w,
+                     layout.skinprev->y);
     width = render.text_width(skin.name.c_str(), font_sz);
     render.draw_text(skin.name.c_str(), font_sz,
-                     layout.window.w / 2 - width / 2, layout.skinprev->y);
+                     layout.window.w / 2 - width / 2,
+                     layout.skinprev->y + layout.skinprev->h * 1.2);
     render.draw(Render::ButtonPrev, layout.skinprev);
     render.draw(Render::ButtonNext, layout.skinnext);
-
-    // version info
-    std::string version = "Version " + std::string(APP_VERSION);
-    const size_t delim = version.find('-');
-    if (delim != std::string::npos) {
-        version.resize(delim);
-    }
-    const size_t ver_font_sz = layout.base_size * 0.6;
-    width = render.text_width(version.c_str(), ver_font_sz);
-    render.draw_text(
-        version.c_str(), ver_font_sz,
-        layout.field.x + (layout.settings->x - layout.field.x) / 2 - width / 2,
-        layout.settings->y + layout.settings->h / 2 - ver_font_sz / 2);
 
     render.draw(Render::ButtonOk, layout.settings);
 }
@@ -459,7 +449,7 @@ void Game::reset_level(bool regen)
 
 void Game::create_fireworks()
 {
-    const size_t fw_per_rcv = 5;
+    const size_t fw_per_rcv = 4;
     fireworks.clear();
     fireworks.reserve(level.recievers.size() * fw_per_rcv);
     for (size_t y = 0; y < level.height; ++y) {

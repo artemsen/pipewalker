@@ -17,7 +17,10 @@ public:
         CellBkg,        // cell background
         Title,          // title ("PipeWalker")
         Lock,           // lock
-        Firework,       // fireworks particle
+        Firework0,      // fireworks particle
+        Firework1,      // fireworks particle
+        Firework2,      // fireworks particle
+        Firework3,      // fireworks particle
         Sender,         // sender
         ReceiverOff,    // receiver (not connected)
         ReceiverOn,     // receiver (connected)
