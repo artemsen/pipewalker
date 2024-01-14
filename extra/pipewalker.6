@@ -32,18 +32,12 @@ Data directory for \fBpipewalker\fR themes.
 .B pipewalker
 supports various themes.
 Themes are stored as a set of textures in a PNG file. All themes must be
-512x448 pixels in size, and comply to the template provided on the
-.UR http://\:pipewalker.sourceforge.net/\:themes/\:scheme.png
-project homepage
-.UE .
-On Debian systems, the template can be found in
-\fI/usr/share/doc/pipewalker/examples/scheme.png\fR.
-
+1024x896 pixels in size.
 To add a new theme, copy the PNG file to the \fI/usr/share/games/pipewalker\fR
 data directory.  The file name is used as the theme name.
 .SH EXAMPLE
-To start pipewalker on the level 1234, with wrap mode disabled, and using big
-as the level map size:
+To start pipewalker on the level 1234, with wrap mode disabled, and level
+map 10x20:
 .PP
 .RS
 .B $ pipewalker \-\-id=1234 \-\-no\-wrap \-\-width=10 \-\-height=20
