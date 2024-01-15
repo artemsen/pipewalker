@@ -1,0 +1,34 @@
+// SPDX-License-Identifier: MIT
+// Resource file for MS Windows.
+// Copyright (C) 2024 Artem Senichev <artemsen@gmail.com>
+
+#include <windows.h>
+#include "buildcfg.h"
+
+0 ICON "pipewalker.ico"
+LANGUAGE 0, SUBLANG_NEUTRAL
+1 VERSIONINFO
+  FILEVERSION    APP_VERSION_MAJOR,APP_VERSION_MINOR,APP_VERSION_PATCH
+  PRODUCTVERSION APP_VERSION_MAJOR,APP_VERSION_MINOR,APP_VERSION_PATCH
+  FILEOS         VOS__WINDOWS32
+  FILEFLAGSMASK  VFT2_UNKNOWN
+  FILETYPE       VFT_UNKNOWN
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "000004b0"
+    BEGIN
+      VALUE "FileDescription", "PipeWalker game"
+      VALUE "FileVersion", APP_VERSION
+      VALUE "InternalName", "PipeWalker"
+      VALUE "LegalCopyright", "Copyright (C) 2007-2024 Artem Senichev"
+      VALUE "OriginalFilename", "PipeWalker.exe"
+      VALUE "ProductName", "PipeWalker game"
+      VALUE "ProductVersion", APP_VERSION
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x0, 1200
+  END
+END

@@ -66,18 +66,24 @@ endif
 
 # configuration file
 conf = configuration_data()
-conf.set_quoted('APP_VERSION', version)
-conf.set_quoted('APP_DATADIR', appdata_dir + '/')
 if get_option('buildtype') == 'release'
   conf.set('NDEBUG', 1)
 else
   conf.set('DEBUG', 1)
 endif
+conf.set_quoted('APP_DATADIR', appdata_dir + '/')
+conf.set_quoted('APP_VERSION', version)
+if host_machine.system() == 'windows'
+  vnum = version.split('-')[0].split('.')
+  assert(vnum.length() == 3, f'Invalid version string: @version@')
+  conf.set('APP_VERSION_MAJOR', vnum[0].to_int())
+  conf.set('APP_VERSION_MINOR', vnum[1].to_int())
+  conf.set('APP_VERSION_PATCH', vnum[2].to_int())
+endif
 configure_file(output: 'buildcfg.h', configuration: conf)
 
-executable(
-  'pipewalker',
-  [
+# source files
+sources = [
     'src/cell.cpp',
     'src/firework.cpp',
     'src/game.cpp',
@@ -89,7 +95,18 @@ executable(
     'src/skin.cpp',
     'src/sound.cpp',
     'src/state.cpp',
-  ],
+]
+if host_machine.system() == 'windows'
+  sources += import('windows').compile_resources(
+    'src/winres.rc',
+    include_directories: [meson.current_source_dir() / 'extra',
+                          meson.current_build_dir()]
+)
+endif
+
+executable(
+  'pipewalker',
+  sources,
   dependencies: [
     sdl_base,
     sdl_image,
