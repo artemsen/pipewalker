@@ -84,23 +84,24 @@ int main(int argc, char* argv[])
 
     // clang-format off
     const struct option long_opts[] = {
-        { "id",       required_argument, NULL, 'i' },
-        { "width",    required_argument, NULL, 'c' },
-        { "height",   required_argument, NULL, 'r' },
-        { "no-wrap",  no_argument,       NULL, 'w' },
-        { "no-sound", no_argument,       NULL, 's' },
-        { "version",  no_argument,       NULL, 'v' },
-        { "help",     no_argument,       NULL, 'h' },
-        { NULL, 0, NULL, 0 }
+        { "id",       required_argument, nullptr, 'i' },
+        { "width",    required_argument, nullptr, 'c' },
+        { "height",   required_argument, nullptr, 'r' },
+        { "no-wrap",  no_argument,       nullptr, 'w' },
+        { "no-sound", no_argument,       nullptr, 's' },
+        { "version",  no_argument,       nullptr, 'v' },
+        { "help",     no_argument,       nullptr, 'h' },
+        { nullptr, 0, nullptr, 0 }
     };
-    const char* short_opts = "i:c:r:wvh";
+    const char* short_opts = "i:c:r:wsvh";
     // clang-format on
 
     opterr = 0; // prevent native error messages
 
     // parse arguments
     int opt;
-    while ((opt = getopt_long(argc, argv, short_opts, long_opts, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, short_opts, long_opts, nullptr)) !=
+           -1) {
         switch (opt) {
             case 'i':
                 state.level_id = strtoul(optarg, nullptr, 0);
@@ -137,11 +138,11 @@ int main(int argc, char* argv[])
             case 'h':
                 printf("PipeWalker game version " APP_VERSION ".\n");
                 printf("Usage: %s [OPTION...]\n", argv[0]);
-                printf("  -i, --id=ID          set level Id (1-%ld)\n",
+                printf("  -i, --id=ID          set level Id (1-%zu)\n",
                        Level::max_id);
-                printf("  -c, --width=COLUMNS  set level width (%ld-%ld)\n",
+                printf("  -c, --width=COLUMNS  set level width (%zu-%zu)\n",
                        Level::min_size, Level::max_size);
-                printf("  -r, --height=ROWS    set level height (%ld-%ld)\n",
+                printf("  -r, --height=ROWS    set level height (%zu-%zu)\n",
                        Level::min_size, Level::max_size);
                 puts("  -w, --no-wrap        disable warp mode");
                 puts("  -s, --no-sound       disable sound");
