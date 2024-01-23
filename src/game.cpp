@@ -21,6 +21,7 @@ static const LevelSize level_sizes[] = {
 
 Game::Game(SDL_Window* wnd, SDL_Renderer* renderer)
     : window(wnd)
+    , layout()
     , render(renderer)
     , puzzle_mode(true)
 {
@@ -131,7 +132,7 @@ bool Game::update()
         sound.play(Sound::Clatz);
     }
 
-    return level.state.rotation_active || !fireworks.empty();
+    return level.state.rotation_active || level.state.level_complete;
 }
 
 void Game::draw()
