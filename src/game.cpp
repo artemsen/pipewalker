@@ -174,6 +174,7 @@ void Game::draw_puzzle()
 
     // pipes shadow
     const int shadow_shift = layout.cell_size / 20;
+    const int lift_shift = layout.cell_size / 16;
     for (size_t y = 0; y < level.height; ++y) {
         for (size_t x = 0; x < level.width; ++x) {
             const Cell& cell = level.get_cell({ x, y });
@@ -197,9 +198,9 @@ void Game::draw_puzzle()
                     continue;
             }
             if (cell.rotation()) {
-                const double phase = cell.phase();
-                dst.x += shadow_shift * sin(M_PI * phase);
-                dst.y += shadow_shift * sin(M_PI * phase);
+                const int shift = lift_shift * sin(M_PI * cell.phase());
+                dst.x += shift;
+                dst.y += shift;
             }
             render.draw(tid, dst, cell.angle(), 0.3);
         }
@@ -232,9 +233,9 @@ void Game::draw_puzzle()
                     continue;
             }
             if (cell.rotation()) {
-                const double phase = cell.phase();
-                dst.x -= shadow_shift * sin(M_PI * phase);
-                dst.y -= shadow_shift * sin(M_PI * phase);
+                const int shift = lift_shift * sin(M_PI * cell.phase());
+                dst.x -= shift;
+                dst.y -= shift;
             }
             render.draw(tid, dst, cell.angle());
         }
