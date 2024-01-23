@@ -63,6 +63,7 @@ void Level::update()
 {
     // update cells state
     state.rotation_complete = false;
+    state.rotation_active = false;
     Position pos;
     for (pos.y = 0; pos.y < height; ++pos.y) {
         for (pos.x = 0; pos.x < width; ++pos.x) {
@@ -73,7 +74,9 @@ void Level::update()
                     state.rotation_complete = true;
                     break;
                 case Cell::Unchanged:
+                    break;
                 case Cell::RotationInProgress:
+                    state.rotation_active = true;
                     break;
             }
         }

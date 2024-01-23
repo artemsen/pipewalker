@@ -39,8 +39,11 @@ public:
      */
     void handle_event(const SDL_Event& event);
 
-    /** Update game state. */
-    void update();
+    /**
+     * Update game state.
+     * @return true if animation is in progress
+     */
+    bool update();
 
     /** Draw scene. */
     void draw();

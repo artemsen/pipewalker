@@ -59,9 +59,13 @@ bool run(State& state)
             }
         }
         if (!quit) {
-            game.update();
+            const bool animate = game.update();
             game.draw();
-            SDL_Delay(33); // ~30 fps
+            if (animate) {
+                SDL_Delay(1000 / 60); // 60 fps
+            } else {
+                SDL_WaitEvent(nullptr);
+            }
         }
     }
 

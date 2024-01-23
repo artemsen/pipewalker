@@ -63,6 +63,7 @@ public:
 
     struct State {
         bool level_complete;    ///< Level complete
+        bool rotation_active;   ///< One or more pipes in rotation
         bool rotation_complete; ///< Pipe rotation complete
     } state;
 

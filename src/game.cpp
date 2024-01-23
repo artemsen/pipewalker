@@ -112,7 +112,7 @@ void Game::handle_event(const SDL_Event& event)
     }
 }
 
-void Game::update()
+bool Game::update()
 {
     level.update();
 
@@ -130,6 +130,8 @@ void Game::update()
     if (!level.state.level_complete && level.state.rotation_complete) {
         sound.play(Sound::Clatz);
     }
+
+    return level.state.rotation_active || !fireworks.empty();
 }
 
 void Game::draw()
