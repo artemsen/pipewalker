@@ -135,7 +135,7 @@ Pipe::operator Type() const
 
 Cell::Status Cell::update()
 {
-    if (rotate_start) {
+    if (rotation()) {
         const Uint64 diff = SDL_GetTicks64() - rotate_start;
         if (diff > rotation_time) {
             // rotation completed
@@ -152,21 +152,32 @@ Cell::Status Cell::update()
     return Cell::Unchanged;
 }
 
+double Cell::phase() const
+{
+    double phase = 1.0;
+
+    if (rotation()) {
+        const Uint64 diff = SDL_GetTicks64() - rotate_start;
+        if (diff < rotation_time) {
+            phase =
+                static_cast<double>(diff) / static_cast<double>(rotation_time);
+        }
+    }
+
+    return phase;
+}
+
 double Cell::angle() const
 {
     double angle = pipe.angle();
 
-    if (rotate_start) {
-        const Uint64 diff = SDL_GetTicks64() - rotate_start;
-        if (diff < rotation_time) {
-            const float diff_angle = static_cast<float>(diff) /
-                static_cast<float>(rotation_time) * 90.0f;
-            angle = rotate_pipe.angle();
-            if (rotate_clockwise) {
-                angle += diff_angle;
-            } else {
-                angle -= diff_angle;
-            }
+    if (rotation()) {
+        const float diff_angle = phase() * 90.0f;
+        angle = rotate_pipe.angle();
+        if (rotate_clockwise) {
+            angle += diff_angle;
+        } else {
+            angle -= diff_angle;
         }
     }
 
@@ -175,7 +186,7 @@ double Cell::angle() const
 
 void Cell::rotate(bool clockwise)
 {
-    if (rotate_start) {
+    if (rotation()) {
         // rotation in progress
         if (rotate_clockwise == clockwise) {
             rotate_twice = true;

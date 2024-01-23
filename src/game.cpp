@@ -6,6 +6,8 @@
 
 #include "buildcfg.h"
 
+#include <cmath>
+
 struct LevelSize {
     size_t size;
     const char* name;
@@ -194,6 +196,11 @@ void Game::draw_puzzle()
                 default:
                     continue;
             }
+            if (cell.rotation()) {
+                const double phase = cell.phase();
+                dst.x += shadow_shift * sin(M_PI * phase);
+                dst.y += shadow_shift * sin(M_PI * phase);
+            }
             render.draw(tid, dst, cell.angle(), 0.3);
         }
     }
@@ -223,6 +230,11 @@ void Game::draw_puzzle()
                     break;
                 default:
                     continue;
+            }
+            if (cell.rotation()) {
+                const double phase = cell.phase();
+                dst.x -= shadow_shift * sin(M_PI * phase);
+                dst.y -= shadow_shift * sin(M_PI * phase);
             }
             render.draw(tid, dst, cell.angle());
         }

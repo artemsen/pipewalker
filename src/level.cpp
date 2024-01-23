@@ -80,7 +80,7 @@ void Level::update()
     }
 
     // trace from sender
-    if (get_cell(sender).rotate_start == 0) {
+    if (!get_cell(sender).rotation()) {
         trace_state(sender);
     }
 
@@ -261,7 +261,7 @@ void Level::trace_state(const Position& pos)
         if (cell.pipe.get(side)) {
             const Position next_pos = neighbor(pos, side);
             Cell& next_cell = get_cell(next_pos);
-            if (next_cell.rotate_start == 0 && !next_cell.active &&
+            if (!next_cell.rotation() && !next_cell.active &&
                 next_cell.pipe.get(side.opposite())) {
                 next_cell.active = true;
                 trace_state(next_pos);

@@ -99,6 +99,18 @@ struct Cell {
     Status update();
 
     /**
+     * Check if rotation is in progress.
+     * @return true if rotation in progress
+     */
+    inline bool rotation() const { return rotate_start != 0; }
+
+    /**
+     * Get pipe rotation phase [0.0, 1.0].
+     * @return pipe rotation phase
+     */
+    double phase() const;
+
+    /**
      * Get pipe angle.
      * @return pipe angle
      */
