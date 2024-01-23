@@ -128,7 +128,7 @@ struct Cell {
     Pipe pipe;             ///< Pipe
 
     size_t rotate_start;   ///< Rotation start timestamp
-    Pipe rotate_pipe;      ///< Rotation pipe
+    Pipe rotate_pipe;      ///< Start state of pipe before rotation
     bool rotate_twice;     ///< Twice rotation flag
     bool rotate_clockwise; ///< Rotate direction
 };

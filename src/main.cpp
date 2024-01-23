@@ -24,7 +24,7 @@ bool run(State& state)
 
     // create window
     SDL_Window* window = SDL_CreateWindow("PipeWalker", SDL_WINDOWPOS_UNDEFINED,
-                                          SDL_WINDOWPOS_UNDEFINED, 480, 640,
+                                          SDL_WINDOWPOS_UNDEFINED, 480, 600,
                                           SDL_WINDOW_RESIZABLE);
     if (!window) {
         printf("Failed to create window: %s\n", SDL_GetError());
