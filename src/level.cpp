@@ -81,7 +81,6 @@ void Level::update()
             }
         }
     }
-    state.rotation_active |= state.rotation_complete;
 
     // trace from sender
     if (!get_cell(sender).rotation()) {

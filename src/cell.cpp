@@ -142,8 +142,9 @@ Cell::Status Cell::update()
             rotate_start = 0;
             if (rotate_twice) {
                 rotate(rotate_clockwise);
+            } else {
+                return Cell::RotationComplete;
             }
-            return Cell::RotationComplete;
         }
         return Cell::RotationInProgress;
     }
