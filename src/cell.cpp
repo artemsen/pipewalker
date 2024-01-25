@@ -101,6 +101,20 @@ void Pipe::rotate(bool clockwise)
     }
 }
 
+std::vector<Side> Pipe::connections() const
+{
+    std::vector<Side> sides;
+    sides.reserve(Side::max);
+
+    for (const Side s : { Side::Top, Side::Right, Side::Bottom, Side::Left }) {
+        if (get(s)) {
+            sides.push_back(s);
+        }
+    }
+
+    return sides;
+}
+
 bool Pipe::get(const Side& side) const
 {
     return sides[side];

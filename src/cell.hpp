@@ -5,6 +5,7 @@
 #pragma once
 
 #include <bitset>
+#include <vector>
 
 /** Position (coordinates). */
 struct Position {
@@ -57,6 +58,12 @@ public:
      * @param clockwise rotate direction
      */
     void rotate(bool clockwise);
+
+    /**
+     * Gat connection sides.
+     * @return array with connected sides
+     */
+    std::vector<Side> connections() const;
 
     /**
      * Check if side connected.

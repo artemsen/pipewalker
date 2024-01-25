@@ -255,20 +255,32 @@ void Level::apply_path(const Position& start, const Level::Path& path)
     }
 }
 
-void Level::trace_state(const Position& pos)
+void Level::trace_state(const Position& start)
 {
-    Cell& cell = get_cell(pos);
-    const Side sides[] = { Side::Top, Side::Right, Side::Bottom, Side::Left };
+    Position curr_pos = start;
 
-    for (const Side side : sides) {
-        if (cell.pipe.get(side)) {
-            const Position next_pos = neighbor(pos, side);
-            Cell& next_cell = get_cell(next_pos);
-            if (!next_cell.rotation() && !next_cell.active &&
-                next_cell.pipe.get(side.opposite())) {
-                next_cell.active = true;
-                trace_state(next_pos);
+    while (true) {
+        Cell& curr_cell = get_cell(curr_pos);
+        curr_cell.active = true;
+
+        // get possible ways
+        std::vector<Position> connected;
+        for (const Side side : curr_cell.pipe.connections()) {
+            const Position next_pos = neighbor(curr_pos, side);
+            const Cell& next_cell = get_cell(next_pos);
+            if (next_pos != curr_pos && !next_cell.rotation() &&
+                !next_cell.active && next_cell.pipe.get(side.opposite())) {
+                connected.push_back(next_pos);
             }
+        }
+        if (connected.empty()) {
+            break;
+        }
+
+        curr_pos = connected[0];
+
+        if (connected.size() > 1) { // fork
+            trace_state(connected[1]);
         }
     }
 }
