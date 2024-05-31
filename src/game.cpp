@@ -454,12 +454,7 @@ void Game::reset_level(bool regen)
         layout.update(level.width, level.height);
     }
 
-#ifdef DEBUG
-    level.get_cell(level.sender).rotate(false);
-#else
     level.reset();
-#endif // DEBUG
-
     level.update();
 }
 
