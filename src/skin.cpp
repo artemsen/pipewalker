@@ -9,6 +9,8 @@
 #include <SDL2/SDL_image.h>
 #include <dirent.h>
 
+#include <cstring>
+
 SDL_Surface* Skin::initialize(const std::string& name)
 {
     SDL_Surface* image = nullptr;

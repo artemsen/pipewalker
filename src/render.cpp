@@ -6,6 +6,7 @@
 
 #include <SDL2/SDL_image.h>
 
+#include <cstring>
 #include <memory>
 
 using SdlSurface = std::unique_ptr<SDL_Surface, decltype(&SDL_FreeSurface)>;

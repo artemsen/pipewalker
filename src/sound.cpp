@@ -8,6 +8,7 @@
 
 #include <SDL2/SDL.h>
 
+#include <cstring>
 #include <string>
 
 Sound::~Sound()
