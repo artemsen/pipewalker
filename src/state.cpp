@@ -6,6 +6,7 @@
 
 #include <SDL2/SDL.h>
 
+#include <cstring>
 #include <vector>
 
 #include "level.hpp"
